@@ -28,6 +28,15 @@ gem "solid_cache"
 gem "solid_queue"
 gem "solid_cable"
 
+#bcrypt
+gem 'bcrypt'
+
+gem 'finnhub_ruby'
+
+gem 'react-rails'
+
+gem "jsbundling-rails"
+
 # Reduces boot times through caching; required in config/boot.rb
 gem "bootsnap", require: false
 

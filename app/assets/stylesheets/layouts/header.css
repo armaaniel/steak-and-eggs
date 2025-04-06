@@ -1,0 +1,44 @@
+nav {
+	display:flex;
+	
+}
+
+.navbar {
+	display:flex;
+	justify-content:end;
+	align-items:center;
+	gap:2rem;
+	padding-top:1.25rem;
+	flex:1;
+	padding-right:4rem;
+}
+
+.navbar a {	
+	color:inherit;
+	text-decoration:none;
+	font-family:helvetica neue;
+	font-weight:400;
+	color:#32302f;
+}
+
+.logo {
+	display:flex;
+	height:auto;
+	width:200px;
+	
+}
+.line {
+    border: none;  /* First remove default styling */
+    background-color: #E4E2E1;
+    height: 0.2rem;   /* Make it a bit thicker so it's clearly visible */
+}
+
+.navbar button {
+	padding:1rem 3rem;
+	border-radius:1.5rem;
+	
+}
+
+.navbar button:hover {
+    background-color: #E4E2E1;
+}

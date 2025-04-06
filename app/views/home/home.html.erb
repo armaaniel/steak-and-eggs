@@ -1,0 +1,22 @@
+<h2>Your current balance is: $<%=current_user&.balance%> </h2>
+
+<ul>You hold
+<%@positions.each do |n|%>
+<li><a href='/stocks/<%=n[:symbol]%>'> 
+	<%=n[:shares] %> of <%=n[:symbol]%> 
+</a></li>
+<%end%>
+</ul>
+
+<div class ='transfer'>
+	<form class='transfer-form' method='post' action='/balance'>
+	    <input type="hidden" name="authenticity_token" value="<%= form_authenticity_token %>">
+		<input type='submit' name='commit' value='add funds'>
+		<input type='submit' name='commit' value='withdraw funds'>
+		<input type='number' placeholder='Amount' name='amount'>
+	</form>
+</div>
+
+<div data-turbo="false">
+  <%= react_component("Button", { title: "Hello World" }) %>
+</div>

@@ -1,0 +1,22 @@
+.signup-box {
+	display:flex;
+	justify-content:center;
+    flex-direction: column;
+	align-items:center;
+	min-height: 75vh
+}
+
+.signup-form {
+	display:flex;
+	flex-direction:column;
+}
+
+.signup-form input[type='submit']{
+	
+	margin-top:1.5rem;
+}
+
+.signup-form input{
+	width:15rem;
+	padding:0.25rem 1rem;
+}

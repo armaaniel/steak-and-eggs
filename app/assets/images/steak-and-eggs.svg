@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300">
+  <!-- Plate -->
+  <ellipse cx="200" cy="160" rx="180" ry="110" fill="#f5f5f5" stroke="#d3d3d3" stroke-width="4"/>
+  
+  <!-- Steak -->
+  <path d="M140 130 C 120 120, 180 100, 260 130 C 290 150, 280 190, 250 200 C 180 220, 120 200, 110 170 C 100 150, 120 140, 140 130" 
+        fill="#8b4513" stroke="#654321" stroke-width="3"/>
+  
+  <!-- Grill marks -->
+  <path d="M160 140 L220 150" stroke="#472400" stroke-width="3"/>
+  <path d="M180 160 L240 170" stroke="#472400" stroke-width="3"/>
+  <path d="M170 180 L230 190" stroke="#472400" stroke-width="3"/>
+  
+  <!-- Eggs -->
+  <circle cx="160" cy="110" r="35" fill="white" stroke="#e6e6e6" stroke-width="2"/>
+  <circle cx="160" cy="110" r="12" fill="#ffd700"/>
+  
+  <circle cx="250" cy="100" r="30" fill="white" stroke="#e6e6e6" stroke-width="2"/>
+  <circle cx="250" cy="100" r="10" fill="#ffd700"/>
+  
+  <!-- Text -->
+  <text x="200" y="270" text-anchor="middle" font-family="Arial, sans-serif" font-size="32" font-weight="bold" fill="#333">
+    STEAK &amp; EGGS
+  </text>
+</svg>

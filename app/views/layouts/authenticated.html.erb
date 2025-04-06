@@ -7,32 +7,28 @@
     <%= csp_meta_tag %>
     <%= yield :head %>
     <%= stylesheet_link_tag :app, "data-turbo-track": "reload" %>
-    <%= javascript_importmap_tags %>
     <%= javascript_include_tag "application", "data-turbo-track": "reload", type: "module" %>
+    <%= javascript_include_tag "application", defer: true %>
   </head>
 
   <body>
 	  <header>
 		  <nav>
 		  <div class='main-logo'>
-			  <a href = '/' class = 'logo'>
+			  <a href = '/home' class = 'logo'>
 			 	  <%= image_tag "steak-and-eggs.svg", alt: "logo", class: "navbar-logo" %>
 			  </a>
 		  </div>
 		  	<div class ='navbar'>
-			  	<a href ='#'>Gallery</a> 
-			  	<a href='#'>Contact Us</a>
-				<a href ='login'>
-					<button>Log In</button>
-				</a>
-				<a href ='signup'>
-					<button>Sign Up</button>
+				<form method='GET' action='/search'>
+					<input type='search' placeholder='search' name='search'>
+				</form>
+				<a href ='logout'>
+					<button>Log Out</button>
 				</a>
 			</div>
 		  </nav>
-		<div>
-			<hr class='line'>		
-		</div>
+	
 	  </header>
     <%= yield %>
   </body>

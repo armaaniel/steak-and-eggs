@@ -1,0 +1,20 @@
+{
+  "name": "app",
+  "private": true,
+  "dependencies": {
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0"
+  },
+  "devDependencies": {
+    "@babel/core": "^7.26.10",
+    "@babel/preset-env": "^7.26.9",
+    "@babel/preset-react": "^7.26.3",
+    "esbuild": "^0.23.1",
+    "esbuild-plugin-babel": "^0.2.3",
+    "glob": "^10.4.5"
+  },
+  "scripts": {
+    "build": "node esbuild.config.js",
+    "watch": "node esbuild.config.js --watch"
+  }
+}
