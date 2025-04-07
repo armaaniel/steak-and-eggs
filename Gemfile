@@ -33,7 +33,7 @@ gem 'bcrypt'
 
 gem 'finnhub_ruby'
 
-gem "react-rails", "= 3.2"
+gem "react-rails", "3.2.1"
 
 # Reduces boot times through caching; required in config/boot.rb
 gem "bootsnap", require: false
