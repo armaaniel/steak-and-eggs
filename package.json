@@ -2,19 +2,49 @@
   "name": "app",
   "private": true,
   "dependencies": {
-    "react": "^18.2.0",
-    "react-dom": "^18.2.0"
+    "@babel/core": "^7.26.10",
+    "@babel/plugin-transform-runtime": "^7.26.10",
+    "@babel/preset-env": "^7.26.9",
+    "@babel/runtime": "^7.27.0",
+    "@types/babel__core": "^7.20.5",
+    "@types/webpack": "^5.28.5",
+    "babel-loader": "^8.4.1",
+    "compression-webpack-plugin": "^9.2.0",
+    "css-loader": "^7.1.2",
+    "css-minimizer-webpack-plugin": "^7.0.2",
+    "mini-css-extract-plugin": "^2.9.2",
+    "prop-types": "^15.8.1",
+    "react": "^18.3.1",
+    "react_ujs": "^3.2.1",
+    "react-dom": "^18.3.1",
+    "shakapacker": "8.2.0",
+    "style-loader": "^4.0.0",
+    "terser-webpack-plugin": "^5.3.14",
+    "webpack": "^5.98.0",
+    "webpack-assets-manifest": "^5.2.1",
+    "webpack-cli": "^4.10.0",
+    "webpack-merge": "^5.10.0"
   },
   "devDependencies": {
-    "@babel/core": "^7.26.10",
-    "@babel/preset-env": "^7.26.9",
     "@babel/preset-react": "^7.26.3",
     "esbuild": "^0.23.1",
     "esbuild-plugin-babel": "^0.2.3",
-    "glob": "^10.4.5"
+    "glob": "^10.4.5",
+    "webpack-dev-server": "^4.15.2"
   },
   "scripts": {
     "build": "node esbuild.config.js",
     "watch": "node esbuild.config.js --watch"
-  }
+  },
+  "version": "0.1.0",
+  "babel": {
+    "presets": [
+		"./node_modules/shakapacker/package/babel/preset.js",
+		"@babel/preset-react"
+    ]
+  },
+  "browserslist": [
+    "defaults"
+  ],
+  "packageManager": "npm@10.9.2"
 }

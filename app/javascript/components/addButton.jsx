@@ -1,6 +1,8 @@
 import React, { useState } from 'react'
 
-const Button = () => {
+const AddButton = () => {
+    console.log("AddButton component is mounting");
+	
 	
 	const [isOpen, setIsOpen] = useState(false);
 	
@@ -40,4 +42,4 @@ const Button = () => {
 	);
 };
 
-export default addButton;
+export default AddButton;

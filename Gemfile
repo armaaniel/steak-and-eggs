@@ -33,9 +33,7 @@ gem 'bcrypt'
 
 gem 'finnhub_ruby'
 
-gem 'react-rails'
-
-gem "jsbundling-rails"
+gem "react-rails", "= 3.2"
 
 # Reduces boot times through caching; required in config/boot.rb
 gem "bootsnap", require: false
@@ -70,3 +68,5 @@ group :test do
   gem "capybara"
   gem "selenium-webdriver"
 end
+
+gem "shakapacker", "= 8.2"
