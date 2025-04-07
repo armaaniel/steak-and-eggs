@@ -27,9 +27,7 @@ class UsersController < ApplicationController
     
   end
   
-  def update_balance
-    Rails.logger.info "PARAMS: #{params.inspect}"
-    
+  def update_balance    
     
     case params[:commit]
     when 'add funds'

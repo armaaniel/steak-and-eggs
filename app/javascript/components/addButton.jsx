@@ -3,7 +3,6 @@ import React, { useState } from 'react'
 const AddButton = () => {
     console.log("AddButton component is mounting");
 	
-	
 	const [isOpen, setIsOpen] = useState(false);
 	
 	const openDialog = () => setIsOpen(true);

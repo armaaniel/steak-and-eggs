@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
 
-const Button = () => {
+const WithdrawButton = () => {
 	
 	const [isOpen, setIsOpen] = useState(false);
 	
@@ -40,4 +40,4 @@ const Button = () => {
 	);
 };
 
-export default withdrawButton;
+export default WithdrawButton;
