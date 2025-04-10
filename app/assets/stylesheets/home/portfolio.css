@@ -1,0 +1,32 @@
+.portfolio {
+    width: 50%;
+    border-radius: 8px;
+    overflow: hidden;
+    position: relative;
+    top: 100px;
+}
+
+	  
+.positions-header {
+	text-align: left;
+}
+
+.quantity-header {
+	text-align: left;
+}
+	
+.portfolio-row {
+	transition: background-color 0.1s;
+}
+	  
+.portfolio-row:hover {
+	background-color: #F5F4F6;
+}
+
+.symbol-cell {
+   padding: 0.3rem;
+ }
+
+ .symbol-name {
+	 text-decoration:none;
+ }

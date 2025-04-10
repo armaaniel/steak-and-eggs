@@ -18,6 +18,7 @@ class StocksController < ApplicationController
         else
           Position.create(user_id: current_user.id, symbol: params[:symbol], shares: params[:quantity])
         end
+        Transaction.create(quantity: params[:quantity], amount: (params[:quantity] * @price), transaction_type: 'Buy', user_id: current_user.id)
       end
       
     when 'sell'
@@ -32,8 +33,9 @@ class StocksController < ApplicationController
         current_user.save
         @record.update(shares: (@record[:shares] - params[:quantity]))
       end
+      Transaction.create(quantity: params[:quantity], amount: (params[:quantity] * @price), transaction_type: 'Sell', user_id: current_user.id)
     end
-    
+    redirect_to "/stocks/#{params[:symbol]}"
   end
   
   private

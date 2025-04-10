@@ -1,4 +1,4 @@
-<h2><%=params[:symbol]%> Current price: <%=@price || 'price unavailable' %> </h2>
+<h2><%=params[:symbol]%> - <%=params[:description]%>Current price: <%=@price || 'price unavailable' %> </h2>
 <h2>You hold <%= @record&.shares || 0 %> shares</h2>
 <div>
 	<form method='POST' action='/position'>

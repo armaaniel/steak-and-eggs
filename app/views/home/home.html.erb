@@ -1,22 +1,32 @@
 <h2>Your current balance is: $<%=current_user&.balance%> </h2>
 
-<ul>You hold
-<%@positions.each do |n|%>
-<li><a href='/stocks/<%=n[:symbol]%>'> 
-	<%=n[:shares] %> of <%=n[:symbol]%> 
-</a></li>
-<%end%>
-</ul>
-
-<div class ='transfer'>
-	<form class='transfer-form' method='post' action='/balance'>
-	    <input type="hidden" name="authenticity_token" value="<%= form_authenticity_token %>">
-		<input type='submit' name='commit' value='add funds'>
-		<input type='submit' name='commit' value='withdraw funds'>
-		<input type='number' placeholder='Amount' name='amount'>
-	</form>
+<table class='portfolio'>
+  <tr>
+    <th class='positions-header'>Positions</th>
+    <th class='quantity-header'>Quantity</th>
+  </tr>
+  <%@positions.each do |n|%>
+  <tr class ='portfolio-row'>
+    <td class='symbol-cell'>
+      <a href='/stocks/<%=n[:symbol]%>' class='symbol-name'>
+        <%=n[:symbol] %>
+      </a>
+    </td>
+	<td class='shares-cell'>
+		<%=n[:shares] %> shares
+	</td>
+  </tr>
+  <%end%>
+</table>
 </div>
 
-<%= react_component("AddButton") %>	  
-<%= react_component("WithdrawButton") %>	  
+<div class ='transfer'>
+	<div class='transfer-form'>
+		<%= react_component("AddButton") %>	  
+		<%= react_component("WithdrawButton") %>
+	</div>
+</div>
+
+  
+
 	

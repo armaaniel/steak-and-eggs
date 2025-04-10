@@ -1,0 +1,21 @@
+<table class='portfolio'>
+  <tr>
+    <th class='quantity-header'>Transaction Type</th>
+	<th>Quantity</th>
+	<th>Amount</th>
+  </tr>
+  <%@activity.each do |n|%>
+  <tr class ='portfolio-row'>
+    <td class='symbol-cell'>
+      <%=n[:transaction_type]%>
+    </td>
+    <td class='symbol-cell'>
+	<%=n[:quantity]%>
+	</td>
+    <td class='symbol-cell'>
+		<%=n[:amount]%>
+	</td>
+  </tr>
+  <%end%>
+</table>
+</div>

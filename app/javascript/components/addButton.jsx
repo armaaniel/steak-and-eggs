@@ -2,6 +2,7 @@ import React, { useState } from 'react'
 
 const AddButton = () => {
     console.log("AddButton component is mounting");
+	console.log("Is className being included:", 'add-button');
 	
 	const [isOpen, setIsOpen] = useState(false);
 	
@@ -10,8 +11,8 @@ const AddButton = () => {
 	
 	return (
 		
-		<div> 
-			<button onClick={openDialog}>
+		<> 
+			<button className='add-button' onClick={openDialog}>
 				Add Funds
 			</button>
 				
@@ -25,7 +26,7 @@ const AddButton = () => {
 						value={document.querySelector("meta[name='csrf-token']")?.getAttribute("content")}/>
 						<h2>Add Funds</h2>
 						<div>
-							<input type='number' placeholder='Amount' name='amount'/>
+							<input type='number' placeholder='Amount' name='amount' min='0.01' step='0.01'/>
 						</div>
 						<div>
 							<input type='submit' name='commit' value='add funds'/>
@@ -37,7 +38,7 @@ const AddButton = () => {
 				</div>
 				</div>
 		)}
-			</div>
+			</>
 	);
 };
 

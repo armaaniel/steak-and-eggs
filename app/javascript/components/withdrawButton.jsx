@@ -10,7 +10,7 @@ const WithdrawButton = () => {
 	return (
 		
 		<div> 
-			<button onClick={openDialog}>
+			<button className='withdraw-button' onClick={openDialog}>
 				Withdraw Funds
 			</button>
 				

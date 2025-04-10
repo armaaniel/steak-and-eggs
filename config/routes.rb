@@ -10,4 +10,5 @@ Rails.application.routes.draw do
   get('stocks/:symbol', to:'stocks#show')
   post('position', to: 'stocks#position')
   get('logout', to: 'users#logout')
+  get('activity', to: 'home#activity')
 end

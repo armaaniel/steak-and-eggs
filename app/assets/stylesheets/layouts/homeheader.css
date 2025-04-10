@@ -1,0 +1,13 @@
+.activity {
+	display:flex;
+	align-items:center;
+	gap:1rem;
+	padding-top:1.25rem;
+	padding-left:4rem;
+}
+
+.activity a {	
+	text-decoration:none;
+	font-family:helvetica neue;
+	color:#32302f;
+}
