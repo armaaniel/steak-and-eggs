@@ -1,5 +1,8 @@
-<h2><%=params[:symbol]%> - <%=params[:description]%>Current price: <%=@price || 'price unavailable' %> </h2>
+<h2><%=params[:symbol]%> - <%=params[:description]%>Current price: <%=@pricedata || 'price unavailable' %> </h2>
 <h2>You hold <%= @record&.shares || 0 %> shares</h2>
+
+<%= react_component("StockChart", {dailyData: @daily}) %>
+
 <div>
 	<form method='POST' action='/position'>
     	<input type="hidden" name="authenticity_token" value="<%= form_authenticity_token %>">

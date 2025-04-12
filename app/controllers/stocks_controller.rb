@@ -1,6 +1,6 @@
 class StocksController < ApplicationController
   before_action(:authenticate_user)
-  before_action(:set_price_and_record)
+  before_action(:get_data)
   layout 'authenticated'
   def show
   end
@@ -40,10 +40,18 @@ class StocksController < ApplicationController
   
   private
   
-  def set_price_and_record
-    finnhub_client ||= FinnhubRuby::DefaultApi.new
-    @price = finnhub_client.quote(params[:symbol]).c
+  def get_data
+    stock_object ||= Alphavantage::TimeSeries.new(symbol: params[:symbol])
+    @pricedata = stock_object.quote
+    @price = @pricedata&.price.to_f
     @record = Position.find_by(user_id: current_user.id, symbol: params[:symbol])
+    @daily = []
+    stock_object.daily['time_series_daily'].each do |date, values|
+      @daily.unshift({
+        date: date,
+        close: values['close'].to_f,
+      })
+    end
   end
   
 end  

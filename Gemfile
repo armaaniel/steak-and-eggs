@@ -35,6 +35,8 @@ gem 'finnhub_ruby'
 
 gem "react-rails", "= 3.2"
 
+gem 'alphavantage'
+
 # Reduces boot times through caching; required in config/boot.rb
 gem "bootsnap", require: false
 

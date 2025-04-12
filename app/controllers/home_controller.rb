@@ -8,11 +8,13 @@ class HomeController < ApplicationController
   end
   
   def search
+    results = Alphavantage::TimeSeries.search(keywords: (params[:search]))
+    @results = results.select do |n| 
+     (n.region == 'United States' || n.region =='Toronto') &&
+     (n.type == 'Equity' || n.type == 'ETF') &&
+     !n.symbol.include?('.')
+   end
     
-    finnhub_client ||= FinnhubRuby::DefaultApi.new
-    search = finnhub_client.symbol_search(params[:search])
-    filtered_search = search.result.select {|n| (n.type == 'Common Stock' || n.type == 'ETP') && !n.symbol.include?('.')}
-    @results = filtered_search.map {|n| {symbol: n.symbol, description: n.description}}
   end
   
   def activity

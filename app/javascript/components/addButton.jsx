@@ -1,9 +1,7 @@
 import React, { useState } from 'react'
 
 const AddButton = () => {
-    console.log("AddButton component is mounting");
-	console.log("Is className being included:", 'add-button');
-	
+    
 	const [isOpen, setIsOpen] = useState(false);
 	
 	const openDialog = () => setIsOpen(true);

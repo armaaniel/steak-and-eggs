@@ -17,6 +17,7 @@
     "react": "^18.3.1",
     "react_ujs": "^3.2.1",
     "react-dom": "^18.3.1",
+    "recharts": "^2.15.2",
     "shakapacker": "8.2.0",
     "style-loader": "^4.0.0",
     "terser-webpack-plugin": "^5.3.14",
@@ -39,8 +40,8 @@
   "version": "0.1.0",
   "babel": {
     "presets": [
-		"./node_modules/shakapacker/package/babel/preset.js",
-		"@babel/preset-react"
+      "./node_modules/shakapacker/package/babel/preset.js",
+      "@babel/preset-react"
     ]
   },
   "browserslist": [
