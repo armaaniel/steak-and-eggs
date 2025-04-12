@@ -33,7 +33,7 @@ gem 'bcrypt'
 
 gem 'finnhub_ruby'
 
-gem "react-rails", "= 3.2"
+gem "react-rails", "3.2.1"
 
 gem 'alphavantage'
 
