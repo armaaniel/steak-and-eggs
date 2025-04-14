@@ -1,9 +1,15 @@
-<h2><%=params[:symbol]%> - <%=params[:description]%>Current price: <%=@pricedata || 'price unavailable' %> </h2>
+<h2><%=params[:symbol]%> - <%=params[:description]%>Current price: <%=@price || 'price unavailable' %> </h2>
 <h2>You hold <%= @record&.shares || 0 %> shares</h2>
 
-<%= react_component("StockChart", {dailyData: @daily}) %>
 
-<div>
+<div class='parent-container'>
+
+<div class ='chart-container'>
+<%= react_component("StockChart", {dailyData: @daily}) %>
+</div>
+
+
+<!--<div>
 	<form method='POST' action='/position'>
     	<input type="hidden" name="authenticity_token" value="<%= form_authenticity_token %>">
 	    <input type="hidden" name="symbol" value="<%= params[:symbol] %>">
@@ -11,6 +17,10 @@
 		<input type='submit', name='commit', value='sell'>
 		<input type='number' placeholder='quantity' name='quantity'>
 	</form>
-</div>	
-	
+</div>!-->
 
+<div class='buy-sell-container'>
+<%= react_component("BuySell") %>
+</div>
+
+</div>

@@ -1,0 +1,13 @@
+.buy-sell-container {
+	position: relative;
+	  display: flex;
+	  flex-direction: row;
+	  width: 25%;
+	  flex: 1;
+	  margin-left:9%;
+	  
+	}
+
+	.parent-container {
+		display:flex;
+	}

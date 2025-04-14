@@ -24,7 +24,7 @@ const WithdrawButton = () => {
 						value={document.querySelector("meta[name='csrf-token']")?.getAttribute("content")}/>
 						<h2>Withdraw Funds</h2>
 						<div>
-							<input type='number' placeholder='Amount' name='amount'/>
+							<input type='number' placeholder='Amount' name='amount' min='0.01' step='0.01'/>
 						</div>
 						<div>
 							<input type='submit' name='commit' value='withdraw funds'/>
