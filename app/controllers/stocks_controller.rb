@@ -42,8 +42,8 @@ class StocksController < ApplicationController
   
   def get_data
     stock_object ||= Alphavantage::TimeSeries.new(symbol: params[:symbol])
-    @pricedata = stock_object.quote
-    @price = @pricedata&.price.to_f
+    @marketdata = stock_object.quote
+    @companydata = Alphavantage::Fundamental.new(symbol: params[:symbol]).overview
     @record = Position.find_by(user_id: current_user.id, symbol: params[:symbol])
     @daily = []
     stock_object.daily['time_series_daily'].each do |date, values|

@@ -1,12 +1,15 @@
+<!--<div>
+
 <h2><%=params[:symbol]%> - <%=params[:description]%>Current price: <%=@price || 'price unavailable' %> </h2>
 <h2>You hold <%= @record&.shares || 0 %> shares</h2>
+</div>!-->
 
 
 <div class='parent-container'>
 
-<div class ='chart-container'>
-<%= react_component("StockChart", {dailyData: @daily}) %>
-</div>
+	<div class ='chart-container'>
+		<%= react_component("StockChart", {dailyData: @daily}) %>
+	</div>
 
 
 <!--<div>
@@ -19,8 +22,69 @@
 	</form>
 </div>!-->
 
-<div class='buy-sell-container'>
-<%= react_component("BuySell") %>
+	<div class='buy-sell-container'>
+		<%= react_component("BuySell") %>
+	</div>
+
+</div>
+
+<div class='data-parent-container'>
+	
+	<div>
+		<h2 class='header-data-name'>Market Details</h2>
+	</div>
+
+<div class='market-data'>
+	<div>
+		<p class='data-name'>Open</p>
+		<p class='data-value'><%= number_to_currency(@marketdata.open)%></p>
+	</div>
+	
+	<div>
+		<p class='data-name'>High</p>
+		<p class='data-value'><%= number_to_currency(@marketdata.high) %></p>
+	</div>
+	
+	<div>
+		<p class='data-name'>Low</p>
+		<p class='data-value'><%= number_to_currency(@marketdata.low) %></p>
+	</div>
+	
+	<div>
+		<p class='data-name'>52 week high</p>
+		<p class='data-value'><%= number_to_currency(@companydata['52_week_high'])%></p>
+	</div>
+	
+	<div>
+		<p class='data-name'>52 week low</p>
+		<p class='data-value'><%= number_to_currency(@companydata['52_week_low'])%></p>
+	</div>
+	
+	<div>
+		<p class='data-name'>Volume</p>
+		<p class='data-value'><%= number_to_human(@marketdata.volume)%></p>
+	</div>		
+	
+	<div>
+		<p class='data-name'>Exchange</p>
+		<p class='data-value'><%=@companydata.exchange%></p>
+	</div>
+	
+	<div>
+		<p class='data-name'>Market cap</p>
+		<p class='data-value'>$<%= number_to_human(@companydata.market_capitalization)%></p>
+	</div>
+	
+	<div>
+		<p class='data-name'>Currency</p>
+		<p class='data-value'><%=@companydata.currency%></p>
+	</div>
+	
+</div>
+
+<div class='stock-description'>
+	<h2 class='header-data-name'>Description</h2>
+	<p class='data-value'><%=@companydata.description%></p>
 </div>
 
 </div>

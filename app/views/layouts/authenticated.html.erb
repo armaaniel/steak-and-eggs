@@ -12,7 +12,7 @@
 
   <body>
 	  <header>
-		  <nav>
+		  <nav class='nav'>
 		  <div class='main-logo'>
 			  <a href = '/home' class = 'logo'>
 			 	  <%= image_tag "steak-and-eggs.svg", alt: "logo", class: "navbar-logo" %>
@@ -26,7 +26,7 @@
   			</div>
 		  	<div class ='navbar'>
 				<form method='GET' action='/search'>
-					<input type='search' placeholder='search' name='search'>
+					<input type='search' placeholder='search' name='search' class='searchbar'>
 				</form>
 				<a href ='logout'>
 					<button>Log Out</button>
@@ -35,6 +35,11 @@
 		  </nav>
 	
 	  </header>
+	  
+	<div class='padding-wrapper'>
+	  
     <%= yield %>
+    </div>
+	
   </body>
 </html>

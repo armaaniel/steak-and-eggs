@@ -1,0 +1,33 @@
+.market-data {
+	
+	display:grid;
+	grid-template-columns: 1fr 1fr 1fr;
+	grid-template-rows: 1fr 1fr 1fr;
+	row-gap:1rem;
+	
+}
+.data-name {
+	font-family:futura;
+	
+}
+
+.data-value {
+	font-family:avenir;
+	font-weight:200;
+}
+
+.data-parent-container {
+	display:grid;
+	row-gap:1rem;
+}
+
+.header-data-name {
+	font-family:futura;
+	font-weight:500;
+}
+
+.stock-description {
+	display:flex;
+	flex-direction:column;
+	gap:1rem;
+}
