@@ -1,32 +1,60 @@
-<h2>Your current balance is: $<%=current_user&.balance%> </h2>
+<div class='home'>
+<div class='home-left'>
+	
+	
+<div class='cb'>
+<h2>Your current cash balance is: $<%=current_user&.balance%> </h2>
+</div>
 
+<% if @positions.any?%>
+<div class="holdings">
+	<h2> Holdings </h2>
+</div>
+
+<div class='table-wrapper-one'>
 <table class='portfolio'>
-  <tr>
-    <th class='positions-header'>Positions</th>
-    <th class='quantity-header'>Quantity</th>
-  </tr>
+	<tr class='heading-row'>
+		<th class='positions-header'>Positions</th>
+		<th class='quantity-header'>Total Value</th>
+	</tr>
+	
   <%@positions.each do |n|%>
   <tr class ='portfolio-row'>
     <td class='symbol-cell'>
       <a href='/stocks/<%=n[:symbol]%>' class='symbol-name'>
-        <%=n[:symbol] %>
+		  
+		<img src='https://img.logo.dev/ticker/<%=n[:symbol]%>?token=pk_ZBCJebqoQXKBWVLhwcIBfg&retina=true' 
+		height='32' width='32'>
+		
+	    <div class="stock-text">
+		<p class="stock-symbol"><%=n[:symbol]%></p>
+		<p class="stock-name"><%=n[:name]%></p>	
+		</div>
+		
       </a>
     </td>
 	<td class='shares-cell'>
+        <a href='/stocks/<%=n[:symbol]%>' class='symbol-name'>
 		<%=n[:shares] %> shares
+        </a>
+		
 	</td>
+	
+	
   </tr>
+  
   <%end%>
 </table>
 </div>
-
-<div class ='transfer'>
-	<div class='transfer-form'>
-		<%= react_component("AddButton") %>	  
-		<%= react_component("WithdrawButton") %>
-	</div>
+  <%end%>
 </div>
 
-  
+<div class='home-right'>  
 
-	
+<div class ='button-container'>
+	<%= react_component("AddButton") %>	  
+	<%= react_component("WithdrawButton") %>
+</div>
+
+</div>
+</div>

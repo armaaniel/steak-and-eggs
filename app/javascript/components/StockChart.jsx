@@ -4,6 +4,8 @@ import { LineChart, Line, Tooltip, ResponsiveContainer, YAxis } from 'recharts';
 const StockChart = (props) => {
 	return (
 		
+		
+		
 		<div className='chart'>
  	   	<ResponsiveContainer width="100%" height="100%">
 			<LineChart data = {props.dailyData}>

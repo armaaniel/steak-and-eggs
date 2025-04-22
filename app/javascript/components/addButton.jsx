@@ -10,7 +10,7 @@ const AddButton = () => {
 	return (
 		
 		<> 
-			<button className='add-button' onClick={openDialog}>
+			<button className='add-withdraw-button' onClick={openDialog}>
 				Add Funds
 			</button>
 				
@@ -19,16 +19,22 @@ const AddButton = () => {
 			<div>
 				<div className='background-overlay'></div>
 				<div className='modal-dialog'>
-					<form className = 'modal-contents' method='post' action='/balance'>
+				<div className='modal-header'>
+						<h2>Add Funds</h2>
+				</div>
+					<form className = 'modal-form' method='post' action='/balance'>
 	   	 				<input type="hidden" name="authenticity_token" 
 						value={document.querySelector("meta[name='csrf-token']")?.getAttribute("content")}/>
-						<h2>Add Funds</h2>
-						<div>
-							<input type='number' placeholder='Amount' name='amount' min='0.01' step='0.01'/>
+						
+						<div className='modal-amount'>
+							<input type='number' placeholder='Amount' name='amount' min='0.01' step='0.01' className='shares-input'/>
 						</div>
-						<div>
-							<input type='submit' name='commit' value='add funds'/>
+						<div className='modal-submit'>
+							<button type='submit' name='commit' value='add' className='aw-submit'>
+							Submit
+							</button>
 						</div>
+			
 					</form>
 					<button className='close-button' onClick={closeDialog}>
 						X

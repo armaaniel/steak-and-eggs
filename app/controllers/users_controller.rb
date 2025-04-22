@@ -26,11 +26,11 @@ class UsersController < ApplicationController
   def update_balance    
     
     case params[:commit] 
-    when 'add funds'
+    when 'add'
       current_user.balance += params[:amount].to_f
       current_user.save
       Transaction.create(quantity: 1, amount: params[:amount].to_f, transaction_type: 'Deposit', user_id: current_user.id)
-    when 'withdraw funds'
+    when 'withdraw'
       current_user.balance -= params[:amount].to_f
       current_user.save
       Transaction.create(quantity: 1, amount: params[:amount].to_f, transaction_type: 'Withdraw', user_id: current_user.id)

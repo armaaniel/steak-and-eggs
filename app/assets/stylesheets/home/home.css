@@ -1,28 +1,25 @@
-.transfer {
-	display:flex;
-	justify-content:end;
-	margin-left:auto;
-	width:27%;
-	height:5%;
-	margin-right:5rem;
-}
-
-.transfer-form {
-	height:100%;
-	display:flex;
-	justify-content:center;
-	align-items:center;
-	gap:5%;
-	padding:1rem;
-	width:100%;
-}
-
-.transfer-form > div {
-	height:100%;
-	width:100%;
-}
-
 .padding-wrapper {
 	padding:1rem;
+	display:flex;
+	flex-direction:column;
+}
+.home-left {
+	display:flex;
+	flex-direction:column;
+	width:68%;
+	row-gap:1.5rem;
+}
+.home-right {
+	display:flex;
+	flex-direction:column;
+	width:32%;
 }
 
+.home {
+	display:flex;
+	flex-direction:row;
+}
+
+.cb {
+	font-family:avenir;
+}

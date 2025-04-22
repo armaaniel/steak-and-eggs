@@ -10,7 +10,7 @@ const WithdrawButton = () => {
 	return (
 		
 		<> 
-			<button className='withdraw-button' onClick={openDialog}>
+			<button className='add-withdraw-button' onClick={openDialog}>
 				Withdraw Funds
 			</button>
 				
@@ -19,16 +19,23 @@ const WithdrawButton = () => {
 			<div>
 				<div className='background-overlay'></div>
 				<div className='modal-dialog'>
-					<form className = 'modal-contents' method='post' action='/balance'>
+				<div className='modal-header'>
+						<h2>Withdraw Funds</h2>
+				</div>
+					<form className = 'modal-form' method='post' action='/balance'>
 	   	 				<input type="hidden" name="authenticity_token" 
 						value={document.querySelector("meta[name='csrf-token']")?.getAttribute("content")}/>
-						<h2>Withdraw Funds</h2>
-						<div>
-							<input type='number' placeholder='Amount' name='amount' min='0.01' step='0.01'/>
+			
+						<div className='modal-amount'>
+							<input type='number' placeholder='Amount' name='amount' min='0.01' step='0.01' className='shares-input'/>
 						</div>
-						<div>
-							<input type='submit' name='commit' value='withdraw funds'/>
+			
+						<div className='modal-submit'>
+							<button type='submit' name='commit' value='withdraw' className='aw-submit'>
+							Submit
+							</button>
 						</div>
+			
 					</form>
 					<button className='close-button' onClick={closeDialog}>
 						X

@@ -2,8 +2,11 @@ class HomeController < ApplicationController
   before_action(:authenticate_user)
   layout "authenticated"
   def home
+    name_object = 
     positions = Position.where(user_id: current_user.id)
-    @positions = positions.map {|n| {symbol: n.symbol, shares: n.shares}}
+    @positions = positions.map do |n| 
+      {symbol: n.symbol, shares: n.shares, name: Alphavantage::Fundamental.new(symbol:n.symbol).overview.name}
+    end
     
   end
   

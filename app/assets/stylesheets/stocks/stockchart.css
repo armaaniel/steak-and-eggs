@@ -1,8 +1,13 @@
 .chart-container {
-	width:68%;
+	width:69%;
 }
 
 .chart {
 	width: 100%;
-	height: 30vh;
+	height: 35vh;
+}
+
+.parent-container {
+	display:flex;
+	flex-direciton:column;
 }

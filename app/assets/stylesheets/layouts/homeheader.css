@@ -1,21 +1,24 @@
 .activity {
 	display:flex;
-	align-items:center;
-	gap:1rem;
-	padding-top:1.25rem;
-	padding-left:4rem;
+	margin-top:1.25rem;
+	padding:1.25rem;
 }
 
 .activity a {	
 	text-decoration:none;
-	font-family:helvetica neue;
+	font-family:avenir;
 	color:#32302f;
+}
+
+.activity:hover {
+  background-color: #f2f2f2;
+  border-radius: 0.5rem;
 }
 
 .searchbar {
 	border-radius:0.75rem;
 	padding:0.5rem 0.5rem 0.5rem 0.75rem;
-	outline:none;
 	border:1px solid rgb(228, 226, 225);
 
 }
+

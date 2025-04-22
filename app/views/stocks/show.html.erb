@@ -1,53 +1,78 @@
-<!--<div>
 
-<h2><%=params[:symbol]%> - <%=params[:description]%>Current price: <%=@price || 'price unavailable' %> </h2>
-<h2>You hold <%= @record&.shares || 0 %> shares</h2>
-</div>!-->
-
-
-<div class='parent-container'>
-
+	
+	<div class='symbol-name'>
+		<img src='https://img.logo.dev/ticker/<%=params[:symbol]%>?token=pk_ZBCJebqoQXKBWVLhwcIBfg&retina=true' 
+		height='40' width='40'>
+	    <div class="stock-text">
+		<p class="stock-symbol"><%=params[:symbol]%></p>
+		<p class="stock-name"><%= @companydata.name%></p>
+		</div>
+		
+		<div>
+		<p class="stock-symbol"> Current Price: <%= number_to_currency(@marketdata.price)%></p>	
+		</div>
+	</div>
+	
 	<div class ='chart-container'>
 		<%= react_component("StockChart", {dailyData: @daily}) %>
 	</div>
 
 
-<!--<div>
-	<form method='POST' action='/position'>
-    	<input type="hidden" name="authenticity_token" value="<%= form_authenticity_token %>">
-	    <input type="hidden" name="symbol" value="<%= params[:symbol] %>">
-		<input type='submit', name='commit', value='buy'>
-		<input type='submit', name='commit', value='sell'>
-		<input type='number' placeholder='quantity' name='quantity'>
-	</form>
-</div>!-->
-
 	<div class='buy-sell-container'>
-		<%= react_component("BuySell") %>
+		<%= react_component("BuySell", {marketPrice: @marketdata.price, userBalance: current_user.balance,
+		userHoldings: @record&.shares, symbol: @marketdata.symbol}) %>
 	</div>
 
-</div>
-
 <div class='data-parent-container'>
+	
+	<% if @record %>
+	
+	<div class="holdings">
+		<h2> Holdings </h2>
+	</div>
+
+	<div class='table-wrapper'>
+	<table class='portfolio'>
+		<tr class='heading-row'>
+			<th class='positions-header'>Positions</th>
+			<th class='quantity-header'>Total Value</th>
+		</tr>
+
+	  <tr class ='portfolio-row'>
+	    <td class='symbol-cell'>
+	      <a href='/stocks/<%=@record[:symbol]%>' class='symbol-name'>
+			  
+	  		<img src='https://img.logo.dev/ticker/<%=@record[:symbol]%>?token=pk_ZBCJebqoQXKBWVLhwcIBfg&retina=true' 
+	  		height='32' width='32'>
+			
+		    <div class="stock-text">
+			<p class="stock-symbol"><%=@record[:symbol]%></p>
+			<p class="stock-name"><%= @companydata.name%></p>	
+		
+		</div>
+		
+	      </a>
+	    </td>
+		<td class='shares-cell'>
+	        <a href='/stocks/<%=@record[:symbol]%>' class='symbol-name'>
+			<%=@record[:shares] %> shares
+	        </a>
+		
+		</td>
+	</tr>
+	</table>
+	</div>
+
+	<%end%>
 	
 	<div>
 		<h2 class='header-data-name'>Market Details</h2>
 	</div>
 
 <div class='market-data'>
-	<div>
+	<div class>
 		<p class='data-name'>Open</p>
 		<p class='data-value'><%= number_to_currency(@marketdata.open)%></p>
-	</div>
-	
-	<div>
-		<p class='data-name'>High</p>
-		<p class='data-value'><%= number_to_currency(@marketdata.high) %></p>
-	</div>
-	
-	<div>
-		<p class='data-name'>Low</p>
-		<p class='data-value'><%= number_to_currency(@marketdata.low) %></p>
 	</div>
 	
 	<div>
@@ -56,24 +81,37 @@
 	</div>
 	
 	<div>
-		<p class='data-name'>52 week low</p>
-		<p class='data-value'><%= number_to_currency(@companydata['52_week_low'])%></p>
+		<p class='data-name'>Exchange</p>
+		<p class='data-value'><%=@companydata.exchange%></p>
 	</div>
 	
 	<div>
-		<p class='data-name'>Volume</p>
-		<p class='data-value'><%= number_to_human(@marketdata.volume)%></p>
-	</div>		
+		<p class='data-name'>High</p>
+		<p class='data-value'><%= number_to_currency(@marketdata.high) %></p>
+	</div>
 	
-	<div>
-		<p class='data-name'>Exchange</p>
-		<p class='data-value'><%=@companydata.exchange%></p>
+	<div class>
+		<p class='data-name'>52 week low</p>
+		<p class='data-value'><%= number_to_currency(@companydata['52_week_low'])%></p>
 	</div>
 	
 	<div>
 		<p class='data-name'>Market cap</p>
 		<p class='data-value'>$<%= number_to_human(@companydata.market_capitalization)%></p>
 	</div>
+		
+	
+	<div>
+		<p class='data-name'>Low</p>
+		<p class='data-value'><%= number_to_currency(@marketdata.low) %></p>
+	</div>
+	
+	
+	<div>
+		<p class='data-name'>Volume</p>
+		<p class='data-value'><%= number_to_human(@marketdata.volume)%></p>
+	</div>
+	
 	
 	<div>
 		<p class='data-name'>Currency</p>

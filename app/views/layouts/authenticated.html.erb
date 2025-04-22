@@ -13,25 +13,35 @@
   <body>
 	  <header>
 		  <nav class='nav'>
+			  
 		  <div class='main-logo'>
 			  <a href = '/home' class = 'logo'>
 			 	  <%= image_tag "steak-and-eggs.svg", alt: "logo", class: "navbar-logo" %>
 			  </a>
 		  </div>
+		  
 		  <div class='activity'>
-		  	<a href ='/home'>Home</a> 
-			</div>
+			  <a href ='/home'>Home</a> 
+		  </div>
+			
   		  <div class='activity'>
-  		  	<a href ='activity'>Activity</a> 
-  			</div>
+			  <a href ='/activity'>Activity</a> 
+		  </div>
+		  
 		  	<div class ='navbar'>
+				
 				<form method='GET' action='/search'>
 					<input type='search' placeholder='search' name='search' class='searchbar'>
 				</form>
+				
+				<div>
 				<a href ='logout'>
 					<button>Log Out</button>
 				</a>
+				</div>
+				
 			</div>
+			
 		  </nav>
 	
 	  </header>
