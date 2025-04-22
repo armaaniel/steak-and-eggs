@@ -11,6 +11,8 @@
 	border-radius:1rem;
 	padding:0rem 1rem;
 	
+    max-height: 375px;
+    overflow-y: auto;
 }
 
 .portfolio {
@@ -71,3 +73,10 @@ font-family:avenir;
 .parent-container {
   width: 100%;
 }
+
+.heading-row {
+  position: sticky;
+  top: 0;
+  background-color: white;
+}
+
