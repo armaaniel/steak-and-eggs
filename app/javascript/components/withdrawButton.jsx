@@ -37,9 +37,11 @@ const WithdrawButton = () => {
 						</div>
 			
 					</form>
+			
 					<button className='close-button' onClick={closeDialog}>
 						X
 					</button>
+			
 				</div>
 				</div>
 		)}
