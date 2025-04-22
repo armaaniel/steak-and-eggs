@@ -1,7 +1,7 @@
-<h2>Results for "<%= params[:search]%>"</h2>
+<h2 class='stock-name'>Results for "<%= params[:search]%>"</h2>
 <ul>
 	<% @results.each do |n| %>
-	<li><a href='/stocks/<%=n[:symbol]%>'>
+	<li><a class='stock-name' href='/stocks/<%=n[:symbol]%>'>
 		<%= n[:symbol] %>
 		-
 		<%= n[:name]%>

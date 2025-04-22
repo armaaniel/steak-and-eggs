@@ -1,17 +1,16 @@
-
+<div class='symbol-name-two'>
 	
-	<div class='symbol-name'>
 		<img src='https://img.logo.dev/ticker/<%=params[:symbol]%>?token=pk_ZBCJebqoQXKBWVLhwcIBfg&retina=true' 
 		height='40' width='40'>
 	    <div class="stock-text">
-		<p class="stock-symbol"><%=params[:symbol]%></p>
-		<p class="stock-name"><%= @companydata.name%></p>
+		<p class="stock-symbol"><%=params[:symbol]%> </p>
+		<p class="stock-name"><%= @companydata.name%> - Current Price: <%= number_to_currency(@marketdata.price)%> </p>
 		</div>
 		
-		<div>
-		<p class="stock-symbol"> Current Price: <%= number_to_currency(@marketdata.price)%></p>	
-		</div>
+		
 	</div>
+	
+	
 	
 	<div class ='chart-container'>
 		<%= react_component("StockChart", {dailyData: @daily}) %>

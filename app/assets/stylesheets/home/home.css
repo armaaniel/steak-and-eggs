@@ -23,3 +23,26 @@
 .cb {
 	font-family:avenir;
 }
+
+.stock-price {
+  display: flex;
+  justify-content: center;
+  width:19%;
+}
+  
+.symbol-name-two {
+  	display:flex;
+    text-decoration: none;
+    flex-direction:row;
+    gap:8px;
+     align-items: center;
+     color:inherit;
+     padding:8px;
+	 width:68%;
+  
+  }
+  
+  ul {
+    list-style-type: none;
+	margin-top:1rem;
+  }

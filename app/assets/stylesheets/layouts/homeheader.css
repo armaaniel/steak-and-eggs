@@ -2,13 +2,10 @@
 	display:flex;
 	margin-top:1.25rem;
 	padding:1.25rem;
-}
-
-.activity a {	
 	text-decoration:none;
 	font-family:avenir;
 	color:#32302f;
-}
+}	
 
 .activity:hover {
   background-color: #f2f2f2;
@@ -22,3 +19,15 @@
 
 }
 
+.main-logo {
+  display: inline-block;
+  border-radius: 50%;
+  width: auto;
+  height: auto;
+}
+
+.main-logo img {
+  display: block;
+  width: auto;
+  height: auto;
+}

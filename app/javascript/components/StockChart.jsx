@@ -5,7 +5,6 @@ const StockChart = (props) => {
 	return (
 		
 		
-		
 		<div className='chart'>
  	   	<ResponsiveContainer width="100%" height="100%">
 			<LineChart data = {props.dailyData}>
@@ -13,6 +12,7 @@ const StockChart = (props) => {
       		<Tooltip cursor={false} 
 			position={{ x: 0, y: 0 }}   
 			labelFormatter={(index) => props.dailyData[index].date}
+			contentStyle={{ border: 'none', background: 'none'}}
 			/>
           <YAxis domain={[dataMin => (dataMin*0.95), dataMax => (dataMax * 1.05)]} hide={true} />
 			
