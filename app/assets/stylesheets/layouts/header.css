@@ -1,6 +1,5 @@
 .nav {
 	display:flex;
-	gap:1rem;
 	align-items:center;
 	
 }
@@ -9,13 +8,13 @@
 	display:flex;
 	justify-content:end;
 	align-items:center;
-	gap:2rem;
+	gap:1.25rem;
 	padding-top:1.25rem;
 	flex:1;
 	margin-right:3rem;
 }
 
-.navbar a {	
+.about-contact {	
 	text-decoration:none;
 	font-family:helvetica neue;
 	color:#32302f;
@@ -35,11 +34,41 @@
     height: 0.2rem;  
 }
 
-.navbar button {
-	padding:1rem 3rem;
-	border-radius:1.5rem;
+.login-link {
+	
+	display:flex;
+	justify-content:center;
+	width:auto;
+	font-family:futura;
+	background:white;
+	border-radius:4rem;
+	border:1px solid;
+	padding:0.75rem 1.5rem;
+	color:black;
+	text-decoration:none;
+	
 }
 
-.navbar button:hover {
-    background-color: #E4E2E1;
+.signup-link {
+	
+	display:flex;
+	justify-content:center;
+	width:auto;
+	font-family:futura;
+	background:rgb(50, 48, 47);
+	border-radius:4rem;
+	padding:0.75rem 1.5rem;
+	color:white;
+	text-decoration:none;
+}
+
+.signup-link:hover {
+	background-color:#535050;
+	transition:0.4s;
+}
+
+.login-link:hover {
+	background-color:#D4D3D2;
+	transition:0.4s;
+	
 }

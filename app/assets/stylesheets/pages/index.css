@@ -1,0 +1,47 @@
+.index-main {
+	display:flex;
+	flex-direction:column;
+	flex:1;
+	justify-content:center;
+	align-items:center;
+	background-color:#E4E8D5;
+}
+
+.index-trade {
+	padding:3rem;
+	
+}
+
+.index-start {
+	width:25%;
+	display:flex;
+	justify-content:center;
+	
+}
+
+.index-a {
+	
+	display:flex;
+	justify-content:center;
+	width:50%;
+	font-family:futura;
+	background:rgb(50, 48, 47);
+	border-radius:4rem;
+	padding:1rem;
+	color:white;
+	text-decoration:none;
+	
+}
+
+.index-a:hover {
+	background-color:#535050;
+	transition:0.4s;
+}
+
+.index-heading {
+	color:rgb(50, 48, 47);
+	font-family:avenir;
+	font-size:3rem;
+}
+
+

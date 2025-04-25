@@ -14,7 +14,7 @@
 
 .searchbar {
 	border-radius:0.75rem;
-	padding:0.5rem 0.5rem 0.5rem 0.75rem;
+	padding:0.75rem;
 	border:1px solid rgb(228, 226, 225);
 
 }
@@ -30,4 +30,19 @@
   display: block;
   width: auto;
   height: auto;
+}
+
+.navbar-two {
+	display:flex;
+	justify-content:end;
+	align-items:center;
+	gap:1rem;
+	padding-top:1.25rem;
+	flex:1;
+	margin-right:3rem;
+}
+
+.searchbar:hover {
+	border:1px solid black;
+
 }

@@ -91,11 +91,8 @@
 
 .aw-submit {
 	background:rgb(50, 48, 47);
-		border:1px solid;
-		border-radius:4rem;
-		min-height:2rem;
-		padding:1rem;
-		color:white;
-		width:50%;
-	
+	border-radius:4rem;
+	padding:1rem;
+	color:white;
+	width:50%;
 }
