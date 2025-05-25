@@ -10,11 +10,6 @@ module Types
       description('fetch user data by ID')
     end
     
-    field(:users_with_positions_by_id, Types::UserType) do
-      argument(:id, ID, required:true)
-      description('fetch user data with positions by ID')
-    end
-    
     field(:positions, Types::PositionsType) do
       argument(:id, ID, required:true)
       description('fetch position data by user id')
@@ -25,10 +20,6 @@ module Types
     end
     
     def users_by_id(id:)
-      User.find_by(id: id)
-    end
-    
-    def users_with_positions_by_id(id:)
       User.find_by(id: id)
     end
     
