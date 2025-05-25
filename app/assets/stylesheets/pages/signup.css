@@ -7,6 +7,14 @@
 
 }
 
+.signup-box > div[data-react-class="Signup"] {
+	display:flex;
+	flex-direction:column;
+		
+	width:65%;
+	min-height:51%;
+}
+
 .signup-form {
 
 	display:flex;
@@ -21,8 +29,26 @@
 	flex-direction:column;
 	border:1.5px solid rgb(228, 226, 225);
 	background-color:white;
-	width:65%;
+	
+	height:100%;
+	
+	gap:2rem;
+	border-radius:1rem;
+	padding:1.5rem;
+	
+
+}
+
+.login-form-container {
+
+	display:flex;
+	flex-direction:column;
+	border:1.5px solid rgb(228, 226, 225);
+	background-color:white;
+	
 	height:51%;
+	width:65%;
+	
 	gap:2rem;
 	border-radius:1rem;
 	padding:1.5rem;
@@ -65,7 +91,15 @@
 	text-align:center;
 	color:rgb(50, 48, 47);
 	font-family:avenir;
+
+}
+
+.login-heading {
+	text-align:center;
+	color:rgb(50, 48, 47);
+	font-family:avenir;
 	padding-top:0.5rem;
+
 }
 
 .email-pass {
@@ -73,6 +107,16 @@
 	padding:1rem;
 	border:1px solid rgb(228, 226, 225);
 
+}
+
+.date-email-pass {
+	
+	border-radius:0.5rem;
+	padding:1rem;
+	border:1px solid rgb(228, 226, 225);
+	width:50%;
+	
+	
 }
 
 .signup-submit {
@@ -91,6 +135,15 @@
 	color:rgb(97, 94, 92);
 	font-family:avenir;
 	text-align:center;
+	
+}
+
+.signup-pac {
+	color:rgb(97, 94, 92);
+	font-family:avenir;
+	text-align:center;
+	margin-top:1rem;
+	
 }
 
 .signup-pa a {
@@ -98,4 +151,39 @@
 	font-family:futura;
 	text-align:center;
 }
+
+.signup-header-container {
+	display:grid;
+    grid-template-columns: 1fr 1fr 1fr;
+	padding-top:0.5rem;
+	padding-bottom:1.5rem;
+}
+
+.signup-back-button {
+    justify-self: start;
+	background:none;
+	border:none;
+	text-align:left;
+  font-family:Futura;
+  font-weight:200;
+  color:rgb(50, 48, 47);
+  font-size:100%;
 	
+}
+
+.signup-back-button:hover {
+  background-color: #f2f2f2;
+	
+}
+
+.date-wrapper {
+	display:flex;
+}
+
+.dob-text {
+	color:rgb(97, 94, 92);
+	font-family:avenir;
+	align-self:center;
+	text-align:center;
+	
+}

@@ -151,6 +151,7 @@ GEM
     ffi (1.17.1-x86_64-darwin)
     ffi (1.17.1-x86_64-linux-gnu)
     ffi (1.17.1-x86_64-linux-musl)
+    fiber-storage (1.0.1)
     finnhub_ruby (1.1.19)
       typhoeus (~> 1.0, >= 1.0.1)
     fugit (1.11.1)
@@ -158,6 +159,12 @@ GEM
       raabro (~> 1.4)
     globalid (1.2.1)
       activesupport (>= 6.1)
+    graphiql-rails (1.10.5)
+      railties
+    graphql (2.5.7)
+      base64
+      fiber-storage
+      logger
     hashie (4.1.0)
     i18n (1.14.7)
       concurrent-ruby (~> 1.0)
@@ -256,6 +263,9 @@ GEM
     raabro (1.4.0)
     racc (1.8.1)
     rack (3.1.10)
+    rack-cors (3.0.0)
+      logger
+      rack (>= 3.0.14)
     rack-proxy (0.7.7)
       rack
     rack-session (2.1.0)
@@ -442,11 +452,14 @@ DEPENDENCIES
   capybara
   debug
   finnhub_ruby
+  graphiql-rails
+  graphql
   importmap-rails
   jbuilder
   kamal
   propshaft
   puma (>= 5.0)
+  rack-cors
   rails (~> 8.0.1)
   react-rails (= 3.2)
   rubocop-rails-omakase

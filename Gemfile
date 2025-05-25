@@ -37,6 +37,11 @@ gem "react-rails", "= 3.2"
 
 gem 'alphavantage'
 
+gem 'rack-cors'
+
+gem 'graphql'
+gem 'graphiql-rails'
+
 # Reduces boot times through caching; required in config/boot.rb
 gem "bootsnap", require: false
 

@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2025_04_10_040819) do
+ActiveRecord::Schema[8.0].define(version: 2025_05_22_220517) do
   create_table "positions", force: :cascade do |t|
     t.string "symbol"
     t.integer "shares"
@@ -31,10 +31,15 @@ ActiveRecord::Schema[8.0].define(version: 2025_04_10_040819) do
   end
 
   create_table "users", force: :cascade do |t|
-    t.string "name"
-    t.string "email"
-    t.string "password_digest"
+    t.string "email", null: false
+    t.string "password_digest", null: false
     t.decimal "balance", default: "0.0"
+    t.string "first_name", null: false
+    t.string "last_name", null: false
+    t.date "date_of_birth", null: false
+    t.integer "gender", null: false
+    t.string "middle_name"
+    t.index ["email"], name: "index_users_on_email", unique: true
   end
 
   add_foreign_key "positions", "users"

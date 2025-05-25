@@ -10,19 +10,6 @@
 	<div class=login-signup-right>
 		
 <div class = 'signup-box'>
-	<div class='signup-form-container'>
-		
-	<h2 class='signup-heading'> Sign Up </h2>
-	
-	<form class = 'signup-form' action='/users' method='post'>
-	    <input type="hidden" name="authenticity_token" value="<%= form_authenticity_token %>">
-		<input type = 'email' name='email' placeholder='Email' class='email-pass'>
-		<input type = 'password' name= 'password' placeholder='Password' class='email-pass'>
-		<input type = 'submit' value='Sign Up' class='signup-submit'>
-	</form>
-	
-	<p class='signup-pa'>Already have an account? <a href='/login'> Log In </a> </p> 
-	
-</div>
+	<%= react_component("Signup") %>	  
 </div>
 </div>

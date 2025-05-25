@@ -1,9 +1,9 @@
 class UsersController < ApplicationController
-  def create
-    
-    #todo strong parameters, error handling, negative amounts
-    
-    user = User.create(email: params[:email], password: params[:password])
+  def signup
+        
+    user = User.create(email: params[:email], password: params[:password], first_name: params[:firstName]&.strip&.titleize, 
+    middle_name: params[:middleName].presence&.strip&.titleize, last_name: params[:lastName]&.strip&.titleize,
+    gender: params[:gender], date_of_birth:params[:dateOfBirth] )
     
     session[:user_id] = user.id
     
