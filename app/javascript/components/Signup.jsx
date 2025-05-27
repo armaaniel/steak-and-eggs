@@ -76,7 +76,7 @@ function Signup() {
 		    	<option value="">Choose gender</option>
 				<option value='male'>Male</option>
 				<option value='female'>Female</option>
-				<option value='non-binary'>Non-Binary</option>
+				<option value='non_binary'>Non-Binary</option>
 				<option value='fluid'>Fluid</option>
 				<option value='prefer_not_to_say'>Prefer Not To Say</option>
 			</select>

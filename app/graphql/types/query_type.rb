@@ -14,6 +14,11 @@ module Types
       argument(:id, ID, required:true)
       description('fetch position data by user id')
     end
+    
+    field(:transactions, [Types::TransactionsType]) do
+      argument(:id, ID, required:true)
+      description('fetch transaction data by user id')
+    end
         
     def users_by_email_or_name(term:)
       User.where("lower(email) LIKE ? OR lower(first_name) LIKE ?", "%#{term.downcase}%", "%#{term.downcase}%").limit(5)
@@ -27,6 +32,9 @@ module Types
       Position.where(user_id: id)
     end
     
-  end
+    def transactions(id:)
+      Transaction.where(user_id: id)
+    end
+end
 end
   

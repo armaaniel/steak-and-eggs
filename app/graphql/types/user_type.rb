@@ -7,7 +7,7 @@ module Types
     field(:middle_name, String)
     field(:last_name, String)
     field(:date_of_birth, String)
-    field(:gender, Types::GenderEnumType)
+    field(:gender, String)
     field(:positions, [Types::PositionsType])
   end
 end

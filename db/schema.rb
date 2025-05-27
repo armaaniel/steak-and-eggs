@@ -10,23 +10,24 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2025_05_22_220517) do
+ActiveRecord::Schema[8.0].define(version: 2025_05_25_102446) do
   create_table "positions", force: :cascade do |t|
-    t.string "symbol"
-    t.integer "shares"
-    t.integer "user_id"
+    t.string "symbol", null: false
+    t.integer "shares", null: false
+    t.integer "user_id", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["user_id"], name: "index_positions_on_user_id"
   end
 
   create_table "transactions", force: :cascade do |t|
-    t.string "transaction_type"
-    t.decimal "amount"
-    t.integer "quantity"
+    t.integer "transaction_type", null: false
+    t.decimal "amount", null: false
+    t.integer "quantity", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.integer "user_id", null: false
+    t.string "symbol", null: false
     t.index ["user_id"], name: "index_transactions_on_user_id"
   end
 

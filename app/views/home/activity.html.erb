@@ -1,14 +1,26 @@
 <table class='portfolio'>
   <tr>
-    <th class='quantity-header'>Transaction Type</th>
+    <th>Transaction Type</th>
+    <th>Date</th>
+	<th>Symbol</th>
 	<th>Quantity</th>
 	<th>Amount</th>
   </tr>
   <%@activity.each do |n|%>
   <tr class ='portfolio-row'>
+	  
     <td class='symbol-cell'>
       <%=n[:transaction_type]%>
     </td>
+	
+    <td class='symbol-cell'>
+      <%=n[:created_at].strftime("%Y-%m-%d")%>
+    </td>
+	
+    <td class='symbol-cell'>
+	<%=n[:symbol]%>
+	</td>
+	
     <td class='symbol-cell'>
 	<%=n[:quantity]%>
 	</td>
