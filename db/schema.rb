@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2025_05_25_102446) do
+ActiveRecord::Schema[8.0].define(version: 2025_06_05_183445) do
   create_table "positions", force: :cascade do |t|
     t.string "symbol", null: false
     t.integer "shares", null: false
@@ -40,6 +40,7 @@ ActiveRecord::Schema[8.0].define(version: 2025_05_25_102446) do
     t.date "date_of_birth", null: false
     t.integer "gender", null: false
     t.string "middle_name"
+    t.decimal "used_margin", default: "0.0", null: false
     t.index ["email"], name: "index_users_on_email", unique: true
   end
 

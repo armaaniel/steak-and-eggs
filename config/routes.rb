@@ -15,4 +15,7 @@ Rails.application.routes.draw do
   post('position', to: 'stocks#position')
   get('logout', to: 'users#logout')
   get('activity', to: 'home#activity')
+  get('aum', to: 'portfolio#aum')
+  
+  mount ActionCable.server => '/cable'
 end

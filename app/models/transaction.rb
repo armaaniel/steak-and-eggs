@@ -6,7 +6,7 @@ class Transaction < ApplicationRecord
   enum(:transaction_type, {
       
     Deposit:0,
-    Withdrawal:1,
+    Withdraw:1,
     Buy:2,
     Sell:3
   

@@ -10,7 +10,9 @@
 		
 	</div>
 	
-	
+	<div>
+		<%=react_component("StockPrice", {symbol: params[:symbol], marketPrice: @marketdata.price})%>
+	</div>
 	
 	<div class ='chart-container'>
 		<%= react_component("StockChart", {dailyData: @daily}) %>

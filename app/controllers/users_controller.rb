@@ -1,20 +1,9 @@
 class UsersController < ApplicationController
   def signup
         
-    user = User.create(email: params[:email], password: params[:password], first_name: params[:firstName]&.strip&.titleize, 
-    middle_name: params[:middleName].presence&.strip&.titleize, last_name: params[:lastName]&.strip&.titleize,
-    gender: params[:gender], date_of_birth:params[:dateOfBirth] )
+    user = UserService.signup(params)
     
-    session[:user_id] = user.id
-    
-    redirect_to home_path
-  end
-  
-  def login
-        
-    user = User.find_by(email: params[:email])
-      
-    if user && user.authenticate(params[:password])
+    if user
       session[:user_id] = user.id
       redirect_to home_path
     else
@@ -23,18 +12,23 @@ class UsersController < ApplicationController
     
   end
   
-  def update_balance    
-    
-    case params[:commit] 
-    when 'add'
-      Transaction.create(symbol:'CAD', quantity: 1, amount: params[:amount].to_f, transaction_type: 'Deposit', user_id: current_user.id)
-      current_user.balance += params[:amount].to_f
-      current_user.save
-    when 'withdraw'
-      Transaction.create(symbol: 'CAD', quantity: 1, amount: params[:amount].to_f, transaction_type: 'Withdraw', user_id: current_user.id)
-      current_user.balance -= params[:amount].to_f
-      current_user.save
+  def login
+        
+    user = UserService.authenticate(params)
+      
+    if user 
+      session[:user_id] = user.id
+      redirect_to home_path
+    else
+      redirect_to login_path
     end
+    
+  end
+  
+  def update_balance
+    
+    UserService.update_balance(params: params, current_user: current_user)    
+    
     redirect_to home_path
   end    
       
@@ -42,7 +36,6 @@ class UsersController < ApplicationController
     reset_session
     redirect_to root_path
   end
-    
-    
+        
     
 end

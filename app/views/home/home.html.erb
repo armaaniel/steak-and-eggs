@@ -4,6 +4,7 @@
 	
 <div class='cb'>
 <h2>Your current cash balance is: $<%=current_user&.balance%> </h2>
+<%=react_component("PortfolioValue")%>
 </div>
 
 <% if @positions.any?%>
@@ -38,6 +39,7 @@
 	<td class='shares-cell'>
         <a href='/stocks/<%=n[:symbol]%>' class='symbol-name'>
 		<%=n[:shares] %> shares
+		
 	</a>
 	</td>
 	

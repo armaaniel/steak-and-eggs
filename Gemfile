@@ -28,12 +28,19 @@ gem "solid_cache"
 gem "solid_queue"
 gem "solid_cable"
 
+gem 'redis'
+
+# Gemfile
+gem 'oj'
+
 #bcrypt
 gem 'bcrypt'
 
 gem 'finnhub_ruby'
 
 gem "react-rails", "= 3.2"
+
+gem 'polygonio', path: '../polygonio-ruby'
 
 gem 'alphavantage'
 
