@@ -1,16 +1,9 @@
 class WebsocketService
-  def self.subscribe_to(symbols)
-    return if symbols.blank?
-    
-    formatted_symbols = symbols.map do |symb|
-      "A.#{symb}"
-    end
-    
-    formatted_symbols_string = formatted_symbols.join(',')
-    
+  def self.subscribe_to
+        
     client = Polygonio::Websocket::Client.new("stocks", "BwLaqIrn3PJnY6NfIDBaEtsqycllj8lE", delayed: true)
     
-    client.subscribe(formatted_symbols_string) do |event|
+    client.subscribe("A.*") do |event|
       event.each do |data|
         
         REDIS.set(data.sym, data.c)

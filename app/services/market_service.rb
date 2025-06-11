@@ -7,6 +7,7 @@ class MarketService
     market_price = REDIS.get(symbol).to_f
     trade_quantity = params[:quantity].to_i 
     trade_value = (trade_quantity * market_price)
+    quantity_held = record[:shares]
     
     case params[:commit]
     when 'buy'
@@ -18,7 +19,7 @@ class MarketService
         current_user.balance -= trade_value
         current_user.save
         if record
-          record.update(shares: (trade_quantity + record[:shares]))
+          record.update(shares: (trade_quantity + quantity_held))
         else
           Position.create(user_id: current_user.id, symbol: symbol, shares: trade_quantity)
         end
@@ -31,7 +32,7 @@ class MarketService
         current_user.balance = 0
         current_user.save
         if record
-          record.update(shares: (trade_quantity + record[:shares]))
+          record.update(shares: (trade_quantity + quantity_held))
         else 
           Position.create(user_id: current_user.id, symbol: symbol, shares: trade_quantity)
         end 
@@ -42,15 +43,17 @@ class MarketService
       end
       
     when 'sell'
-      return if record.nil?
-      if record[:shares] == trade_quantity
-        current_user.balance += trade_value
-        current_user.save
+      return if record.nil? || quantity_held < trade_quantity
+      
+      margin_payment = [current_user.used_margin, trade_value].min
+      current_user.used_margin -= margin_payment
+      current_user.balance += (trade_value - margin_payment)
+      current_user.save
+      
+      if quantity_held == trade_quantity
         record.destroy()
-      elsif record[:shares] > trade_quantity
-        current_user.balance += trade_value
-        current_user.save
-        record.update(shares: (record[:shares] - trade_quantity))
+      else 
+        record.update(shares: (quantity_held - trade_quantity))
       end
       Transaction.create(symbol: symbol, quantity: trade_quantity, 
       amount: trade_value, transaction_type: 'Sell', user_id: current_user.id)

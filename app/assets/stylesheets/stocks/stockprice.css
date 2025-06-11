@@ -1,0 +1,13 @@
+.stock-price-header {
+
+    font-size: 28px;
+    font-family: avenir;
+    color: rgb(97, 94, 92);
+		
+}
+
+.stock-price-container {
+	
+	padding-left:0.5rem;
+	
+}

@@ -12,7 +12,7 @@ const StockChart = (props) => {
       		<Tooltip cursor={false} 
 			position={{ x: 0, y: 0 }}   
 			labelFormatter={(index) => props.dailyData[index].date}
-			contentStyle={{ border: 'none', background: 'none'}}
+			contentStyle={{ border: 'none', background: 'none', display: 'flex', padding:'4px', gap:'8px' }}
 			/>
           <YAxis domain={[dataMin => (dataMin*0.95), dataMax => (dataMax * 1.05)]} hide={true} />
 			

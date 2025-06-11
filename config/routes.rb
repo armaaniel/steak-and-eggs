@@ -16,6 +16,7 @@ Rails.application.routes.draw do
   get('logout', to: 'users#logout')
   get('activity', to: 'home#activity')
   get('aum', to: 'portfolio#aum')
+  get('bpm', to: 'portfolio#buying_power_margin')
   
   mount ActionCable.server => '/cable'
 end

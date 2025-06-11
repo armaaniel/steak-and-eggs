@@ -1,21 +1,65 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import consumer from '../channels/consumer'
 
 const BuySell = (props) => {
+	
   const [currentState, setCurrentState] = useState({ action: "buy", step: 1 });
   
   const [quantity, setQuantity] = useState(null);
   
-  const updateQuantity = (e) => {
-    if (e.target.value === '') 
-		{ setQuantity(''); } 
-	
-	else 
-		{ setQuantity(Number(e.target.value)); }
-  };
+  const [availableMargin, setAvailableMargin] = useState(null)
   
-  const estimatedCost = (quantity || 0) * props.marketPrice;
+  const [buyingPower, setBuyingPower] = useState(0)
   
-  const hasInsufficientFunds = estimatedCost > props.userBalance;
+  const [price, setPrice] = useState(parseFloat(props.marketPrice));
+  
+  useEffect(() => {
+	  async function setBuyingPowerMargin() {
+		  try {
+			  const response = await fetch('/bpm')
+			  const data = await response.json()
+			  
+			  if (data) {
+				  setBuyingPower(parseFloat(data.buying_power))
+				  setAvailableMargin(parseFloat(data.available_margin))
+			  } 	
+			  	  
+		  } catch (err) {
+			  console.log(err)
+		  }
+	  }
+	  
+	  setBuyingPowerMargin()
+	  
+	  const interval = setInterval(setBuyingPowerMargin, 10000)
+	  
+	  return () => clearInterval(interval)
+  
+  }, []);
+    
+    useEffect(() => {
+      const subscription = consumer.subscriptions.create(
+        { channel: "PriceChannel", symbol: `A.${props.symbol}` },
+	  
+        { received(data) {
+  	      console.log(`Received data:`, data);
+		  
+		  
+            setPrice(parseFloat(data));
+		  
+          }
+        }
+      );
+    
+      return () => {
+        subscription.unsubscribe();
+      };
+    }, [props.symbol]);
+  
+  
+  const estimatedCost = (quantity || 0) * price;
+  
+  const hasInsufficientFunds = estimatedCost > buyingPower;
   
   const hasInsufficientQuantity = quantity > props.userHoldings
   
@@ -25,6 +69,14 @@ const BuySell = (props) => {
     } else {
       return false;
     }
+  };
+  
+  const updateQuantity = (e) => {
+    if (e.target.value === '') 
+		{ setQuantity(''); } 
+	
+	else 
+		{ setQuantity(Number(e.target.value)); }
   };
   
   const quantityInvalid = isQuantityInvalid();
@@ -89,6 +141,24 @@ const BuySell = (props) => {
 		  	</div>
 		  	<div>
 		  	<p> {props.userBalance} </p>
+		  	</div>
+		  </div>
+		  
+		  <div className='bs-containers'>
+		  	<div className='bs-width-wrapper'>
+          	<p>Available Margin</p>
+		  	</div>
+		  	<div>
+		  	<p> {availableMargin} </p>
+		  	</div>
+		  </div>
+		  
+		  <div className='bs-containers'>
+		  	<div className='bs-width-wrapper'>
+          	<p>Buying Power</p>
+		  	</div>
+		  	<div>
+		  	<p> {buyingPower} </p>
 		  	</div>
 		  </div>
 		  

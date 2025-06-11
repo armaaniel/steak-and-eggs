@@ -16,10 +16,16 @@ class PositionService
   end
   
   def self.get_aum(user_id:, balance:)
-    positions = Position.where(user_id: user_id)
+    positions = Position.where(user_id: user_id).to_a
+    
+    return balance if positions.empty?
+    
+    symbols = positions.pluck(:symbol)
+    prices_array = REDIS.mget(*symbols)
+    prices = symbols.zip(prices_array).to_h
     
     positions.inject(balance) do |acc, position|
-      price = REDIS.get(position.symbol).to_f
+      price = prices[position.symbol].to_f
       acc + (price * position.shares)
     end
     
@@ -35,8 +41,19 @@ class PositionService
     
     buying_power = balance + available_margin
     
-  end    
-
+    if portfolio_value > 0
+      equity_ratio = (equity / (portfolio_value - balance) * 100).round(2)
+    else
+      equity_ratio = 100
+    end
+        
+    { buying_power: buying_power,
+      available_margin: available_margin,
+      equity_ratio: equity_ratio
+    }
+    
+  end
+  
 end
   
     

@@ -2,8 +2,9 @@
 <div class='home-left'>
 	
 	
-<div class='cb'>
-<h2>Your current cash balance is: $<%=current_user&.balance%> </h2>
+
+<div class='port-value'>
+<h2>Your Portfolio value is:&nbsp;$</h2>
 <%=react_component("PortfolioValue")%>
 </div>
 
@@ -56,6 +57,18 @@
 <div class ='button-container'>
 	<%= react_component("AddButton") %>	  
 	<%= react_component("WithdrawButton") %>
+</div>
+
+<div class='cb'>
+<h2 class='cb-header'>Cash balance: $<%=current_user&.balance%> </h2>
+</div>
+
+<div class='cb'>
+<h2 class='cb-header'>Equity Ratio: <%=PositionService.get_buying_power(user_id: current_user.id, balance: current_user.balance, used_margin: current_user.used_margin)[:equity_ratio]%>% </h2>
+</div>
+
+<div class='cb'>
+<h2 class='cb-header'>Margin Call Status: <%=current_user.margin_call_status%> </h2>
 </div>
 
 </div>

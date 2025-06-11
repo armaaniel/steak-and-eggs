@@ -16,3 +16,10 @@
 	display:flex;
 	flex-direction:column;
 }
+
+.recharts-default-tooltip {
+	
+	align-items:center;
+	font-family:avenir;
+	
+}

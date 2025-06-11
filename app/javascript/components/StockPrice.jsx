@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react'
 import consumer from '../channels/consumer'
 
 const StockPrice = ({ symbol, marketPrice }) => {
-  const [price, setPrice] = useState(marketPrice);
+  const [price, setPrice] = useState(parseFloat(marketPrice).toFixed(2));
   
   useEffect(() => {
     const subscription = consumer.subscriptions.create(
@@ -12,7 +12,7 @@ const StockPrice = ({ symbol, marketPrice }) => {
 	      console.log(`Received data:`, data);
 		  
 		  
-          setPrice(data);
+          setPrice(parseFloat(data).toFixed(2));
 		  
         }
       }
@@ -23,7 +23,7 @@ const StockPrice = ({ symbol, marketPrice }) => {
     };
   }, [symbol]);
 
-  return <h2>${price}</h2>;
+  return <h3 className='stock-price-header'>${price}</h3>;
 }
 
 export default StockPrice;
