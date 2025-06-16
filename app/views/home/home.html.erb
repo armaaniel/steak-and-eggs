@@ -8,6 +8,10 @@
 <%=react_component("PortfolioValue")%>
 </div>
 
+	<div>
+		<%= react_component("StockChart", {dailyData: @daily}) %>
+	</div>
+
 <% if @positions.any?%>
 <div class="holdings">
 	<h2> Holdings </h2>
@@ -40,7 +44,6 @@
 	<td class='shares-cell'>
         <a href='/stocks/<%=n[:symbol]%>' class='symbol-name'>
 		<%=n[:shares] %> shares
-		
 	</a>
 	</td>
 	
@@ -61,6 +64,10 @@
 
 <div class='cb'>
 <h2 class='cb-header'>Cash balance: $<%=current_user&.balance%> </h2>
+</div>
+
+<div class='cb'>
+<h2 class='cb-header'>Cash balance: $<%=current_user&.used_margin%> </h2>
 </div>
 
 <div class='cb'>

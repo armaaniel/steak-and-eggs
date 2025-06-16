@@ -19,6 +19,10 @@ module Types
       argument(:id, ID, required:true)
       description('fetch transaction data by user id')
     end
+    
+    field(:margin_call_status, [Types::UserType]) do
+      description('fetch users by margin call status')
+    end 
         
     def users_by_email_or_name(term:)
       User.where("lower(email) LIKE ? OR lower(first_name) LIKE ?", "%#{term.downcase}%", "%#{term.downcase}%").limit(5)
@@ -35,6 +39,11 @@ module Types
     def transactions(id:)
       Transaction.where(user_id: id)
     end
+    
+    def margin_call_status
+      User.where(margin_call_status: 'active')
+    end
+    
 end
 end
   

@@ -5,6 +5,8 @@ const BuySell = (props) => {
 	
   const [currentState, setCurrentState] = useState({ action: "buy", step: 1 });
   
+  const [isSubmitting, setIsSubmitting] = useState(false);
+    
   const [quantity, setQuantity] = useState(null);
   
   const [availableMargin, setAvailableMargin] = useState(null)
@@ -20,8 +22,8 @@ const BuySell = (props) => {
 			  const data = await response.json()
 			  
 			  if (data) {
-				  setBuyingPower(parseFloat(data.buying_power))
-				  setAvailableMargin(parseFloat(data.available_margin))
+				  setBuyingPower(parseFloat(data.buying_power).toFixed(2))
+				  setAvailableMargin(parseFloat(data.available_margin).toFixed(2))
 			  } 	
 			  	  
 		  } catch (err) {
@@ -39,7 +41,7 @@ const BuySell = (props) => {
     
     useEffect(() => {
       const subscription = consumer.subscriptions.create(
-        { channel: "PriceChannel", symbol: `A.${props.symbol}` },
+        { channel: "PriceChannel", symbol: `${props.symbol}` },
 	  
         { received(data) {
   	      console.log(`Received data:`, data);
@@ -57,7 +59,7 @@ const BuySell = (props) => {
     }, [props.symbol]);
   
   
-  const estimatedCost = (quantity || 0) * price;
+  const estimatedCost = (quantity || 0) * price * props.exchangeRate;
   
   const hasInsufficientFunds = estimatedCost > buyingPower;
   
@@ -87,7 +89,15 @@ const BuySell = (props) => {
     setCurrentState({ ...currentState, step: currentState.step - 1 });
   const buyState = () => setCurrentState({ action: "buy", step: 1 });
   const sellState = () => setCurrentState({ action: "sell", step: 1 });
-
+  
+  const handleSubmit = () => {
+	  
+	  setTimeout(() => 
+	  
+		  setIsSubmitting(true), 10)
+  
+  }
+  
 
   return (
     <>
@@ -125,7 +135,7 @@ const BuySell = (props) => {
           	<p>Estimated Cost</p>
 		  	</div>
 		  	<div>
-		  	<p> ${estimatedCost.toFixed(2)} </p>
+		  	<p> ${estimatedCost.toFixed(2)} CAD </p>
 		  	</div>
 		  </div>
 		  
@@ -140,7 +150,7 @@ const BuySell = (props) => {
           	<p>Available Cash</p>
 		  	</div>
 		  	<div>
-		  	<p> {props.userBalance} </p>
+		  	<p> {props.userBalance} CAD </p>
 		  	</div>
 		  </div>
 		  
@@ -149,7 +159,7 @@ const BuySell = (props) => {
           	<p>Available Margin</p>
 		  	</div>
 		  	<div>
-		  	<p> {availableMargin} </p>
+		  	<p> {availableMargin} CAD </p>
 		  	</div>
 		  </div>
 		  
@@ -158,7 +168,7 @@ const BuySell = (props) => {
           	<p>Buying Power</p>
 		  	</div>
 		  	<div>
-		  	<p> {buyingPower} </p>
+		  	<p> {buyingPower} CAD </p>
 		  	</div>
 		  </div>
 		  
@@ -203,7 +213,7 @@ const BuySell = (props) => {
           	<p>Estimated Value</p>
 		  	</div>
 		  	<div>
-		  	<p> ${estimatedCost.toFixed(2)} </p>
+		  	<p> ${estimatedCost.toFixed(2)} CAD </p>
 		  	</div>
 		  </div>
 		  
@@ -259,16 +269,16 @@ const BuySell = (props) => {
 		  	<p>Cost</p>
 		  	</div>
 		  	<div>
-		  	<p>${estimatedCost.toFixed(2)}</p>
+		  	<p>${estimatedCost.toFixed(2)} CAD </p>
 		  	</div>
 		  </div>
 		  
 		  <div>
-		  <form method='POST' action='/position'>
+		  <form method='POST' action='/position' onSubmit={handleSubmit}>
 	   	 	<input type="hidden" name="authenticity_token" 
 			value={document.querySelector("meta[name='csrf-token']")?.getAttribute("content")}/>
 	    	<input type="hidden" name="symbol" value={props.symbol}/>
-		  	<input type='submit' name='commit' value='buy' className='next'/>
+		  	<input type='submit' name='commit' value='buy' className='next' disabled={isSubmitting}/>
 			<input type='hidden' value={quantity} name='quantity'/>
 		  </form>
 		  </div>
@@ -306,16 +316,16 @@ const BuySell = (props) => {
 		  	<p>Value</p>
 		  	</div>
 		  	<div>
-		  	<p>${estimatedCost.toFixed(2)}</p>
+		  	<p>${estimatedCost.toFixed(2)} CAD </p>
 		  	</div>
 		  </div>
 		  
 		  <div>
-		  <form method='POST' action='/position'>
+		  <form method='POST' action='/position' onSubmit={handleSubmit}>
 	   	 	<input type="hidden" name="authenticity_token" 
 			value={document.querySelector("meta[name='csrf-token']")?.getAttribute("content")}/>
 	    	<input type="hidden" name="symbol" value={props.symbol}/>
-		  	<input type='submit' name='commit' value='sell' className='next'/>
+		  	<input type='submit' name='commit' value='sell' className='next' disabled={isSubmitting}/>
 			<input type='hidden' value={quantity} name='quantity'/>
 		  </form>
 		  </div>
@@ -362,7 +372,7 @@ const BuySell = (props) => {
 		  	<p>Value</p>
 		  	</div>
 		  	<div>
-		  	<p>${estimatedCost.toFixed(2)}</p>
+		  	<p>${estimatedCost.toFixed(2)} CAD </p>
 		  	</div>
 		  </div>
 		  
@@ -409,7 +419,7 @@ const BuySell = (props) => {
 		  	<p>Cost</p>
 		  	</div>
 		  	<div>
-		  	<p>${estimatedCost.toFixed(2)}</p>
+		  	<p>${estimatedCost.toFixed(2)} CAD </p>
 		  	</div>
 		  </div>
 		  

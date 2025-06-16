@@ -7,7 +7,7 @@ class StocksController < ApplicationController
   end
     
   def position
-    MarketService.position(params: params, record: @record, current_user: current_user)
+    MarketService.position(params: params, current_user: current_user)
     
     redirect_to "/stocks/#{params[:symbol]}"
   end
@@ -15,10 +15,20 @@ class StocksController < ApplicationController
   private
   
   def get_data
-    @marketdata = MarketService.marketdata(params: params)
-    @companydata = MarketService.companydata(params: params) 
-    @record = PositionService.record(params: params, current_user: current_user)
-    @daily = MarketService.daily(params: params)
+    
+    @marketdata = MarketService.marketdata(symbol: params[:symbol])
+    
+    
+    @daily = MarketService.dailydata(symbol: params[:symbol])
+    @companydata = MarketService.companydata(symbol: params[:symbol]) 
+    @record = PositionService.record(symbol: params[:symbol], user_id: current_user.id)
+    
+    if @companydata[:currency] == 'USD'
+      @exchangerate = MarketService.exchange_rate
+    else
+      @exchangerate = 1.0
+    end
+    
   end
   
 end  

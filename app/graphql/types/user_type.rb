@@ -8,7 +8,14 @@ module Types
     field(:last_name, String)
     field(:date_of_birth, String)
     field(:gender, String)
+    field(:margin_call_status, String)
     field(:positions, [Types::PositionsType])
+    field(:equity_ratio, Float)
+    
+    def equity_ratio
+      PositionService.get_buying_power(user_id:object.id,balance:object.balance,used_margin:object.used_margin)[:equity_ratio]
+    end
+    
   end
 end
 

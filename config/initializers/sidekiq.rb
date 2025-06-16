@@ -7,5 +7,5 @@ Sidekiq.configure_client do |config|
 end
 
 Sidekiq::Cron::Job.create(name:'daily_margin_call_check',
-cron: '0 16 * * 1-5',
-class: 'MarginCallWorker')
+cron: '30 18 * * 1-5',
+class: 'PortfolioServiceWorker')

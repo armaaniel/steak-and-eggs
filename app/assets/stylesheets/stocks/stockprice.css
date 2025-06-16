@@ -1,13 +1,23 @@
 .stock-price-header {
-
     font-size: 28px;
     font-family: avenir;
     color: rgb(97, 94, 92);
-		
+    margin-right: 4px;
+    line-height: 1; 
+}
+
+.stock-price-currency {
+    font-family: futura;
+    color: rgb(97, 94, 92);
+
 }
 
 .stock-price-container {
 	
-	padding-left:0.5rem;
+	display:flex;
+	align-items:flex-end;
+	height:100%;
+	
 	
 }
+

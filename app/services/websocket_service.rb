@@ -6,9 +6,9 @@ class WebsocketService
     client.subscribe("A.*") do |event|
       event.each do |data|
         
-        REDIS.set(data.sym, data.c)
+        REDIS.set("price:#{data.sym}", data.c)
         
-        ActionCable.server.broadcast("price_channel:A.#{data.sym}", data.c)
+        ActionCable.server.broadcast("price_channel:#{data.sym}", data.c)
       end
     end
   end

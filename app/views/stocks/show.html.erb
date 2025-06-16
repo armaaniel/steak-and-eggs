@@ -4,10 +4,11 @@
 		height='40' width='40'>
 	    <div class="stock-text">
 		<p class="stock-symbol"><%=params[:symbol]%> </p>
-		<p class="stock-name"><%= @companydata.name%> </p>
+		<p class="stock-name"><%= @companydata[:name]%> </p>
 		</div>
 		
-<%=react_component("StockPrice", {symbol: params[:symbol], marketPrice: @marketdata.price}, {class: "stock-price-container"})%>
+<%=react_component("StockPrice", {symbol: params[:symbol], marketPrice: @marketdata[:price], currency: @companydata[:currency]}, {class: "stock-price-container"})%>
+
 	</div>
 	
 	<div class ='chart-container'>
@@ -16,8 +17,7 @@
 
 
 	<div class='buy-sell-container'>
-		<%= react_component("BuySell", {marketPrice: @marketdata.price, userBalance: current_user.balance,
-		userHoldings: @record&.shares || 0, symbol: @marketdata.symbol}) %>
+		<%= react_component("BuySell", {marketPrice: @marketdata[:price], userBalance: current_user.balance, exchangeRate: @exchangerate, userHoldings: @record&.shares || 0, symbol: params[:symbol]}) %>
 	</div>
 
 <div class='data-parent-container'>
@@ -44,7 +44,7 @@
 			
 		    <div class="stock-text">
 			<p class="stock-symbol"><%=@record[:symbol]%></p>
-			<p class="stock-name"><%= @companydata.name%></p>	
+			<p class="stock-name"><%= @companydata[:name]%></p>	
 		
 		</div>
 		
@@ -69,57 +69,62 @@
 <div class='market-data'>
 	<div class>
 		<p class='data-name'>Open</p>
-		<p class='data-value'><%= number_to_currency(@marketdata.open)%></p>
+		<p class='data-value'><%= number_to_currency(@marketdata[:open])%></p>
 	</div>
-	
+		
 	<div>
 		<p class='data-name'>52 week high</p>
-		<p class='data-value'><%= number_to_currency(@companydata['52_week_high'])%></p>
+		<p class='data-value'><%= number_to_currency(@companydata[:'52_week_high'])%></p>
 	</div>
 	
 	<div>
 		<p class='data-name'>Exchange</p>
-		<p class='data-value'><%=@companydata.exchange%></p>
+		<p class='data-value'><%=@companydata[:exchange]%></p>
 	</div>
 	
 	<div>
 		<p class='data-name'>High</p>
-		<p class='data-value'><%= number_to_currency(@marketdata.high) %></p>
+		<p class='data-value'><%= number_to_currency(@marketdata[:high]) %></p>
 	</div>
 	
 	<div class>
 		<p class='data-name'>52 week low</p>
-		<p class='data-value'><%= number_to_currency(@companydata['52_week_low'])%></p>
+		<p class='data-value'><%= number_to_currency(@companydata[:'52_week_low'])%></p>
 	</div>
 	
 	<div>
 		<p class='data-name'>Market cap</p>
-		<p class='data-value'>$<%= number_to_human(@companydata.market_capitalization)%></p>
+		<p class='data-value'>$<%= number_to_human(@companydata[:market_capitalization])%></p>
 	</div>
 		
 	
 	<div>
 		<p class='data-name'>Low</p>
-		<p class='data-value'><%= number_to_currency(@marketdata.low) %></p>
+		<p class='data-value'><%= number_to_currency(@marketdata[:low]) %></p>
 	</div>
 	
 	
 	<div>
 		<p class='data-name'>Volume</p>
-		<p class='data-value'><%= number_to_human(@marketdata.volume)%></p>
+		<p class='data-value'><%= number_to_human(@marketdata[:volume])%></p>
 	</div>
 	
 	
 	<div>
 		<p class='data-name'>Currency</p>
-		<p class='data-value'><%=@companydata.currency%></p>
+		<p class='data-value'><%=@companydata[:currency]%></p>
+	</div>
+	
+	<div>
+		<p class='data-name'>Currency</p>
+		<p class='data-value'><%=@exchangerate%></p>
 	</div>
 	
 </div>
 
 <div class='stock-description'>
 	<h2 class='header-data-name'>Description</h2>
-	<p class='data-value'><%=@companydata.description%></p>
+	<p class='data-value'><%=@companydata[:description]%></p>
 </div>
 
 </div>

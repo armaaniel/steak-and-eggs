@@ -2,7 +2,7 @@ class PositionService
   def self.positions(current_user:)
     position = Position.where(user_id: current_user.id)
     positions = position.map do |n| 
-      {symbol: n.symbol, shares: n.shares, name: Alphavantage::Fundamental.new(symbol:n.symbol).overview.name}
+      {symbol: n.symbol, shares: n.shares, name: MarketService.companydata(symbol:n.symbol)[:name]}
     end
     positions
   end
@@ -11,8 +11,8 @@ class PositionService
     Transaction.where(user_id: current_user.id)
   end
   
-  def self.record(params:, current_user:)
-    Position.find_by(user_id: current_user.id, symbol: params[:symbol])
+  def self.record(symbol:, user_id:)
+    Position.find_by(user_id: user_id, symbol: symbol)
   end
   
   def self.get_aum(user_id:, balance:)
@@ -20,8 +20,11 @@ class PositionService
     
     return balance if positions.empty?
     
+    price_keys = positions.map {|n| "price:#{n.symbol}"}
+    
+    prices_array = REDIS.mget(*price_keys)
     symbols = positions.pluck(:symbol)
-    prices_array = REDIS.mget(*symbols)
+    
     prices = symbols.zip(prices_array).to_h
     
     positions.inject(balance) do |acc, position|
@@ -49,7 +52,8 @@ class PositionService
         
     { buying_power: buying_power,
       available_margin: available_margin,
-      equity_ratio: equity_ratio
+      equity_ratio: equity_ratio,
+      portfolio_value:portfolio_value
     }
     
   end

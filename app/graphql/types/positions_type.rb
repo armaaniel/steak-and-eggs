@@ -3,5 +3,11 @@ module Types
     field(:symbol, String)
     field(:shares, Integer)
     field(:user_id, ID)
+    field(:current_price, Float)
+    
+    def current_price
+      REDIS.get(object.symbol).to_f.round(2)
+    end
+    
   end
 end
