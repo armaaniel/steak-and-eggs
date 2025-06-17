@@ -21,6 +21,8 @@ module SteakAndEggs
     config.load_defaults 8.0
     config.assets.enabled = true
     config.assets.initialize_on_precompile = false
+    
+    config.time_zone = 'Mountain Time (US & Canada)'
 
     # Please, add to the `ignore` list any other `lib` subdirectories that do
     # not contain `.rb` files, or that should not be reloaded or eager loaded.

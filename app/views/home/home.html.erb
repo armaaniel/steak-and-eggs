@@ -63,15 +63,11 @@
 </div>
 
 <div class='cb'>
-<h2 class='cb-header'>Cash balance: $<%=current_user&.balance%> </h2>
+<h2 class='cb-header'>Cash Balance: $<%=current_user&.balance%> </h2>
 </div>
 
 <div class='cb'>
-<h2 class='cb-header'>Cash balance: $<%=current_user&.used_margin%> </h2>
-</div>
-
-<div class='cb'>
-<h2 class='cb-header'>Equity Ratio: <%=PositionService.get_buying_power(user_id: current_user.id, balance: current_user.balance, used_margin: current_user.used_margin)[:equity_ratio]%>% </h2>
+<h2 class='cb-header'>Equity Ratio: <%=PositionService.get_buying_power(user_id: current_user.id, balance: current_user.balance, used_margin: current_user.used_margin)&.dig(:equity_ratio) || 'N/A'%> </h2>
 </div>
 
 <div class='cb'>

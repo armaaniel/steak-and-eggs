@@ -10,7 +10,12 @@ const PortfolioValue = () => {
 			try {
 				const response = await fetch('/aum')
 				const data = await response.json()
+				
+				if (data === null) {
+					setValue('N/A')
+				} else {
 				setValue(parseFloat(data).toFixed(2))
+			}
 			} catch (err) {
 				console.log(err)
 			}	

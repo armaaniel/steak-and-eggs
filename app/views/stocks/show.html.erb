@@ -7,7 +7,7 @@
 		<p class="stock-name"><%= @companydata[:name]%> </p>
 		</div>
 		
-<%=react_component("StockPrice", {symbol: params[:symbol], marketPrice: @marketdata[:price], currency: @companydata[:currency]}, {class: "stock-price-container"})%>
+<%=react_component("StockPrice", {symbol: params[:symbol], marketPrice: @marketprice, currency: @companydata[:currency]}, {class: "stock-price-container"})%>
 
 	</div>
 	
@@ -17,7 +17,7 @@
 
 
 	<div class='buy-sell-container'>
-		<%= react_component("BuySell", {marketPrice: @marketdata[:price], userBalance: current_user.balance, exchangeRate: @exchangerate, userHoldings: @record&.shares || 0, symbol: params[:symbol]}) %>
+		<%= react_component("BuySell", {marketPrice: @marketprice, userBalance: current_user.balance, exchangeRate: @exchangerate, userHoldings: @record&.shares || 0, symbol: params[:symbol]}) %>
 	</div>
 
 <div class='data-parent-container'>
@@ -116,7 +116,7 @@
 	</div>
 	
 	<div>
-		<p class='data-name'>Currency</p>
+		<p class='data-name'>Exchange Rate</p>
 		<p class='data-value'><%=@exchangerate%></p>
 	</div>
 	

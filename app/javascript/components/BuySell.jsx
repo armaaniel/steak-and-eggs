@@ -21,10 +21,15 @@ const BuySell = (props) => {
 			  const response = await fetch('/bpm')
 			  const data = await response.json()
 			  
-			  if (data) {
+			  if (data != null) {
 				  setBuyingPower(parseFloat(data.buying_power).toFixed(2))
 				  setAvailableMargin(parseFloat(data.available_margin).toFixed(2))
-			  } 	
+			  } else {
+			  
+				  setBuyingPower('N/A')
+				  setAvailableMargin('N/A')
+			  
+			  }
 			  	  
 		  } catch (err) {
 			  console.log(err)
@@ -61,7 +66,7 @@ const BuySell = (props) => {
   
   const estimatedCost = (quantity || 0) * price * props.exchangeRate;
   
-  const hasInsufficientFunds = estimatedCost > buyingPower;
+  const hasInsufficientFunds = buyingPower === 'N/A' || estimatedCost > buyingPower;
   
   const hasInsufficientQuantity = quantity > props.userHoldings
   

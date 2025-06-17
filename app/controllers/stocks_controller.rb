@@ -7,7 +7,7 @@ class StocksController < ApplicationController
   end
     
   def position
-    MarketService.position(params: params, current_user: current_user)
+    MarketService.position(params: params, user_id: current_user.id)
     
     redirect_to "/stocks/#{params[:symbol]}"
   end
@@ -17,6 +17,7 @@ class StocksController < ApplicationController
   def get_data
     
     @marketdata = MarketService.marketdata(symbol: params[:symbol])
+    @marketprice = MarketService.marketprice(symbol:params[:symbol])
     
     
     @daily = MarketService.dailydata(symbol: params[:symbol])

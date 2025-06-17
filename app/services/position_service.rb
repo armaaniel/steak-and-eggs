@@ -23,6 +23,7 @@ class PositionService
     price_keys = positions.map {|n| "price:#{n.symbol}"}
     
     prices_array = REDIS.mget(*price_keys)
+    
     symbols = positions.pluck(:symbol)
     
     prices = symbols.zip(prices_array).to_h
@@ -32,11 +33,17 @@ class PositionService
       acc + (price * position.shares)
     end
     
+  rescue => e
+    nil
+    
+    
   end
   
   def self.get_buying_power(user_id:, balance:, used_margin:)
     
     portfolio_value = get_aum(user_id: user_id, balance: balance)
+    
+    return nil unless portfolio_value
     
     equity = portfolio_value - used_margin
     

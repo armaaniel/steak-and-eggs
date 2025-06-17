@@ -1,5 +1,5 @@
 class MarketService
-  def self.position(params:, current_user:)
+  def self.position(params:, user_id:)
     return if params[:quantity].blank? || params[:quantity].to_i < 0
     
     
@@ -14,34 +14,35 @@ class MarketService
     case params[:commit]
     when 'buy'
       ActiveRecord::Base.transaction do
-        buying_power = PositionService.get_buying_power(user_id: current_user.id, balance: current_user.balance, used_margin: current_user.used_margin)
-        record = Position.find_by(user_id:current_user.id, symbol: symbol)
-        quantity_held = record.shares
+        user = User.lock.find(user_id)
+        buying_power = PositionService.get_buying_power(user_id: user_id, balance: user.balance, used_margin: user.used_margin)
+        record = Position.find_by(user_id:user_id, symbol: symbol)
+        quantity_held = record&.shares
         
-        if current_user.balance >= trade_value
-          current_user.balance -= trade_value
-          current_user.save!
+        if user.balance >= trade_value
+          user.balance -= trade_value
+          user.save!
           if record
             record.update!(shares: (trade_quantity + quantity_held))
           else
-            Position.create!(user_id: current_user.id, symbol: symbol, shares: trade_quantity)
+            Position.create!(user_id: user_id, symbol: symbol, shares: trade_quantity)
           end
           
           Transaction.create!(symbol: symbol, quantity: trade_quantity, amount: trade_value, transaction_type: 'Buy', 
-          user_id: current_user.id)
+          user_id: user_id)
         
         elsif buying_power >= trade_value
-          current_user.used_margin += current_user.balance
-          current_user.balance = 0
-          current_user.save!
+          user.used_margin += user.balance
+          user.balance = 0
+          user.save!
           if record
             record.update!(shares: (trade_quantity + quantity_held))
           else 
-            Position.create!(user_id: current_user.id, symbol: symbol, shares: trade_quantity)
+            Position.create!(user_id: user_id, symbol: symbol, shares: trade_quantity)
           end 
           
           Transaction.create!(symbol: symbol, quantity: trade_quantity, amount: trade_value, transaction_type: 'Buy', 
-          user_id: current_user.id)
+          user_id: user_id)
         
         else
           return
@@ -50,15 +51,16 @@ class MarketService
       
     when 'sell'
       ActiveRecord::Base.transaction do
-        record = Position.find_by(user_id:current_user.id, symbol: symbol)
+        user = User.lock.find(user_id)
+        record = Position.find_by(user_id:user_id, symbol: symbol)
         return if record.nil?
         quantity_held = record.shares
         return if quantity_held < trade_quantity
                 
-        margin_payment = [current_user.used_margin, trade_value].min
-        current_user.used_margin -= margin_payment
-        current_user.balance += (trade_value - margin_payment)
-        current_user.save!
+        margin_payment = [user.used_margin, trade_value].min
+        user.used_margin -= margin_payment
+        user.balance += (trade_value - margin_payment)
+        user.save!
         
         if quantity_held == trade_quantity
           record.destroy!
@@ -67,19 +69,39 @@ class MarketService
         end
         
         Transaction.create!(symbol: symbol, quantity: trade_quantity, 
-        amount: trade_value, transaction_type: 'Sell', user_id: current_user.id)
+        amount: trade_value, transaction_type: 'Sell', user_id: user_id)
       end
     end
     
   rescue => e
-    Rails.logger.error("Trade failed for #{symbol}, #{current_user.id}, #{e.message}")
+    Rails.logger.error("Trade failed for #{symbol}, #{user_id}, #{e.message}")
     nil
   end
   
+  def self.marketprice(symbol:)
+    
+    cached = safe_redis_get("price:#{symbol}")
+    return cached.to_f if cached
+    
+    stock_object = Alphavantage::TimeSeries.new(symbol: symbol)
+    quote = stock_object.quote
+    
+    if quote&.dig(:price)
+      safe_redis_setex("price:#{symbol}", 5.minutes.to_i, quote[:price])
+      return quote[:price].to_f
+    end
+    
+    0
+    
+  rescue => e
+    Rails.logger.error("Market price failed for #{symbol} #{e.message}")
+    'N/A'
+    
+  end
   
   def self.marketdata(symbol:)
     
-    cached = safe_redis_get("price:#{symbol}")
+    cached = safe_redis_get("market:#{symbol}")
     return JSON.parse(cached, symbolize_names: true) if cached
     
     stock_object = Alphavantage::TimeSeries.new(symbol: symbol)
@@ -130,7 +152,7 @@ class MarketService
     company = Alphavantage::Fundamental.new(symbol: symbol).overview
     
     return {name:'N/A', currency:'N/A', :'52_week_high'=> 'N/A', exchange: 'N/A', :'52_week_low'=> 'N/A', market_capitalization:'N/A', 
-      description: 'N/A'} unless company
+      description: 'N/A'} unless company[:name]
     
     safe_redis_setex("company:#{symbol}", 24.hours.to_i, company.to_json)
     

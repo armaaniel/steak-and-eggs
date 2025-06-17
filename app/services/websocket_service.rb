@@ -9,6 +9,9 @@ class WebsocketService
         REDIS.set("price:#{data.sym}", data.c)
         
         ActionCable.server.broadcast("price_channel:#{data.sym}", data.c)
+        
+      rescue => e 
+        nil
       end
     end
   end

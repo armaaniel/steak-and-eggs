@@ -33,6 +33,9 @@ gem 'redis'
 gem 'sidekiq'
 gem 'sidekiq-cron'
 
+gem 'sentry-ruby'
+gem 'sentry-rails'
+
 # Gemfile
 gem 'oj'
 
