@@ -66,6 +66,8 @@ const BuySell = (props) => {
   
   const estimatedCost = (quantity || 0) * price * props.exchangeRate;
   
+  const free = estimatedCost === 0
+  
   const hasInsufficientFunds = buyingPower === 'N/A' || estimatedCost > buyingPower;
   
   const hasInsufficientQuantity = quantity > props.userHoldings
@@ -145,7 +147,7 @@ const BuySell = (props) => {
 		  </div>
 		  
 		  <div>
-          <button className='next' onClick={nextStep} disabled={hasInsufficientFunds || quantityInvalid}>Next</button>
+          <button className='next' onClick={nextStep} disabled={hasInsufficientFunds || quantityInvalid || free}>Next</button>
 		  </div>
 		  
 		  <hr />		  
@@ -223,7 +225,7 @@ const BuySell = (props) => {
 		  </div>
 		  
 		  <div>
-          <button className='next' onClick={nextStep} disabled={hasInsufficientQuantity || quantityInvalid}>Next</button>
+          <button className='next' onClick={nextStep} disabled={hasInsufficientQuantity || quantityInvalid || free}>Next</button>
 		  </div>
 		  
 		  <hr />		  

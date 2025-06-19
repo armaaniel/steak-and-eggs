@@ -4,6 +4,12 @@ class StocksController < ApplicationController
   layout 'authenticated'
   def show
     
+    if @marketdata == {price:'N/A', open:'N/A', high:'N/A', low:'N/A', volume:'N/A'} &&
+      @companydata == {name:'N/A', currency:'N/A', :'52_week_high'=> 'N/A', exchange: 'N/A', :'52_week_low'=> 'N/A', market_capitalization:'N/A', 
+      description: 'N/A'}
+      redirect_to "/not_found"
+    end
+      
   end
     
   def position
@@ -20,8 +26,9 @@ class StocksController < ApplicationController
     @marketprice = MarketService.marketprice(symbol:params[:symbol])
     
     
-    @daily = MarketService.dailydata(symbol: params[:symbol])
     @companydata = MarketService.companydata(symbol: params[:symbol]) 
+    @daily = MarketService.dailydata(symbol: params[:symbol])
+    
     @record = PositionService.record(symbol: params[:symbol], user_id: current_user.id)
     
     if @companydata[:currency] == 'USD'
@@ -30,6 +37,6 @@ class StocksController < ApplicationController
       @exchangerate = 1.0
     end
     
-  end
+  end  
   
 end  

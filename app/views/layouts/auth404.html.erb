@@ -8,25 +8,44 @@
     <%= yield :head %>
     <%= stylesheet_link_tag :app, "data-turbo-track": "reload" %>
     <%= javascript_pack_tag "application" %>
-    <%= Sentry.get_trace_propagation_meta.html_safe %>
   </head>
 
   <body>
 	  <header>
 		  <nav class='nav'>
+			  
 		  <div class='main-logo'>
-			  <a href = '/' class = 'logo'>
+			  <a href = '/home' class = 'logo'>
 			 	  <%= image_tag "steak-and-eggs.svg", alt: "logo", class: "navbar-logo" %>
 			  </a>
 		  </div>
-		  	<div class ='navbar'>
-			  	<a class ='about-contact' href ='#'>About</a> 
-			  	<a class= 'about-contact' href='#'>Contact Us</a>
-				<a class ='login-link' href ='/login'>Log in</a>
-				<a class = 'signup-link' href='signup'>Sign up</a>
+		  
+		  <div>
+			  <a class='activity' href ='/home'>Home</a> 
+		  </div>
+			
+  		  <div>
+			  <a class='activity' href ='/activity'>Activity</a> 
+		  </div>
+		  
+		  	<div class ='navbar-two'>
+				
+				<form method='GET' action='/search'>
+					<input type='search' placeholder='search' name='search' class='searchbar'>
+				</form>
+				
+				<div>
+				<a class ='login-link' href ='/logout'>Log Out</a>
+				</div>
+				
 			</div>
+			
 		  </nav>
+	
 	  </header>
+	  	  
     <%= yield %>
+    </div>
+	
   </body>
 </html>

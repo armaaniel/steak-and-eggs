@@ -2,7 +2,11 @@ class PositionService
   def self.positions(current_user:)
     position = Position.where(user_id: current_user.id)
     positions = position.map do |n| 
-      {symbol: n.symbol, shares: n.shares, name: MarketService.companydata(symbol:n.symbol)[:name]}
+      {symbol: n.symbol, shares: n.shares, name: MarketService.companydata(symbol:n.symbol)&.dig(:name), 
+        price: MarketService.marketprice(symbol:n.symbol)}
+    rescue => e
+      Sentry.capture_exception(e)
+      nil
     end
     positions
   end
@@ -34,6 +38,7 @@ class PositionService
     end
     
   rescue => e
+    Sentry.capture_exception(e)
     nil
     
     
@@ -63,6 +68,9 @@ class PositionService
       portfolio_value:portfolio_value
     }
     
+  rescue => e
+    Sentry.capture_exception(e)
+    nil
   end
   
 end

@@ -12,8 +12,11 @@ class WebsocketService
         
       rescue => e 
         nil
+        Sentry.capture_exception(e)
       end
     end
+  rescue => e
+    nil
   end
 end
 

@@ -74,7 +74,7 @@ class MarketService
     end
     
   rescue => e
-    Rails.logger.error("Trade failed for #{symbol}, #{user_id}, #{e.message}")
+    Sentry.capture_exception(e)
     nil
   end
   
@@ -94,7 +94,7 @@ class MarketService
     0
     
   rescue => e
-    Rails.logger.error("Market price failed for #{symbol} #{e.message}")
+    Sentry.capture_exception(e)
     'N/A'
     
   end
@@ -117,7 +117,7 @@ class MarketService
     resilient_data
     
   rescue => e
-    Rails.logger.error("Market data failed for #{symbol} #{e.message}")
+    Sentry.capture_exception(e)
     {price:'N/A', open:'N/A', high:'N/A', low:'N/A', volume:'N/A'}
   end
     
@@ -141,7 +141,7 @@ class MarketService
       daily
       
     rescue => e
-      Rails.logger.error("Daily data failed for #{symbol}, #{e.message}")
+      Sentry.capture_exception(e)
       []
     end
   
@@ -159,7 +159,7 @@ class MarketService
     company
     
   rescue => e
-    Rails.logger.error("Company data failed for #{symbol}, #{e.message}")
+    Sentry.capture_exception(e)
     {name:'N/A', currency:'N/A', :'52_week_high'=> 'N/A', exchange: 'N/A', :'52_week_low'=> 'N/A', market_capitalization:'N/A', 
       description: 'N/A'}
     
@@ -181,7 +181,7 @@ class MarketService
     forex.to_f
     
   rescue => e
-    Rails.logger.error("Can't get forex rate for USD to CAD, #{e.message}")
+    Sentry.capture_exception(e)
     1.36
     
   end
@@ -197,7 +197,7 @@ class MarketService
     results
     
   rescue => e
-    Rails.logger.error("Search failed for #{search_key}, #{e.message}")
+    Sentry.capture_exception(e)
     []
     
   end

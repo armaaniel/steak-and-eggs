@@ -16,15 +16,8 @@ class HomeController < ApplicationController
   end
   
   def daily
-    daily = []
-    stock_object = Alphavantage::TimeSeries.new(symbol: 'tsla')
-    stock_object&.daily['time_series_daily']&.each do |date, values|
-      daily.unshift({
-        date: date,
-        close: values['close'].to_f,
-      })
-    end
-    @daily = daily
-  end
+    data = PortfolioRecord.where(user_id:current_user.id).pluck(:date, :portfolio_value)
+    @daily = data.map do |date, value| {date: date, value: value} end
+  end    
   
 end
