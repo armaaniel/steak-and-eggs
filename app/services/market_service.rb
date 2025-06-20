@@ -206,13 +206,15 @@ class MarketService
   
   def self.safe_redis_get(key)
     REDIS.get(key)
-  rescue Redis::BaseError
+  rescue Redis::BaseError => e
+    Sentry.capture_exception(e)
     nil
   end
   
   def self.safe_redis_setex(key, time, value)
     REDIS.setex(key, time, value)
-  rescue Redis::BaseError
+  rescue Redis::BaseError => e
+    Sentry.capture_exception(e)
     nil
   end
   

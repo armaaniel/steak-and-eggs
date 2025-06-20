@@ -1,11 +1,12 @@
 class UserService 
   def self.signup(params)
-    User.transaction do
-      User.create!(email: params[:email], password: params[:password], first_name: params[:firstName]&.strip&.titleize,
+    ActiveRecord::Base.transaction do
+      user = User.create!(email: params[:email], password: params[:password], first_name: params[:firstName]&.strip&.titleize,
       middle_name: params[:middleName]&.strip&.titleize, last_name: params[:lastName]&.strip&.titleize, gender: params[:gender],
       date_of_birth: params[:dateOfBirth])
     
       PortfolioRecord.create!(date:Date.today, portfolio_value:0, user_id:user.id)
+      user
     end
     
   rescue => e
@@ -17,21 +18,46 @@ class UserService
     user = User.find_by(email: params[:email])&.authenticate(params[:password])
   end
   
-  def self.update_balance(params:, current_user:)
-    case params[:commit] 
+  def self.update_balance(amount:, user_id:, action:)
+    return if amount.nil? || amount&.to_f <= 0
+    amount = amount.to_f
+    
+    case action
     when 'add'
-      Transaction.transaction do
-        Transaction.create!(symbol:'CAD', quantity: 1, amount: params[:amount].to_f, transaction_type: 'Deposit', user_id: current_user.id)
-        current_user.balance += params[:amount].to_f
-        current_user.save!
+      ActiveRecord::Base.transaction do
+        user = User.lock.find(user_id)
+        
+        user.balance += amount
+        user.save!
+        
+        Transaction.create!(symbol:'CAD', quantity: 1, amount: amount, transaction_type: 'Deposit', user_id: user_id)
+        
+        record = PortfolioRecord.find_or_initialize_by(user_id:user_id, date:Date.today)
+        record.portfolio_value = PositionService.get_aum(user_id:user_id, balance:user.balance)
+        record.save!
       end
     when 'withdraw'
-      Transaction.transaction do
-        Transaction.create!(symbol: 'CAD', quantity: 1, amount: params[:amount].to_f, transaction_type: 'Withdraw', user_id: current_user.id)
-        current_user.balance -= params[:amount].to_f
-        current_user.save!
+      ActiveRecord::Base.transaction do
+        user = User.lock.find(user_id)
+        
+        return false if user.balance < amount
+        
+        user.balance -= amount
+        user.save!
+        
+        Transaction.create!(symbol: 'CAD', quantity: 1, amount: amount, transaction_type: 'Withdraw', user_id: user_id)
+        record = PortfolioRecord.find_or_initialize_by(user_id:user_id, date:Date.today)
+        record.portfolio_value = PositionService.get_aum(user_id:user_id, balance:user.balance)
+        record.save!
       end
     end
+    
+    begin
+      REDIS.del("portfolio:#{user_id}")
+    rescue Redis::BaseError => e
+      Sentry.capture_exception(e)
+    end
+    
   rescue => e
     Sentry.capture_exception(e)
     nil

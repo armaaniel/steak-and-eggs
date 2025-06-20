@@ -10,7 +10,7 @@
 	border:1px solid rgb(228, 226, 225);
 	border-radius:1rem;
 	padding:0rem 1rem;
-	
+	background:white;
     max-height: 375px;
     overflow-y: auto;
 }

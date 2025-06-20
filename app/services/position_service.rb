@@ -4,11 +4,10 @@ class PositionService
     positions = position.map do |n| 
       {symbol: n.symbol, shares: n.shares, name: MarketService.companydata(symbol:n.symbol)&.dig(:name), 
         price: MarketService.marketprice(symbol:n.symbol)}
-    rescue => e
-      Sentry.capture_exception(e)
-      nil
     end
-    positions
+  rescue => e
+    Sentry.capture_exception(e)
+    nil
   end
   
   def self.transactions(current_user:)
@@ -41,7 +40,6 @@ class PositionService
     Sentry.capture_exception(e)
     nil
     
-    
   end
   
   def self.get_buying_power(user_id:, balance:, used_margin:)
@@ -73,6 +71,39 @@ class PositionService
     nil
   end
   
+  def self.portfolio_values(user_id:)
+    
+    begin
+      cached_values = REDIS.get("portfolio:#{user_id}")
+      return JSON.parse(cached_values, symbolize_names:true) if cached_values
+    rescue Redis::BaseError
+      Sentry.capture_exception(e)
+      []
+    end
+    
+    data = PortfolioRecord.where(user_id:user_id).pluck(:date, :portfolio_value)
+    
+    values = data.map do |date, value| 
+      {date: date, value: value.to_f} 
+    end
+    
+    if values.length < 2
+      values = [{date:Date.today, value:values.first[:value]},{date:Date.today, value:values.first[:value]}]
+    end
+    
+    begin
+      REDIS.setex("portfolio:#{user_id}", 6.hours.to_i, values.to_json)
+    rescue Redis::BaseError
+      Sentry.capture_exception(e)
+    end
+    
+    values
+    
+  rescue => e
+    Sentry.capture_exception(e)
+    []
+  end
+    
 end
   
     

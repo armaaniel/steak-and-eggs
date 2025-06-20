@@ -14,6 +14,7 @@ Rails.application.routes.draw do
   get('activity', to: 'home#activity')
   get('aum', to: 'portfolio#aum')
   get('bpm', to: 'portfolio#buying_power_margin')
+  get('positions', to: 'portfolio#positions')
   match('*path', to: 'pages#not_found', via: :all)
   
   mount ActionCable.server => '/cable'

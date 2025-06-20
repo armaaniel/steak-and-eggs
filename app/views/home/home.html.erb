@@ -12,47 +12,12 @@
 		<%= react_component("PortfolioChart", {dailyData: @daily}) %>
 	</div>
 
-<% if @positions.any?%>
 <div class="holdings">
 	<h2> Holdings </h2>
 </div>
 
-<div class='table-wrapper-one'>
-<table class='portfolio'>
-	<thead>
-	<tr class='heading-row'>
-		<th class='positions-header'>Positions</th>
-		<th class='quantity-header'>Quantity Held</th>
-	</tr>
-</thead>
-	
-  <%@positions.each do |n|%>
-  <tr class ='portfolio-row'>
-    <td class='symbol-cell'>
-      <a href='/stocks/<%=n[:symbol]%>' class='symbol-name'>
-		  
-		<img src='https://img.logo.dev/ticker/<%=n[:symbol]%>?token=pk_ZBCJebqoQXKBWVLhwcIBfg&retina=true' 
-		height='32' width='32'>
-		
-	    <div class="stock-text">
-		<p class="stock-symbol"><%=n[:symbol]%></p>
-		<p class="stock-name"><%=n[:name]%></p>	
-		</div>
-		
-      </a>
-    </td>
-	<td class='shares-cell'>
-        <a href='/stocks/<%=n[:symbol]%>' class='symbol-name'>
-		<%=n[:shares] %> shares
-	</a>
-	</td>
-	
-  </tr>
-  
-  <%end%>
-</table>
-</div>
-  <%end%>
+<%=react_component("PositionsTable", {id: current_user.id}, {class:"table-wrapper-one"})%>
+
 </div>
 
 <div class='home-right'>  

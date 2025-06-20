@@ -10,11 +10,11 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2025_06_12_173706) do
+ActiveRecord::Schema[8.0].define(version: 2025_06_18_225550) do
   create_table "portfolio_records", force: :cascade do |t|
     t.integer "user_id", null: false
     t.date "date", null: false
-    t.decimal "portfolio_value"
+    t.decimal "portfolio_value", null: false
     t.index ["user_id", "date"], name: "index_portfolio_records_on_user_id_and_date", unique: true
     t.index ["user_id"], name: "index_portfolio_records_on_user_id"
   end

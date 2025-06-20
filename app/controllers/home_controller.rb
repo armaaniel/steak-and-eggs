@@ -4,7 +4,7 @@ class HomeController < ApplicationController
   layout "authenticated"
   
   def home
-    @positions = PositionService.positions(current_user: current_user)
+    
   end
 
   def search
@@ -16,8 +16,11 @@ class HomeController < ApplicationController
   end
   
   def daily
-    data = PortfolioRecord.where(user_id:current_user.id).pluck(:date, :portfolio_value)
-    @daily = data.map do |date, value| {date: date, value: value} end
-  end    
+    @daily = PositionService.portfolio_values(user_id:current_user.id)
+  end
+  
+  def test
+    @portfoliorecord = PortfolioRecord.where(user_id:current_user.id)  
+  end  
   
 end
