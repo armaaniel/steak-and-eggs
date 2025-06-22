@@ -19,7 +19,9 @@ end
 end
 
 def not_found
-  if session[:user_id]
+  if request.format.json?
+    head 404
+  elsif session[:user_id]
     render layout: 'auth404'
   else
     render layout: 'application'

@@ -26,19 +26,17 @@ class UsersController < ApplicationController
       redirect_to login_path
     end
     
-  end
-  
-  def update_balance
-    
-    UserService.update_balance(amount: params[:amount], user_id: current_user.id, action: params[:commit])    
-    
-    redirect_to home_path
-  end    
+  end  
       
   def logout
     reset_session
     redirect_to root_path
   end
+  
+  def update_balance
+    UserService.update_balance(amount: params[:amount], user_id: current_user.id, action: params[:commit])    
+    redirect_to home_path
+  end  
         
     
 end

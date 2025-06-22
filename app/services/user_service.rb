@@ -33,7 +33,7 @@ class UserService
         Transaction.create!(symbol:'CAD', quantity: 1, amount: amount, transaction_type: 'Deposit', user_id: user_id)
         
         record = PortfolioRecord.find_or_initialize_by(user_id:user_id, date:Date.today)
-        record.portfolio_value = PositionService.get_aum(user_id:user_id, balance:user.balance)
+        record.portfolio_value = PositionService.get_aum(user_id:user_id, balance:user.balance)[:aum]
         record.save!
       end
     when 'withdraw'
@@ -47,20 +47,18 @@ class UserService
         
         Transaction.create!(symbol: 'CAD', quantity: 1, amount: amount, transaction_type: 'Withdraw', user_id: user_id)
         record = PortfolioRecord.find_or_initialize_by(user_id:user_id, date:Date.today)
-        record.portfolio_value = PositionService.get_aum(user_id:user_id, balance:user.balance)
+        record.portfolio_value = PositionService.get_aum(user_id:user_id, balance:user.balance)[:aum]
         record.save!
       end
     end
     
-    begin
-      REDIS.del("portfolio:#{user_id}")
-    rescue Redis::BaseError => e
-      Sentry.capture_exception(e)
-    end
+    RedisService.safe_del("portfolio:#{user_id}")
     
   rescue => e
     Sentry.capture_exception(e)
     nil
   end
+  
+  
 end
       

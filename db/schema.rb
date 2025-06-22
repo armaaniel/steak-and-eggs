@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2025_06_18_225550) do
+ActiveRecord::Schema[8.0].define(version: 2025_06_21_181541) do
   create_table "portfolio_records", force: :cascade do |t|
     t.integer "user_id", null: false
     t.date "date", null: false
@@ -25,6 +25,7 @@ ActiveRecord::Schema[8.0].define(version: 2025_06_18_225550) do
     t.integer "user_id", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.string "name"
     t.index ["user_id"], name: "index_positions_on_user_id"
   end
 
@@ -42,7 +43,6 @@ ActiveRecord::Schema[8.0].define(version: 2025_06_18_225550) do
   create_table "users", force: :cascade do |t|
     t.string "email", null: false
     t.string "password_digest", null: false
-    t.decimal "balance", default: "0.0"
     t.string "first_name", null: false
     t.string "last_name", null: false
     t.date "date_of_birth", null: false
@@ -50,6 +50,7 @@ ActiveRecord::Schema[8.0].define(version: 2025_06_18_225550) do
     t.string "middle_name"
     t.decimal "used_margin", default: "0.0", null: false
     t.string "margin_call_status"
+    t.decimal "balance", default: "0.0"
     t.index ["email"], name: "index_users_on_email", unique: true
   end
 

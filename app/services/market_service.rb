@@ -15,7 +15,7 @@ class MarketService
     when 'buy'
       ActiveRecord::Base.transaction do
         user = User.lock.find(user_id)
-        buying_power = PositionService.get_buying_power(user_id: user_id, balance: user.balance, used_margin: user.used_margin)
+        buying_power = PositionService.get_buying_power(user_id: user_id, balance: user.balance, used_margin: user.used_margin)[:buying_power]
         record = Position.find_by(user_id:user_id, symbol: symbol)
         quantity_held = record&.shares
         
@@ -25,7 +25,7 @@ class MarketService
           if record
             record.update!(shares: (trade_quantity + quantity_held))
           else
-            Position.create!(user_id: user_id, symbol: symbol, shares: trade_quantity)
+            Position.create!(user_id: user_id, symbol: symbol, shares: trade_quantity, name: params&.dig(:name))
           end
           
           Transaction.create!(symbol: symbol, quantity: trade_quantity, amount: trade_value, transaction_type: 'Buy', 
@@ -38,7 +38,7 @@ class MarketService
           if record
             record.update!(shares: (trade_quantity + quantity_held))
           else 
-            Position.create!(user_id: user_id, symbol: symbol, shares: trade_quantity)
+            Position.create!(user_id: user_id, symbol: symbol, shares: trade_quantity, name: params&.dig(:name))
           end 
           
           Transaction.create!(symbol: symbol, quantity: trade_quantity, amount: trade_value, transaction_type: 'Buy', 
@@ -73,6 +73,8 @@ class MarketService
       end
     end
     
+    RedisService.safe_del("positions:#{user_id}")
+  
   rescue => e
     Sentry.capture_exception(e)
     nil
@@ -80,14 +82,14 @@ class MarketService
   
   def self.marketprice(symbol:)
     
-    cached = safe_redis_get("price:#{symbol}")
+    cached = RedisService.safe_get("price:#{symbol}")
     return cached.to_f if cached
     
     stock_object = Alphavantage::TimeSeries.new(symbol: symbol)
     quote = stock_object.quote
     
     if quote&.dig(:price)
-      safe_redis_setex("price:#{symbol}", 5.minutes.to_i, quote[:price])
+      RedisService.safe_setex("price:#{symbol}", 5.minutes.to_i, quote[:price])
       return quote[:price].to_f
     end
     
@@ -101,7 +103,7 @@ class MarketService
   
   def self.marketdata(symbol:)
     
-    cached = safe_redis_get("market:#{symbol}")
+    cached = RedisService.safe_get("market:#{symbol}")
     return JSON.parse(cached, symbolize_names: true) if cached
     
     stock_object = Alphavantage::TimeSeries.new(symbol: symbol)
@@ -112,7 +114,7 @@ class MarketService
     resilient_data = {price: quote[:price] || 'N/A', open: quote[:open] || 'N/A', high: quote[:high] || 'N/A', low: quote[:low] || 'N/A', 
     volume: quote[:volume] || 'N/A'}
     
-    safe_redis_setex("market:#{symbol}", 5.minutes.to_i, resilient_data.to_json)
+    RedisService.safe_setex("market:#{symbol}", 5.minutes.to_i, resilient_data.to_json)
     
     resilient_data
     
@@ -123,7 +125,7 @@ class MarketService
     
   def self.dailydata(symbol:)
     
-    cached = safe_redis_get("daily:#{symbol}")
+    cached = RedisService.safe_get("daily:#{symbol}")
     return JSON.parse(cached, symbolize_names:true) if cached
     
     stock_object = Alphavantage::TimeSeries.new(symbol: symbol)
@@ -136,7 +138,7 @@ class MarketService
       })
       end
       
-      safe_redis_setex("daily:#{symbol}", 24.hours.to_i, daily.to_json)
+      RedisService.safe_setex("daily:#{symbol}", 24.hours.to_i, daily.to_json)
       
       daily
       
@@ -146,7 +148,7 @@ class MarketService
     end
   
   def self.companydata(symbol:)
-    cached = safe_redis_get("company:#{symbol}")
+    cached = RedisService.safe_get("company:#{symbol}")
     return JSON.parse(cached, symbolize_names:true) if cached
     
     company = Alphavantage::Fundamental.new(symbol: symbol).overview
@@ -154,7 +156,7 @@ class MarketService
     return {name:'N/A', currency:'N/A', :'52_week_high'=> 'N/A', exchange: 'N/A', :'52_week_low'=> 'N/A', market_capitalization:'N/A', 
       description: 'N/A'} unless company[:name]
     
-    safe_redis_setex("company:#{symbol}", 24.hours.to_i, company.to_json)
+    RedisService.safe_setex("company:#{symbol}", 24.hours.to_i, company.to_json)
     
     company
     
@@ -166,7 +168,7 @@ class MarketService
   end
   
   def self.exchange_rate
-    cached = safe_redis_get("forex")
+    cached = RedisService.safe_get("forex")
     return cached.to_f if cached
     
     forex = Alphavantage::Forex.new(from_symbol:'USD', to_symbol: 'CAD').exchange_rates&.dig('exchange_rate')
@@ -176,7 +178,7 @@ class MarketService
       return 1.36
     end
     
-    safe_redis_setex("forex", 5.minutes.to_i, forex)
+    RedisService.safe_setex("forex", 5.minutes.to_i, forex)
     
     forex.to_f
     
@@ -204,18 +206,8 @@ class MarketService
   
   private
   
-  def self.safe_redis_get(key)
-    REDIS.get(key)
-  rescue Redis::BaseError => e
-    Sentry.capture_exception(e)
-    nil
-  end
   
-  def self.safe_redis_setex(key, time, value)
-    REDIS.setex(key, time, value)
-  rescue Redis::BaseError => e
-    Sentry.capture_exception(e)
-    nil
-  end
+  
+  
   
 end

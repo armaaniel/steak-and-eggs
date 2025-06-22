@@ -1,10 +1,22 @@
 class PositionService
-  def self.positions(current_user:)
-    position = Position.where(user_id: current_user.id)
+  
+  
+  
+  def self.positions(user_id:)
+    
+    cached = RedisService.safe_get("positions:#{user_id}")
+    return JSON.parse(cached, symbolize_names:true) if cached
+        
+    position = Position.where(user_id: user_id)
+    
     positions = position.map do |n| 
-      {symbol: n.symbol, shares: n.shares, name: MarketService.companydata(symbol:n.symbol)&.dig(:name), 
-        price: MarketService.marketprice(symbol:n.symbol)}
+      {symbol: n.symbol, shares: n.shares, name: n.name}
     end
+    
+    RedisService.safe_setex("positions:#{user_id}", 24.hours.to_i, positions.to_json)
+    
+    positions
+    
   rescue => e
     Sentry.capture_exception(e)
     nil
@@ -19,32 +31,37 @@ class PositionService
   end
   
   def self.get_aum(user_id:, balance:)
-    positions = Position.where(user_id: user_id).to_a
+    
+    positions = PositionService.positions(user_id:user_id)
     
     return balance if positions.empty?
     
-    price_keys = positions.map {|n| "price:#{n.symbol}"}
+    price_keys = positions.map {|n| "price:#{n[:symbol]}"}
     
     prices_array = REDIS.mget(*price_keys)
     
-    symbols = positions.pluck(:symbol)
+    zipped = positions.zip(prices_array)
     
-    prices = symbols.zip(prices_array).to_h
-    
-    positions.inject(balance) do |acc, position|
-      price = prices[position.symbol].to_f
-      acc + (price * position.shares)
+    positions_with_prices = zipped.map do |position, price|
+      position.merge(price: price.to_f)
     end
+    
+    aum = positions_with_prices.inject(balance) do |acc, position|
+      price = position[:price].to_f
+      acc + (price * position[:shares])
+    end
+    
+    {aum:aum,positions:positions_with_prices}
     
   rescue => e
     Sentry.capture_exception(e)
-    nil
+    {aum:balance, positions:[]}
     
   end
   
   def self.get_buying_power(user_id:, balance:, used_margin:)
     
-    portfolio_value = get_aum(user_id: user_id, balance: balance)
+    portfolio_value = get_aum(user_id: user_id, balance: balance)[:aum]
     
     return nil unless portfolio_value
     
@@ -73,14 +90,9 @@ class PositionService
   
   def self.portfolio_values(user_id:)
     
-    begin
-      cached_values = REDIS.get("portfolio:#{user_id}")
-      return JSON.parse(cached_values, symbolize_names:true) if cached_values
-    rescue Redis::BaseError
-      Sentry.capture_exception(e)
-      []
-    end
-    
+    cached_values = RedisService.safe_get("portfolio:#{user_id}")
+    return JSON.parse(cached_values, symbolize_names:true) if cached_values
+  
     data = PortfolioRecord.where(user_id:user_id).pluck(:date, :portfolio_value)
     
     values = data.map do |date, value| 
@@ -91,11 +103,7 @@ class PositionService
       values = [{date:Date.today, value:values.first[:value]},{date:Date.today, value:values.first[:value]}]
     end
     
-    begin
-      REDIS.setex("portfolio:#{user_id}", 6.hours.to_i, values.to_json)
-    rescue Redis::BaseError
-      Sentry.capture_exception(e)
-    end
+    RedisService.safe_setex("portfolio:#{user_id}", 6.hours.to_i, values.to_json)
     
     values
     

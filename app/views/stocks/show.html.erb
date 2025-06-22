@@ -17,7 +17,7 @@
 
 
 	<div class='buy-sell-container'>
-		<%= react_component("BuySell", {marketPrice: @marketprice, userBalance: current_user.balance, exchangeRate: @exchangerate, userHoldings: @record&.shares || 0, symbol: params[:symbol]}) %>
+		<%= react_component("BuySell", {marketPrice: @marketprice, userBalance: current_user.balance, exchangeRate: @exchangerate, userHoldings: @record&.shares || 0, symbol: params[:symbol], name: @companydata[:name]}) %>
 	</div>
 
 <div class='data-parent-container'>

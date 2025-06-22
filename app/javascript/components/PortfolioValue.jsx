@@ -1,39 +1,34 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react'
+import consumer from '../channels/consumer'
 
+const PortfolioValue = ({ id, aum }) => {
+  const [value, setValue] = useState(aum)
+  
+  useEffect(() => {
+    const subscription = consumer.subscriptions.create(
+      { channel: "PortfolioChannel", id: `${id}` },
+	  
+      { received(data) {
+	      console.log(`Received data:`, data);
+		  
+		  
+          setValue(data.portfolio_value);
+		  
+        }
+      }
+    );
+    
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, [id]);
 
-const PortfolioValue = () => {
-	
-	const [value, setValue] = useState(null);
-	
-	useEffect(() => {
-		async function getValue() {
-			try {
-				const response = await fetch('/aum')
-				const data = await response.json()
-				
-				if (data === null) {
-					setValue('N/A')
-				} else {
-				setValue(parseFloat(data).toFixed(2))
-			}
-			} catch (err) {
-				console.log(err)
-			}	
-		}
-		getValue();
-		
-		const interval = setInterval(getValue, 10000)
-		
-		return () => clearInterval(interval);
-	
-	}, []);
-	
-	return (
-	
-	<h2>{value}</h2>
-	
-	)
-
+  return (
+  <>
+  <h2 className='port-value'>${value}</h2>
+  </>
+  
+  )
 }
 
-export default PortfolioValue
+export default PortfolioValue;

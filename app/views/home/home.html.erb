@@ -4,19 +4,19 @@
 	
 
 <div class='port-value'>
-<h2>Your Portfolio value is:&nbsp;$</h2>
-<%=react_component("PortfolioValue")%>
+	<h2>Your Portfolio value is:&nbsp;</h2>
+	<%=react_component("PortfolioValue", {id: current_user.id, aum: @aum})%>
 </div>
 
-	<div>
-		<%= react_component("PortfolioChart", {dailyData: @daily}) %>
-	</div>
+<div>
+	<%= react_component("PortfolioChart", {dailyData: @daily}) %>
+</div>
 
 <div class="holdings">
 	<h2> Holdings </h2>
 </div>
 
-<%=react_component("PositionsTable", {id: current_user.id}, {class:"table-wrapper-one"})%>
+<%=react_component("PositionsTable", {positions:@positions, id: current_user.id}, {class:"table-wrapper-one"})%>
 
 </div>
 
