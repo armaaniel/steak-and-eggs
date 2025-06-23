@@ -33,6 +33,8 @@ class PortfolioValuesWorker
       portfolio_value = stock_value + cash_balance
       
       ActionCable.server.broadcast("portfolio_channel:#{id}", {portfolio_value: portfolio_value, stock_prices: user_prices})
+      
+      PortfolioValuesWorker.perform_in(10.seconds)
     end
   end
 end

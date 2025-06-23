@@ -32,7 +32,7 @@
 </div>
 
 <div class='cb'>
-<h2 class='cb-header'>Equity Ratio: <%=PositionService.get_buying_power(user_id: current_user.id, balance: current_user.balance, used_margin: current_user.used_margin)&.dig(:equity_ratio) || 'N/A'%> </h2>
+<h2 class='cb-header'>Equity Ratio: <%=@equity%> </h2>
 </div>
 
 <div class='cb'>

@@ -34,7 +34,7 @@ class PositionService
     
     positions = PositionService.positions(user_id:user_id)
     
-    return balance if positions.empty?
+    return {aum:balance} if positions.empty?
     
     price_keys = positions.map {|n| "price:#{n[:symbol]}"}
     
@@ -71,7 +71,7 @@ class PositionService
     
     buying_power = balance + available_margin
     
-    if portfolio_value > 0
+    if portfolio_value > 0 && portfolio_value != balance
       equity_ratio = (equity / (portfolio_value - balance) * 100).round(2)
     else
       equity_ratio = 100

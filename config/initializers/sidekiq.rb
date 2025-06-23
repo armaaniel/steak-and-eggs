@@ -11,5 +11,5 @@ cron: '30 18 * * 1-5 America/Edmonton',
 class: 'PortfolioServiceWorker')
   
 Sidekiq::Cron::Job.create(name: 'portfolio_update_10s',
-  cron: '*/10 * * * * *',  # Every 10 seconds
-  class: 'PortfolioValuesWorker')
+cron: '*/10 * * * * *',  
+class: 'PortfolioValuesWorker')
