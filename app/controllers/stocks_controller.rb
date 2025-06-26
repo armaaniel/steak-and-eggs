@@ -31,6 +31,8 @@ class StocksController < ApplicationController
     
     @record = PositionService.record(symbol: params[:symbol], user_id: current_user.id)
     
+    @buyingpower = PositionService.get_buying_power(user_id:current_user.id, balance: current_user.balance, used_margin:current_user.used_margin)
+    
     if @companydata[:currency] == 'USD'
       @exchangerate = MarketService.exchange_rate
     else

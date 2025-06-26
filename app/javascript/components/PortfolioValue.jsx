@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react'
 import consumer from '../channels/consumer'
 
 const PortfolioValue = ({ id, aum }) => {
-  const [value, setValue] = useState(aum)
+  const [value, setValue] = useState(parseFloat(aum).toFixed(2))
   
   useEffect(() => {
     const subscription = consumer.subscriptions.create(
@@ -12,7 +12,7 @@ const PortfolioValue = ({ id, aum }) => {
 	      console.log(`Received data:`, data);
 		  
 		  
-          setValue(data.portfolio_value);
+          setValue(parseFloat(data.portfolio_value).toFixed(2));
 		  
         }
       }

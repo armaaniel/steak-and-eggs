@@ -36,6 +36,8 @@ gem 'sidekiq-cron'
 gem 'sentry-ruby'
 gem 'sentry-rails'
 
+gem 'clockwork'
+
 # Gemfile
 gem 'oj'
 

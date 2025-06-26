@@ -63,7 +63,7 @@ class PositionService
     
     portfolio_value = get_aum(user_id: user_id, balance: balance)[:aum]
     
-    return nil unless portfolio_value
+    return 0 unless portfolio_value
     
     equity = portfolio_value - used_margin
     
@@ -77,15 +77,19 @@ class PositionService
       equity_ratio = 100
     end
         
-    { buying_power: buying_power,
-      available_margin: available_margin,
+    { buying_power: buying_power.round(2),
+      available_margin: available_margin.round(2),
       equity_ratio: equity_ratio,
       portfolio_value:portfolio_value
     }
     
   rescue => e
     Sentry.capture_exception(e)
-    nil
+    { buying_power: 0,
+      available_margin: 0,
+      equity_ratio: 0,
+      portfolio_value:0
+    }
   end
   
   def self.portfolio_values(user_id:)

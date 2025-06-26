@@ -5,12 +5,10 @@ class WebsocketService
     
     client.subscribe("A.*") do |event|
       event.each do |data|
+                
+        REDIS.set("price:#{data.sym}", data.c)
         
-        rounded_price = data.c.round(2)
-        
-        REDIS.set("price:#{data.sym}", rounded_price)
-        
-        ActionCable.server.broadcast("price_channel:#{data.sym}", rounded_price)
+        ActionCable.server.broadcast("price_channel:#{data.sym}", data.c)
         
       rescue => e 
         nil

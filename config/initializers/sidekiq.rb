@@ -10,6 +10,3 @@ Sidekiq::Cron::Job.create(name:'daily_margin_call_check',
 cron: '30 18 * * 1-5 America/Edmonton',
 class: 'PortfolioServiceWorker')
   
-Sidekiq::Cron::Job.create(name: 'portfolio_update_10s',
-cron: '*/10 * * * * *',  
-class: 'PortfolioValuesWorker')

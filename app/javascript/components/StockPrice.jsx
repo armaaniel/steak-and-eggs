@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react'
 import consumer from '../channels/consumer'
 
 const StockPrice = ({ symbol, marketPrice, currency }) => {
-  const [price, setPrice] = useState(parseFloat(marketPrice).toFixed(2));
+  const [price, setPrice] = useState(marketPrice.toFixed(2));
   
   useEffect(() => {
     const subscription = consumer.subscriptions.create(

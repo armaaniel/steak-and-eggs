@@ -30,11 +30,17 @@ class PortfolioValuesWorker
       end
       
       cash_balance = all_users[id].balance
+      used_margin = all_users[id].used_margin
+      
       portfolio_value = stock_value + cash_balance
+      equity = portfolio_value - used_margin
       
-      ActionCable.server.broadcast("portfolio_channel:#{id}", {portfolio_value: portfolio_value, stock_prices: user_prices})
+      available_margin = (equity * 0.5) - used_margin
+      buying_power = cash_balance + available_margin
       
-      PortfolioValuesWorker.perform_in(10.seconds)
+      
+      ActionCable.server.broadcast("portfolio_channel:#{id}", {portfolio_value: portfolio_value, stock_prices: user_prices,
+        buying_power:buying_power, available_margin:available_margin})
     end
   end
 end

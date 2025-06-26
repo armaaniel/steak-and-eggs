@@ -9,41 +9,15 @@ const BuySell = (props) => {
     
   const [quantity, setQuantity] = useState(null);
   
-  const [availableMargin, setAvailableMargin] = useState(null)
+  const [availableMargin, setAvailableMargin] = useState(props.buyingPower.available_margin)
   
-  const [buyingPower, setBuyingPower] = useState(0)
+  const [buyingPower, setBuyingPower] = useState(props.buyingPower.buying_power)
   
   const [price, setPrice] = useState(parseFloat(props.marketPrice));
   
-  useEffect(() => {
-	  async function setBuyingPowerMargin() {
-		  try {
-			  const response = await fetch('/bpm')
-			  const data = await response.json()
-			  
-			  if (data != null) {
-				  setBuyingPower(parseFloat(data.buying_power).toFixed(2))
-				  setAvailableMargin(parseFloat(data.available_margin).toFixed(2))
-			  } else {
-			  
-				  setBuyingPower('N/A')
-				  setAvailableMargin('N/A')
-			  
-			  }
-			  	  
-		  } catch (err) {
-			  console.log(err)
-		  }
-	  }
-	  
-	  setBuyingPowerMargin()
-	  
-	  const interval = setInterval(setBuyingPowerMargin, 10000)
-	  
-	  return () => clearInterval(interval)
+  const [value, setValue] = useState(0)
   
-  }, []);
-    
+  
     useEffect(() => {
       const subscription = consumer.subscriptions.create(
         { channel: "PriceChannel", symbol: `${props.symbol}` },
@@ -62,7 +36,26 @@ const BuySell = (props) => {
         subscription.unsubscribe();
       };
     }, [props.symbol]);
-  
+	
+    useEffect(() => {
+      const subscription = consumer.subscriptions.create(
+        { channel: "PortfolioChannel", id: `${props.id}` },
+	  
+        { received(data) {
+  	      console.log(`Received data:`, data);
+		  
+		  
+            setAvailableMargin(parseFloat(data.available_margin).toFixed(2));
+			setBuyingPower(parseFloat(data.buying_power).toFixed(2));
+		  
+          }
+        }
+      );
+    
+      return () => {
+        subscription.unsubscribe();
+      };
+    }, [props.id]);
   
   const estimatedCost = (quantity || 0) * price * props.exchangeRate;
   
@@ -344,99 +337,6 @@ const BuySell = (props) => {
         </div>
       )}
 
-      {currentState.action === "sell" && currentState.step === 3 && (
-        <div className='bs-parent-container-two'>
-		  
-		  <div className='bs-containers'>
-          <h2>Order Submitted!</h2>
-		  </div>
-		  
-		  <div className='bs-containers'>
-		  	<div className='bs-width-wrapper'>
-          	<p> Submitted</p>
-		  	</div>
-		  	<div>
-		  	<p>{new Date().toLocaleTimeString()}</p>
-		  	</div>
-		  </div>
-		  
-		  <div className='bs-containers'>
-		  	<div className='bs-width-wrapper'>
-		  	<p> Order Type</p>
-		  	</div>
-		  	<div>
-		  	<p> Market Sell</p>
-		  	</div>
-		  </div>
-		  
-		  <div className='bs-containers'>
-		  	<div className='bs-width-wrapper'>
-		  	<p>Shares</p>
-		  	</div>
-		  	<div>
-		  	<p>{quantity}</p>
-		  	</div>
-		  </div>
-		  
-		  <div className='bs-containers'>
-		  	<div className='bs-width-wrapper'>
-		  	<p>Value</p>
-		  	</div>
-		  	<div>
-		  	<p>${estimatedCost.toFixed(2)} CAD </p>
-		  	</div>
-		  </div>
-		  
-          <button onClick={buyState} className='next'>Done</button>
-        </div>
-      )}
-
-      {currentState.action === "buy" && currentState.step === 3 && (
-        <div className='bs-parent-container-two'>
-		  
-		  <div className='bs-containers'>
-          <h2>Order Submitted!</h2>
-		  </div>
-		  
-		  <div className='bs-containers'>
-		  	<div className='bs-width-wrapper'>
-          	<p> Submitted</p>
-		  	</div>
-		  	<div>
-		  	<p>{new Date().toLocaleTimeString()}</p>
-		  	</div>
-		  </div>
-		  
-		  <div className='bs-containers'>
-		  	<div className='bs-width-wrapper'>
-		  	<p> Order Type</p>
-		  	</div>
-		  	<div>
-		  	<p> Market Buy</p>
-		  	</div>
-		  </div>
-		  
-		  <div className='bs-containers'>
-		  	<div className='bs-width-wrapper'>
-		  	<p>Shares</p>
-		  	</div>
-		  	<div>
-		  	<p>{quantity}</p>
-		  	</div>
-		  </div>
-		  
-		  <div className='bs-containers'>
-		  	<div className='bs-width-wrapper'>
-		  	<p>Cost</p>
-		  	</div>
-		  	<div>
-		  	<p>${estimatedCost.toFixed(2)} CAD </p>
-		  	</div>
-		  </div>
-		  
-          <button onClick={buyState} className='next'>Done</button>
-        </div>
-      )}
     </>
   );
 };
