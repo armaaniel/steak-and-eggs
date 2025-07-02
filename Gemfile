@@ -30,6 +30,8 @@ gem "solid_cable"
 
 gem 'redis'
 
+gem 'pg'
+
 gem 'sidekiq'
 gem 'sidekiq-cron'
 

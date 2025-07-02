@@ -14,8 +14,10 @@ class PortfolioServiceWorker
       equity_ratio = portfolio[:equity_ratio]
       portfolio_value = portfolio[:portfolio_value]
       
-      PortfolioRecord.create!(user_id:user.id, date:today, portfolio_value:portfolio_value)
-      
+      record = PortfolioRecord.find_or_initialize_by(user_id:user_id, date:Date.today)
+      record.portfolio_value = PositionService.get_aum(user_id:user_id, balance:user.balance)[:aum]
+      record.save!
+            
       if equity_ratio < 250
         user.update!(margin_call_status:'active')
       else

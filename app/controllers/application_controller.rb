@@ -5,7 +5,7 @@ class ApplicationController < ActionController::Base
   
   def authenticate_user
     if session[:user_id].nil?
-      redirect_to login_path
+      redirect_to login_path  
     end
   end
   
@@ -13,5 +13,6 @@ class ApplicationController < ActionController::Base
   
   def current_user
     @current_user ||= User.find_by(id: session[:user_id]) if session[:user_id]
+  rescue => e
   end       
 end

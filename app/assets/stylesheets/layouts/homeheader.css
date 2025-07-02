@@ -12,12 +12,7 @@
   border-radius: 0.5rem;
 }
 
-.searchbar {
-	border-radius:0.75rem;
-	padding:0.75rem;
-	border:1px solid rgb(228, 226, 225);
 
-}
 
 .main-logo {
   display: inline-block;
@@ -42,7 +37,7 @@
 	margin-right:3rem;
 }
 
-.searchbar:hover {
+.nav-search-div:hover {
 	border:1px solid black;
 
 }

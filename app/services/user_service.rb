@@ -54,6 +54,7 @@ class UserService
     
     RedisService.safe_del("portfolio:#{user_id}")
     
+    
   rescue => e
     Sentry.capture_exception(e)
     nil

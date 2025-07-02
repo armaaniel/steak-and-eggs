@@ -30,10 +30,9 @@
 		  
 		  	<div class ='navbar-two'>
 				
-				<form method='GET' action='/search'>
-					<input type='search' placeholder='search' name='search' class='searchbar'>
-				</form>
-				
+<%=react_component("Searchbar", {}, {
+        class: controller_name == 'stocks' ? 'nav-search-div-three' : 'nav-search-div'
+    })%>				
 				<div>
 				<a class ='login-link' href ='/logout'>Log Out</a>
 				</div>
