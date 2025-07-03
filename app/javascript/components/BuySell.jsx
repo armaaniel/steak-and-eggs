@@ -150,7 +150,7 @@ const BuySell = (props) => {
           	<p>Available Cash</p>
 		  	</div>
 		  	<div>
-		  	<p> {props.userBalance} CAD </p>
+		  	<p> {parseFloat(props.userBalance).toFixed(2)} CAD </p>
 		  	</div>
 		  </div>
 		  
