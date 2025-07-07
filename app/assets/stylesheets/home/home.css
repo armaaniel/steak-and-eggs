@@ -67,3 +67,7 @@
   	display:flex;
 	font-family:avenir;
   }
+  
+  .home-chart {
+	  min-height:286px;
+  }

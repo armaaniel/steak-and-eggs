@@ -1,23 +1,25 @@
 <div class='symbol-name-two'>
 	
-		<img src='https://img.logo.dev/ticker/<%=params[:symbol]%>?token=pk_ZBCJebqoQXKBWVLhwcIBfg&retina=true' 
-		height='40' width='40'>
-	    <div class="stock-text">
+	<img src='https://img.logo.dev/ticker/<%=params[:symbol]%>?token=pk_ZBCJebqoQXKBWVLhwcIBfg&retina=true'
+	height='40' width='40'>
+	
+	<div class="stock-text">
 		<p class="stock-symbol"><%=params[:symbol]%> </p>
-		<p class="stock-name"><%= @companydata[:name]%> </p>
-		</div>
-		
-<%=react_component("StockPrice", {symbol: params[:symbol], marketPrice: @marketprice, currency: @companydata[:currency]}, {class: "stock-price-container"})%>
-
+		<p class="stock-name"><%= @name%> </p>
 	</div>
+		
+	<%=react_component("StockPrice", {symbol: params[:symbol], marketPrice: @marketprice}, {class:
+	"stock-price-container"})%>
+
+</div>
 	
 	<div class ='chart-container'>
-		<%= react_component("StockChart", {dailyData: @daily}) %>
+		<%= react_component("StockChart", {symbol:params[:symbol]}) %>
 	</div>
 
 
 	<div class='buy-sell-container'>
-		<%= react_component("BuySell", {marketPrice: @marketprice, userBalance: current_user.balance, exchangeRate: @exchangerate, userHoldings: @record&.shares || 0, symbol: params[:symbol], name: @companydata[:name], id: current_user.id, buyingPower:@buyingpower}) %>
+		<%= react_component("BuySell", {marketPrice: @marketprice, userBalance: current_user.balance, symbol: params[:symbol], id: current_user.id, buyingPower:@buyingpower, holdings:@record&.shares, name:@name}) %>
 	</div>
 
 <div class='data-parent-container'>
@@ -39,12 +41,12 @@
 	    <td class='symbol-cell'>
 	      <a href='/stocks/<%=@record[:symbol]%>' class='symbol-name'>
 			  
-	  		<img src='https://img.logo.dev/ticker/<%=@record[:symbol]%>?token=pk_ZBCJebqoQXKBWVLhwcIBfg&retina=true' 
+	  		<img src=   			'https://img.logo.dev/ticker/<%=@record[:symbol]%>?token=pk_ZBCJebqoQXKBWVLhwcIBfg&retina=true' 
 	  		height='32' width='32'>
 			
 		    <div class="stock-text">
 			<p class="stock-symbol"><%=@record[:symbol]%></p>
-			<p class="stock-name"><%= @companydata[:name]%></p>	
+			<p class="stock-name"><%= @record[:name]%></p>	
 		
 		</div>
 		
@@ -66,65 +68,9 @@
 		<h2 class='header-data-name'>Market Details</h2>
 	</div>
 
-<div class='market-data'>
-	<div class>
-		<p class='data-name'>Open</p>
-		<p class='data-value'><%= number_to_currency(@marketdata[:open])%></p>
-	</div>
+	
+	<%=react_component('MarketData', {symbol:params[:symbol]}, {class:'md-container'})%>
 		
-	<div>
-		<p class='data-name'>52 week high</p>
-		<p class='data-value'><%= number_to_currency(@companydata[:'52_week_high'])%></p>
-	</div>
-	
-	<div>
-		<p class='data-name'>Exchange</p>
-		<p class='data-value'><%=@companydata[:exchange]%></p>
-	</div>
-	
-	<div>
-		<p class='data-name'>High</p>
-		<p class='data-value'><%= number_to_currency(@marketdata[:high]) %></p>
-	</div>
-	
-	<div class>
-		<p class='data-name'>52 week low</p>
-		<p class='data-value'><%= number_to_currency(@companydata[:'52_week_low'])%></p>
-	</div>
-	
-	<div>
-		<p class='data-name'>Market cap</p>
-		<p class='data-value'>$<%= number_to_human(@companydata[:market_capitalization])%></p>
-	</div>
-		
-	
-	<div>
-		<p class='data-name'>Low</p>
-		<p class='data-value'><%= number_to_currency(@marketdata[:low]) %></p>
-	</div>
-	
-	
-	<div>
-		<p class='data-name'>Volume</p>
-		<p class='data-value'><%= number_to_human(@marketdata[:volume])%></p>
-	</div>
-	
-	
-	<div>
-		<p class='data-name'>Currency</p>
-		<p class='data-value'><%=@companydata[:currency]%></p>
-	</div>
-	
-	<div>
-		<p class='data-name'>Exchange Rate</p>
-		<p class='data-value'><%=@exchangerate%></p>
-	</div>
-	
-</div>
 
-<div class='stock-description'>
-	<h2 class='header-data-name'>Description</h2>
-	<p class='data-value'><%=@companydata[:description]%></p>
-</div>
 
 </div>

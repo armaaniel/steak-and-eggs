@@ -8,9 +8,7 @@
 	<%=react_component("PortfolioValue", {id: current_user.id, aum: @aum})%>
 </div>
 
-<div>
-	<%= react_component("PortfolioChart", {dailyData: @daily}) %>
-</div>
+	<%= react_component("PortfolioChart", {dailyData: @daily}, class:'home-chart') %>
 
 <div class="holdings">
 	<h2> Holdings </h2>

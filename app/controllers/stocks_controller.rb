@@ -1,14 +1,17 @@
 class StocksController < ApplicationController
   before_action(:authenticate_user)
-  before_action(:get_data)
   layout 'authenticated'
   def show
+        
+    if Ticker.find_by(symbol:params[:symbol]).nil?
+      return redirect_to "/not_found"
+    end 
     
-    if @marketdata == {price:'N/A', open:'N/A', high:'N/A', low:'N/A', volume:'N/A'} &&
-      @companydata == {name:'N/A', currency:'N/A', :'52_week_high'=> 'N/A', exchange: 'N/A', :'52_week_low'=> 'N/A', market_capitalization:'N/A', 
-      description: 'N/A'}
-      redirect_to "/not_found"
-    end
+    @marketprice = MarketService.marketprice(symbol:params[:symbol])
+    @record = PositionService.find_position(symbol:params[:symbol], user_id:current_user.id)
+    @name = PositionService.get_name(symbol:params[:symbol]) 
+    @buyingpower = PositionService.get_buying_power(user_id:current_user.id, balance: current_user.balance, used_margin:current_user.used_margin)
+       
       
   end
     
@@ -18,27 +21,19 @@ class StocksController < ApplicationController
     redirect_to "/stocks/#{params[:symbol]}"
   end
   
-  private
+  def get_market_data
+    data = MarketService.marketdata(symbol:params[:symbol])
+    render json:data
+  end
   
-  def get_data
-    
-    @marketdata = MarketService.marketdata(symbol: params[:symbol])
-    @marketprice = MarketService.marketprice(symbol:params[:symbol])
-    
-    
-    @companydata = MarketService.companydata(symbol: params[:symbol]) 
-    @daily = MarketService.dailydata(symbol: params[:symbol])
-    
-    @record = PositionService.record(symbol: params[:symbol], user_id: current_user.id)
-    
-    @buyingpower = PositionService.get_buying_power(user_id:current_user.id, balance: current_user.balance, used_margin:current_user.used_margin)
-    
-    if @companydata[:currency] == 'USD'
-      @exchangerate = MarketService.exchange_rate
-    else
-      @exchangerate = 1.0
-    end
-    
-  end  
+  def get_company_data
+    data = MarketService.companydata(symbol:params[:symbol])
+    render json:data
+  end
+  
+  def get_chart_data
+    data = MarketService.chartdata(symbol:params[:symbol])
+    render json:data
+  end
   
 end  

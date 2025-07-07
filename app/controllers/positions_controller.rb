@@ -1,9 +1,14 @@
-class PortfolioController < ApplicationController
+class PositionsController < ApplicationController
   before_action(:authenticate_user)
   
-  def positions
-    positions = PositionService.positions(current_user: current_user)
+  def get_all_positions
+    positions = PositionService.find_positions(current_user: current_user)
     render json: positions
+  end
+  
+  def get_position
+    position = PositionService.find_position(symbol:params[:symbol], user_id:current_user.id)
+    render json: position
   end
   
   def aum

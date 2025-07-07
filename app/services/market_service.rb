@@ -2,9 +2,8 @@ class MarketService
   def self.position(params:, user_id:)
     return if params[:quantity].blank? || params[:quantity].to_i < 0
     
-    
     symbol = params[:symbol]
-    market_price = marketdata(symbol:symbol)&.dig(:price)&.to_f
+    market_price = marketprice(symbol:symbol)
     
     return if market_price.nil? || market_price <=0
     
@@ -82,18 +81,29 @@ class MarketService
   
   def self.marketprice(symbol:)
     
-    cached = RedisService.safe_get("price:#{symbol}")
-    return cached.to_f if cached
+    payload = {symbol: symbol, used_redis: false, used_api: false}
     
-    stock_object = Alphavantage::TimeSeries.new(symbol: symbol)
-    quote = stock_object.quote
-    
-    if quote&.dig(:price)
-      RedisService.safe_setex("price:#{symbol}", 5.minutes.to_i, quote[:price])
-      return quote[:price].to_f
-    end
+    ActiveSupport::Notifications.instrument('MarketService.marketprice', payload) do
+      cached = RedisService.safe_get("price:#{symbol}")
+      
+      if cached
+        payload[:used_redis] = true
+        return cached.to_f
+      end
+      
+      payload[:used_api] = true
+      
+      stock_object = Alphavantage::TimeSeries.new(symbol: symbol)
+      quote = stock_object.quote
+      
+      if quote&.dig(:price)
+        RedisService.safe_setex("price:#{symbol}", 5.minutes.to_i, quote[:price])
+        return quote[:price].to_f
+      end
     
     0
+    
+  end
     
   rescue => e
     Sentry.capture_exception(e)
@@ -103,62 +113,94 @@ class MarketService
   
   def self.marketdata(symbol:)
     
-    cached = RedisService.safe_get("market:#{symbol}")
-    return JSON.parse(cached, symbolize_names: true) if cached
+    payload = {symbol: symbol, used_redis: false, used_api: false}
     
-    stock_object = Alphavantage::TimeSeries.new(symbol: symbol)
-    quote = stock_object.quote
-    
-    return {price:'N/A', open:'N/A', high:'N/A', low:'N/A', volume:'N/A'} unless quote
+    ActiveSupport::Notifications.instrument('MarketService.marketdata', payload) do
+      cached = RedisService.safe_get("market:#{symbol}")
+      
+      if cached
+        payload[:used_redis] = true
+        return JSON.parse(cached, symbolize_names: true)
+      end
+      
+      payload[:used_api] = true
+      
+      stock_object = Alphavantage::TimeSeries.new(symbol: symbol)
+      quote = stock_object.quote
+      
+      return {price:'N/A', open:'N/A', high:'N/A', low:'N/A', volume:'N/A'} unless quote
+      
+      resilient_data = {price: quote[:price] || 'N/A', open: quote[:open] || 'N/A', high: quote[:high] || 'N/A', low: quote[:low] || 'N/A', 
+        volume: quote[:volume] || 'N/A'}
         
-    resilient_data = {price: quote[:price] || 'N/A', open: quote[:open] || 'N/A', high: quote[:high] || 'N/A', low: quote[:low] || 'N/A', 
-    volume: quote[:volume] || 'N/A'}
-    
-    RedisService.safe_setex("market:#{symbol}", 5.minutes.to_i, resilient_data.to_json)
-    
-    resilient_data
+        RedisService.safe_setex("market:#{symbol}", 5.minutes.to_i, resilient_data.to_json)
+        
+        resilient_data
+        
+      end
     
   rescue => e
     Sentry.capture_exception(e)
     {price:'N/A', open:'N/A', high:'N/A', low:'N/A', volume:'N/A'}
   end
     
-  def self.dailydata(symbol:)
+  def self.chartdata(symbol:)
     
-    cached = RedisService.safe_get("daily:#{symbol}")
-    return JSON.parse(cached, symbolize_names:true) if cached
+    payload = {symbol: symbol, used_redis: false, used_api: false}
     
-    stock_object = Alphavantage::TimeSeries.new(symbol: symbol)
-    
-    daily = []
-    stock_object.daily['time_series_daily']&.each do |date, values|
-      daily.unshift({
-        date: date,
-        close: values['close'].to_f,
-      })
+    ActiveSupport::Notifications.instrument("MarketService.chartdata", payload) do
+      
+      cached = RedisService.safe_get("daily:#{symbol}")
+      if cached
+        payload[:used_redis] = true
+        return JSON.parse(cached, symbolize_names:true)
+      end
+      
+      payload[:used_api] = true
+      
+      data = Alphavantage::TimeSeries.new(symbol: symbol).daily
+      
+      daily = []
+      data&.dig('time_series_daily')&.each do |date, values|
+        daily.unshift({date: date, close: values['close'].to_f})
       end
       
       RedisService.safe_setex("daily:#{symbol}", 24.hours.to_i, daily.to_json)
       
       daily
       
-    rescue => e
-      Sentry.capture_exception(e)
-      []
     end
   
+  rescue => e
+    Sentry.capture_exception(e)
+    []
+  end
+  
   def self.companydata(symbol:)
-    cached = RedisService.safe_get("company:#{symbol}")
-    return JSON.parse(cached, symbolize_names:true) if cached
     
-    company = Alphavantage::Fundamental.new(symbol: symbol).overview
+    payload = {symbol: symbol, used_redis: false, used_api: false}
     
-    return {name:'N/A', currency:'N/A', :'52_week_high'=> 'N/A', exchange: 'N/A', :'52_week_low'=> 'N/A', market_capitalization:'N/A', 
+    ActiveSupport::Notifications.instrument("MarketService.companydata", payload) do
+      
+      cached = RedisService.safe_get("company:#{symbol}")
+      
+      if cached
+        payload[:used_redis] = true 
+        return JSON.parse(cached, symbolize_names:true)
+      end
+      
+      payload[:used_api] = true
+      
+      company = Alphavantage::Fundamental.new(symbol: symbol).overview
+      
+      return {name:'N/A', currency:'N/A', :'52_week_high'=> 'N/A', exchange: 'N/A', :'52_week_low'=> 'N/A', market_capitalization:'N/A', 
       description: 'N/A'} unless company[:name]
-    
-    RedisService.safe_setex("company:#{symbol}", 24.hours.to_i, company.to_json)
-    
-    company
+      
+      RedisService.safe_setex("company:#{symbol}", 24.hours.to_i, company.to_json)
+      
+      company
+      
+    end
     
   rescue => e
     Sentry.capture_exception(e)
@@ -187,27 +229,5 @@ class MarketService
     1.36
     
   end
-  
-  def self.search(search_key:)
-    search = Alphavantage::TimeSeries.search(keywords: search_key)
-    
-    results = search.select do |n| 
-      (n.region == 'United States' || n.region =='Toronto') &&
-      (n.type == 'Equity' || n.type == 'ETF') &&
-      !n.symbol.include?('.')
-    end
-    results
-    
-  rescue => e
-    Sentry.capture_exception(e)
-    []
-    
-  end
-  
-  private
-  
-  
-  
-  
   
 end

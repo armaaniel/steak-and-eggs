@@ -1,8 +1,6 @@
 class PositionService
   
-  
-  
-  def self.positions(user_id:)
+  def self.find_positions(user_id:)
     
     cached = RedisService.safe_get("positions:#{user_id}")
     return JSON.parse(cached, symbolize_names:true) if cached
@@ -26,13 +24,17 @@ class PositionService
     Transaction.where(user_id: current_user.id)
   end
   
-  def self.record(symbol:, user_id:)
-    Position.find_by(user_id: user_id, symbol: symbol)
+  def self.find_position(symbol:, user_id:)
+    position = Position.find_by(user_id: user_id, symbol: symbol)
+  end
+  
+  def self.get_name(symbol:)
+    Ticker.find_by(symbol:symbol)&.name&.split('.')&.first
   end
   
   def self.get_aum(user_id:, balance:)
     
-    positions = PositionService.positions(user_id:user_id)
+    positions = PositionService.find_positions(user_id:user_id)
     
     return {aum:balance} if positions.empty?
     
@@ -61,7 +63,7 @@ class PositionService
   
   def self.get_buying_power(user_id:, balance:, used_margin:)
     
-    portfolio_value = get_aum(user_id: user_id, balance: balance)[:aum]
+    portfolio_value = get_aum(user_id: user_id, balance: balance).dig(:aum)
     
     return 0 unless portfolio_value
     
@@ -92,7 +94,7 @@ class PositionService
     }
   end
   
-  def self.portfolio_values(user_id:)
+  def self.portfolio_records(user_id:)
     
     cached_values = RedisService.safe_get("portfolio:#{user_id}")
     return JSON.parse(cached_values, symbolize_names:true) if cached_values

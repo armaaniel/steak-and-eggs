@@ -40,7 +40,7 @@ class PortfolioValuesWorker
       
       
       ActionCable.server.broadcast("portfolio_channel:#{id}", {portfolio_value: portfolio_value, stock_prices: user_prices,
-        buying_power:buying_power, available_margin:available_margin})
+        buying_power:buying_power, available_margin:available_margin, cash_balance:cash_balance})
     end
   end
 end

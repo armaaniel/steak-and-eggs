@@ -16,8 +16,7 @@ const BuySell = (props) => {
   const [price, setPrice] = useState(parseFloat(props.marketPrice));
   
   const [value, setValue] = useState(0)
-  
-  
+      
     useEffect(() => {
       const subscription = consumer.subscriptions.create(
         { channel: "PriceChannel", symbol: `${props.symbol}` },
@@ -57,13 +56,13 @@ const BuySell = (props) => {
       };
     }, [props.id]);
   
-  const estimatedCost = (quantity || 0) * price * props.exchangeRate;
+  const estimatedCost = (quantity || 0) * price;
   
   const free = estimatedCost === 0
   
   const hasInsufficientFunds = buyingPower === 'N/A' || estimatedCost > buyingPower;
   
-  const hasInsufficientQuantity = quantity > props.userHoldings
+  const hasInsufficientQuantity = quantity > props.holdings
   
   const isQuantityInvalid = () => {
     if (quantity === '' || quantity <= 0 || !Number.isInteger(quantity)) {
@@ -91,11 +90,7 @@ const BuySell = (props) => {
   const sellState = () => setCurrentState({ action: "sell", step: 1 });
   
   const handleSubmit = () => {
-	  
-	  setTimeout(() => 
-	  
-		  setIsSubmitting(true), 10)
-  
+		  setIsSubmitting(true)
   }
   
 
@@ -228,7 +223,7 @@ const BuySell = (props) => {
           	<p>Available Shares</p>
 		  	</div>
 		  	<div>
-		  	<p>{props.userHoldings}</p>
+		  	<p>{props.holdings || 0}</p>
 		  	</div>
 		  </div>
 		  

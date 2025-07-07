@@ -1,5 +1,6 @@
 .chart-container {
 	width:69%;
+	min-height:285px;
 }
 
 .chart {
@@ -22,4 +23,11 @@
 	align-items:center;
 	font-family:avenir;
 	
+}
+
+.skeleton-chart {
+  width: 521px;
+  height: 286px;
+  background: #fcfcfc;
+  border-radius: 4px;
 }

@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2025_07_01_143653) do
+ActiveRecord::Schema[8.0].define(version: 2025_07_04_211010) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -42,6 +42,19 @@ ActiveRecord::Schema[8.0].define(version: 2025_07_01_143653) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["symbol"], name: "index_tickers_on_symbol", unique: true
+  end
+
+  create_table "traces", force: :cascade do |t|
+    t.string "endpoint", null: false
+    t.float "duration"
+    t.float "db_runtime"
+    t.float "view_runtime"
+    t.integer "status"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.string "controller"
+    t.string "action"
+    t.json "breakdown"
   end
 
   create_table "transactions", force: :cascade do |t|

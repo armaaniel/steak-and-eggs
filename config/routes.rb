@@ -12,9 +12,16 @@ Rails.application.routes.draw do
   post('position', to: 'stocks#position')
   get('logout', to: 'users#logout')
   get('activity', to: 'home#activity')
-  get('aum', to: 'portfolio#aum')
-  get('bpm', to: 'portfolio#buying_power_margin')
-  get('positions', to: 'portfolio#positions')
+  
+  get('aum', to: 'positions#aum')
+  get('bpm', to: 'positions#buying_power_margin')
+  get('positions', to: 'positions#get_all_positions')
+  get('positions/:symbol', to: 'positions#get_position')
+  
+  get('stocks/:symbol/marketdata', to: 'stocks#get_market_data')
+  get('stocks/:symbol/companydata', to: 'stocks#get_company_data')
+  get('stocks/:symbol/chartdata', to: 'stocks#get_chart_data')
+  
   match('*path', to: 'pages#not_found', via: :all)
   
   mount ActionCable.server => '/cable'
