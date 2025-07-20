@@ -2,6 +2,8 @@ Rails.application.config.after_initialize do
   
   Thread.new do
     
+    current_request = {}
+    
     ActiveSupport::Notifications.subscribe(/.*/) do |name, start, finish, id, payload|
       
       duration = (finish - start) * 1000

@@ -11,8 +11,7 @@ class StocksController < ApplicationController
     @record = PositionService.find_position(symbol:params[:symbol], user_id:current_user.id)
     @name = PositionService.get_name(symbol:params[:symbol]) 
     @buyingpower = PositionService.get_buying_power(user_id:current_user.id, balance: current_user.balance, used_margin:current_user.used_margin)
-       
-      
+    
   end
     
   def position

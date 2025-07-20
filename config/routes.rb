@@ -13,10 +13,7 @@ Rails.application.routes.draw do
   get('logout', to: 'users#logout')
   get('activity', to: 'home#activity')
   
-  get('aum', to: 'positions#aum')
-  get('bpm', to: 'positions#buying_power_margin')
-  get('positions', to: 'positions#get_all_positions')
-  get('positions/:symbol', to: 'positions#get_position')
+  get('positions/:symbol', to: 'positions#get_position')  
   
   get('stocks/:symbol/marketdata', to: 'stocks#get_market_data')
   get('stocks/:symbol/companydata', to: 'stocks#get_company_data')

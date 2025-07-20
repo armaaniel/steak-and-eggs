@@ -117,7 +117,7 @@ class PositionService
     Sentry.capture_exception(e)
     []
   end
-    
+  
 end
   
     
