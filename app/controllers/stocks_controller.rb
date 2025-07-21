@@ -15,7 +15,15 @@ class StocksController < ApplicationController
   end
     
   def position
-    MarketService.position(params: params, user_id: current_user.id)
+    Rails.logger.info "PARAMS: #{params.inspect}"
+    
+    result = MarketService.position(params: params, user_id: current_user.id)
+    
+    Rails.logger.info "MARKET SERVICE RESULT: #{result.inspect}"
+    
+    Rails.logger.info "COMMIT VALUE: #{params[:commit]}"
+    
+    
     
     redirect_to "/stocks/#{params[:symbol]}"
   end

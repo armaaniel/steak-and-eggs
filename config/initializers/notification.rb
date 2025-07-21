@@ -10,6 +10,12 @@ Rails.application.config.after_initialize do
       
       case name
         
+      when /Ticker/
+        
+        current_request[id] ||= {}
+        current_request[id][name] = {duration: duration, used_redis: payload[:used_redis], used_db: payload[:used_db],
+          term:payload[:term]}          
+        
       when /MarketService/
         
         current_request[id] ||= {}

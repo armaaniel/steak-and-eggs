@@ -130,7 +130,7 @@ const BuySell = (props) => {
           	<p>Estimated Cost</p>
 		  	</div>
 		  	<div>
-		  	<p> ${estimatedCost.toFixed(2)} CAD </p>
+		  	<p> ${estimatedCost.toFixed(2)} USD </p>
 		  	</div>
 		  </div>
 		  
@@ -145,7 +145,7 @@ const BuySell = (props) => {
           	<p>Available Cash</p>
 		  	</div>
 		  	<div>
-		  	<p> {parseFloat(props.userBalance).toFixed(2)} CAD </p>
+		  	<p> {parseFloat(props.userBalance).toFixed(2)} USD </p>
 		  	</div>
 		  </div>
 		  
@@ -154,7 +154,7 @@ const BuySell = (props) => {
           	<p>Available Margin</p>
 		  	</div>
 		  	<div>
-		  	<p> {availableMargin} CAD </p>
+		  	<p> {availableMargin} USD </p>
 		  	</div>
 		  </div>
 		  
@@ -163,7 +163,7 @@ const BuySell = (props) => {
           	<p>Buying Power</p>
 		  	</div>
 		  	<div>
-		  	<p> {buyingPower} CAD </p>
+		  	<p> {buyingPower} USD </p>
 		  	</div>
 		  </div>
 		  
@@ -208,7 +208,7 @@ const BuySell = (props) => {
           	<p>Estimated Value</p>
 		  	</div>
 		  	<div>
-		  	<p> ${estimatedCost.toFixed(2)} CAD </p>
+		  	<p> ${estimatedCost.toFixed(2)} USD </p>
 		  	</div>
 		  </div>
 		  
@@ -264,7 +264,7 @@ const BuySell = (props) => {
 		  	<p>Cost</p>
 		  	</div>
 		  	<div>
-		  	<p>${estimatedCost.toFixed(2)} CAD </p>
+		  	<p>${estimatedCost.toFixed(2)} USD </p>
 		  	</div>
 		  </div>
 		  
@@ -273,9 +273,11 @@ const BuySell = (props) => {
 	   	 	<input type="hidden" name="authenticity_token" 
 			value={document.querySelector("meta[name='csrf-token']")?.getAttribute("content")}/>
 	    	<input type="hidden" name="symbol" value={props.symbol}/>
-		  	<input type='submit' name='commit' value='buy' className='next' disabled={isSubmitting}/>
+		  	<input type='submit' className='next' disabled={isSubmitting}/>
 			<input type='hidden' value={quantity} name='quantity'/>
 			<input type='hidden' value={props.name} name='name'/>
+	   	 	<input type="hidden" name="commit" value="buy" />
+			
 			
 		  </form>
 		  </div>
@@ -313,7 +315,7 @@ const BuySell = (props) => {
 		  	<p>Value</p>
 		  	</div>
 		  	<div>
-		  	<p>${estimatedCost.toFixed(2)} CAD </p>
+		  	<p>${estimatedCost.toFixed(2)} USD </p>
 		  	</div>
 		  </div>
 		  
@@ -322,9 +324,11 @@ const BuySell = (props) => {
 	   	 	<input type="hidden" name="authenticity_token" 
 			value={document.querySelector("meta[name='csrf-token']")?.getAttribute("content")}/>
 	    	<input type="hidden" name="symbol" value={props.symbol}/>
-		  	<input type='submit' name='commit' value='sell' className='next' disabled={isSubmitting}/>
+		  	<input type='submit' className='next' disabled={isSubmitting}/>
 			<input type='hidden' value={quantity} name='quantity'/>
 			<input type='hidden' value={props.name} name='name'/>
+	   	 	<input type="hidden" name="commit" value="sell" />
+			
 			
 		  </form>
 		  </div>

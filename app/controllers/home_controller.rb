@@ -14,22 +14,10 @@ class HomeController < ApplicationController
   end
   
   def search
-    term = params[:q]
     
-    if term.present?
-      cached = RedisService.safe_get("search:#{term}")
-      
-      if cached
-        render json: JSON.parse(cached, symbolize_names:true)
-      else
-      results = Ticker.where("symbol ILIKE ? OR name ILIKE ?", "#{term}%", "#{term}%")
-      RedisService.safe_setex("search:#{term}", 1.hour.to_i, results.to_json)
-      render json: results
-      end
-      
-    else 
-      render json: []
-    end
+    results = Ticker.search(term:params[:q])
+    render json: results
+    
   end
   
   def activity
