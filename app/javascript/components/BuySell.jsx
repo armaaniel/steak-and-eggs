@@ -273,7 +273,7 @@ const BuySell = (props) => {
 	   	 	<input type="hidden" name="authenticity_token" 
 			value={document.querySelector("meta[name='csrf-token']")?.getAttribute("content")}/>
 	    	<input type="hidden" name="symbol" value={props.symbol}/>
-		  	<input type='submit' name='commit' value='buy' className='next' disabled={isSubmitting}/>
+		  	<input type='submit' className='next' disabled={isSubmitting}/>
 			<input type='hidden' value={quantity} name='quantity'/>
 			<input type='hidden' value={props.name} name='name'/>
 	   	 	<input type="hidden" name="commit" value="buy" />
@@ -324,10 +324,10 @@ const BuySell = (props) => {
 	   	 	<input type="hidden" name="authenticity_token" 
 			value={document.querySelector("meta[name='csrf-token']")?.getAttribute("content")}/>
 	    	<input type="hidden" name="symbol" value={props.symbol}/>
-		  	<input type='submit' name='commit' value='sell' className='next' disabled={isSubmitting}/>
+		  	<input type='submit' className='next' disabled={isSubmitting}/>
 			<input type='hidden' value={quantity} name='quantity'/>
 			<input type='hidden' value={props.name} name='name'/>
-	   	 	<input type="hidden" name="commit" value="buy" />
+	   	 	<input type="hidden" name="commit" value="sell" />
 			
 			
 		  </form>
