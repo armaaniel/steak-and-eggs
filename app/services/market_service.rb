@@ -1,84 +1,72 @@
 class MarketService
-  def self.position(params:, user_id:)
-    return if params[:quantity].blank? || params[:quantity].to_i < 0
-    
-    symbol = params[:symbol]
-    market_price = marketprice(symbol:symbol)
-    
-    return if market_price.nil? || market_price <=0
-    
-    trade_quantity = params[:quantity].to_i 
-    trade_value = (trade_quantity * market_price)
-    
-    case params[:commit]
-    when 'buy'
-      ActiveRecord::Base.transaction do
-        user = User.lock.find(user_id)
-        buying_power = PositionService.get_buying_power(user_id: user_id, balance: user.balance, used_margin: user.used_margin)[:buying_power]
-        record = Position.find_by(user_id:user_id, symbol: symbol)
-        quantity_held = record&.shares
-        
-        if user.balance >= trade_value
-          user.balance -= trade_value
-          user.save!
-          if record
-            record.update!(shares: (trade_quantity + quantity_held))
-          else
-            Position.create!(user_id: user_id, symbol: symbol, shares: trade_quantity, name: params&.dig(:name))
-          end
-          
-          Transaction.create!(symbol: symbol, quantity: trade_quantity, amount: trade_value, transaction_type: 'Buy', 
-          user_id: user_id)
-        
-        elsif buying_power >= trade_value
-          user.used_margin += user.balance
-          user.balance = 0
-          user.save!
-          if record
-            record.update!(shares: (trade_quantity + quantity_held))
-          else 
-            Position.create!(user_id: user_id, symbol: symbol, shares: trade_quantity, name: params&.dig(:name))
-          end 
-          
-          Transaction.create!(symbol: symbol, quantity: trade_quantity, amount: trade_value, transaction_type: 'Buy', 
-          user_id: user_id)
-        
-        else
-          return
-        end
-      end
-      
-    when 'sell'
-      ActiveRecord::Base.transaction do
-        user = User.lock.find(user_id)
-        record = Position.find_by(user_id:user_id, symbol: symbol)
-        return if record.nil?
-        quantity_held = record.shares
-        return if quantity_held < trade_quantity
-                
-        margin_payment = [user.used_margin, trade_value].min
-        user.used_margin -= margin_payment
-        user.balance += (trade_value - margin_payment)
-        user.save!
-        
-        if quantity_held == trade_quantity
-          record.destroy!
-        else 
-          record.update!(shares: (quantity_held - trade_quantity))
-        end
-        
-        Transaction.create!(symbol: symbol, quantity: trade_quantity, 
-        amount: trade_value, transaction_type: 'Sell', user_id: user_id)
-      end
-    end
-    
-    RedisService.safe_del("positions:#{user_id}")
+  class InsufficientFundsError < StandardError; end
+  class InsufficientSharesError < StandardError; end
   
+  
+  def self.buy(symbol:, quantity:, user_id:, name:)
+    raise(ArgumentError, "Invalid Quantity") if quantity.blank? || quantity.to_i <=0
+    quantity = quantity.to_i
+    
+    stock_price = marketprice(symbol:symbol)
+    raise(StandardError, "Unable to fetch Stock Price for #{symbol}") if stock_price.blank? || stock_price <=0
+    
+    trade_value = quantity*stock_price
+    
+    ActiveRecord::Base.transaction do
+      user = User.lock.find(user_id)
+      position = Position.lock.find_by(user_id:user_id, symbol: symbol)
+      
+      raise(InsufficientFundsError, "Insufficient funds for this purchase") if user.balance < trade_value
+      
+      user.balance -= trade_value
+      user.save!
+        
+        if position
+          position.update!(shares: position.shares + quantity)
+        else
+          Position.create!(user_id:user_id, symbol: symbol, shares: quantity, name: name)
+        end
+        RedisService.safe_del("positions:#{user_id}")
+        Transaction.create!(symbol: symbol, quantity: quantity, value: trade_value, transaction_type: 'Buy', user_id: user_id)
+      end
+    
   rescue => e
     Sentry.capture_exception(e)
-    nil
+    raise
   end
   
+  def self.sell(symbol:, quantity:, user_id:)
+    raise(ArgumentError, "Invalid Quantity") if quantity.blank? || quantity.to_i <= 0
+    quantity = quantity.to_i
+    
+    stock_price = marketprice(symbol:symbol)
+    raise(StandardError, "Unable to fetch Stock Price for #{symbol}") if stock_price.blank? || stock_price <=0
+    
+    trade_value = quantity*stock_price
+    
+    ActiveRecord::Base.transaction do
+      user = User.lock.find(user_id)
+      position = Position.lock.find_by!(user_id:user_id, symbol: symbol)
+      
+      raise(InsufficientSharesError, "Invalid Quantity") if position.shares < quantity
+      
+      user.balance += trade_value
+      user.save!
+      
+      if position.shares == quantity
+        position.destroy!
+      else
+        position.update!(shares: position.shares - quantity)
+      end
+      RedisService.safe_del("positions:#{user_id}")
+      Transaction.create!(symbol:symbol, quantity:quantity, value:trade_value, transaction_type:'Sell', user_id:user_id)
+    end
+    
+  rescue => e
+    Sentry.capture_exception(e)
+    raise
+  end
+    
   def self.marketprice(symbol:)
     
     payload = {symbol: symbol, used_redis: false, used_api: false}
@@ -153,7 +141,7 @@ class MarketService
       cached = RedisService.safe_get("daily:#{symbol}")
       if cached
         payload[:used_redis] = true
-        return JSON.parse(cached, symbolize_names:true)
+        return cached
       end
       
       payload[:used_api] = true
@@ -209,25 +197,6 @@ class MarketService
     
   end
   
-  def self.exchange_rate
-    cached = RedisService.safe_get("forex")
-    return cached.to_f if cached
-    
-    forex = Alphavantage::Forex.new(from_symbol:'USD', to_symbol: 'CAD').exchange_rates&.dig('exchange_rate')
-    
-    unless forex
-      Rails.logger.error("Can't get forex rate for USD to CAD")
-      return 1.36
-    end
-    
-    RedisService.safe_setex("forex", 5.minutes.to_i, forex)
-    
-    forex.to_f
-    
-  rescue => e
-    Sentry.capture_exception(e)
-    1.36
-    
-  end
+  
   
 end

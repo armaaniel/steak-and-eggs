@@ -11,9 +11,9 @@
 	width:92.2%;
 	
 }
+
 .data-name {
-	font-family:futura;
-	
+	font-family:futura;	
 }
 
 .data-value {
@@ -21,32 +21,6 @@
 	font-weight:200;
 }
 
-.data-name-center {
-	font-family:futura;
-	text-align:center;
-	
-}
-
-.data-value-center {
-	font-family:avenir;
-	font-weight:200;
-	text-align:center;
-	
-}
-
-.data-name-right {
-	font-family:futura;
-	text-align:right;
-	
-	
-}
-
-.data-value-right {
-	font-family:avenir;
-	font-weight:200;
-	text-align:right;
-	
-}
 
 .data-parent-container {
 	display:grid;

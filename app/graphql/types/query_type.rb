@@ -1,8 +1,8 @@
 module Types
   class QueryType < Types::BaseObject
-    field(:users_by_email_or_name, [Types::UserType]) do 
+    field(:users_by_username, [Types::UserType]) do 
       argument(:term, String, required: true)
-      description('search users by email or name')
+      description('search users by username')
     end
     
     field(:users_by_id, Types::UserType) do
@@ -46,8 +46,8 @@ module Types
       description('fetch most requested traces')
     end
         
-    def users_by_email_or_name(term:)
-      User.where("lower(email) LIKE ? OR lower(first_name) LIKE ?", "%#{term.downcase}%", "%#{term.downcase}%").limit(5)
+    def users_by_username(term:)
+      User.where("lower(username) LIKE ?", "%#{term.downcase}%").limit(5)
     end
     
     def users_by_id(id:)

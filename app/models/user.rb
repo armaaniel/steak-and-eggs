@@ -1,19 +1,16 @@
 class User < ApplicationRecord
+  after_update(:clear_cache, if: :saved_change_to_balance?)
+  
   has_secure_password
   has_many(:positions)
+  has_many(:transactions)
   has_many(:portfolio_records)
-  validates(:email, presence: true, uniqueness: true)
-  validates(:first_name, presence: true)
-  validates(:last_name, presence: true)
-  validates(:date_of_birth, presence: true)
-  validates(:gender, presence: true)
-  enum(:gender, {
-
-    male:0,
-    female:1,
-    non_binary:2,
-    fluid:3,
-    prefer_not_to_say:4
-
-  })
+  validates(:username, presence: true, uniqueness: true)
+  
+  private
+  
+  def clear_cache
+    Rails.cache.delete("user_#{id}")
+  end
+  
 end

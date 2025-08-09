@@ -1,23 +1,9 @@
 class UsersController < ApplicationController
-  def signup
-        
-    user = UserService.signup(params)
-    puts "User created: #{user.inspect}"
-    
-    if user
-      session[:user_id] = user.id
-      redirect_to home_path
-      puts "Session set: #{session[:user_id]}"
-      
-    else
-      redirect_to login_path
-    end
-    
-  end
+  skip_before_action :verify_authenticity_token
   
   def login
         
-    user = UserService.authenticate(params)
+    user = UserService.authenticate(username:params[:username], password:params[:password])
       
     if user 
       session[:user_id] = user.id
@@ -26,17 +12,13 @@ class UsersController < ApplicationController
       redirect_to login_path
     end
     
-  end  
+  end 
+  
       
   def logout
     reset_session
     redirect_to root_path
   end
-  
-  def update_balance
-    UserService.update_balance(amount: params[:amount], user_id: current_user.id, action: params[:commit])    
-    redirect_to home_path
-  end  
-        
+          
     
 end

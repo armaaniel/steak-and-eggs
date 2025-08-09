@@ -9,58 +9,15 @@ const BuySell = (props) => {
     
   const [quantity, setQuantity] = useState(null);
   
-  const [availableMargin, setAvailableMargin] = useState(props.buyingPower.available_margin)
-  
-  const [buyingPower, setBuyingPower] = useState(props.buyingPower.buying_power)
+  const [balance, setBalance] = useState(props.balance)
   
   const [price, setPrice] = useState(parseFloat(props.marketPrice));
-  
-  const [value, setValue] = useState(0)
-      
-    useEffect(() => {
-      const subscription = consumer.subscriptions.create(
-        { channel: "PriceChannel", symbol: `${props.symbol}` },
-	  
-        { received(data) {
-  	      console.log(`Received data:`, data);
-		  
-		  
-            setPrice(parseFloat(data));
-		  
-          }
-        }
-      );
-    
-      return () => {
-        subscription.unsubscribe();
-      };
-    }, [props.symbol]);
-	
-    useEffect(() => {
-      const subscription = consumer.subscriptions.create(
-        { channel: "PortfolioChannel", id: `${props.id}` },
-	  
-        { received(data) {
-  	      console.log(`Received data:`, data);
-		  
-		  
-            setAvailableMargin(parseFloat(data.available_margin).toFixed(2));
-			setBuyingPower(parseFloat(data.buying_power).toFixed(2));
-		  
-          }
-        }
-      );
-    
-      return () => {
-        subscription.unsubscribe();
-      };
-    }, [props.id]);
-  
+          
   const estimatedCost = (quantity || 0) * price;
   
   const free = estimatedCost === 0
   
-  const hasInsufficientFunds = buyingPower === 'N/A' || estimatedCost > buyingPower;
+  const hasInsufficientFunds = props.balance === 'N/A' || estimatedCost > props.balance;
   
   const hasInsufficientQuantity = quantity > props.holdings
   
@@ -92,6 +49,25 @@ const BuySell = (props) => {
   const handleSubmit = () => {
 		  setIsSubmitting(true)
   }
+  
+  useEffect(() => {
+    const subscription = consumer.subscriptions.create(
+      { channel: "PriceChannel", symbol: `${props.symbol}` },
+  
+      { received(data) {
+	      console.log(`Received data:`, data);
+	  
+	  
+          setPrice(parseFloat(data));
+	  
+        }
+      }
+    );
+  
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, [props.symbol]);
   
 
   return (
@@ -145,27 +121,10 @@ const BuySell = (props) => {
           	<p>Available Cash</p>
 		  	</div>
 		  	<div>
-		  	<p> {parseFloat(props.userBalance).toFixed(2)} USD </p>
+		  	<p> {parseFloat(props.balance).toFixed(2)} USD </p>
 		  	</div>
 		  </div>
 		  
-		  <div className='bs-containers'>
-		  	<div className='bs-width-wrapper'>
-          	<p>Available Margin</p>
-		  	</div>
-		  	<div>
-		  	<p> {availableMargin} USD </p>
-		  	</div>
-		  </div>
-		  
-		  <div className='bs-containers'>
-		  	<div className='bs-width-wrapper'>
-          	<p>Buying Power</p>
-		  	</div>
-		  	<div>
-		  	<p> {buyingPower} USD </p>
-		  	</div>
-		  </div>
 		  
 		  {hasInsufficientFunds && (
 			  <p>Insufficient funds for this purchase</p>

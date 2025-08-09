@@ -10,21 +10,11 @@ class StocksController < ApplicationController
     @marketprice = MarketService.marketprice(symbol:params[:symbol])
     @record = PositionService.find_position(symbol:params[:symbol], user_id:current_user.id)
     @name = PositionService.get_name(symbol:params[:symbol]) 
-    @buyingpower = PositionService.get_buying_power(user_id:current_user.id, balance: current_user.balance, used_margin:current_user.used_margin)
     
   end
     
   def position
-    Rails.logger.info "PARAMS: #{params.inspect}"
-    
     result = MarketService.position(params: params, user_id: current_user.id)
-    
-    Rails.logger.info "MARKET SERVICE RESULT: #{result.inspect}"
-    
-    Rails.logger.info "COMMIT VALUE: #{params[:commit]}"
-    
-    
-    
     redirect_to "/stocks/#{params[:symbol]}"
   end
   

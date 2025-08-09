@@ -1,0 +1,59 @@
+class UsersApiController < ApiController
+  before_action(:authenticate_user_two, except: [:logintwo, :signuptwo])
+  
+  def logintwo
+    
+    user = UserService.authenticate(username:params[:username],password:params[:password])
+        
+    if user
+      payload = {user_id: user.id, exp: 24.hours.from_now.to_i}
+      token = JWT.encode(payload, Rails.application.secret_key_base, 'HS256')
+      
+      render(json: {token: token})
+    else
+      render(json: {error: 'Invalid Credentials' }, status: 401) 
+    end
+    
+  end
+  
+  def signuptwo
+    
+    user = UserService.signup(username:params[:username], password:params[:password])
+    
+    if user
+      payload = {user_id: user.id, exp: 24.hours.from_now.to_i}
+      token = JWT.encode(payload, Rails.application.secret_key_base, 'HS256')
+      
+      render(json: {token: token})
+    else
+      render(json: {error: 'Signup failed'}, status: 422)
+    end
+  end
+      
+  
+  def deposit
+    
+    result = UserService.deposit(amount:params[:amount], user_id:@current_user.id)
+    
+    if result[:success]
+      head(:ok)
+    else
+      render(json: {error: 'Unable to process deposit'}, status: 422)
+    end
+      
+  end
+  
+  def withdraw
+    
+    result = UserService.withdraw(amount:params[:amount], user_id:@current_user.id)
+    
+    if result[:success]
+      head(:ok)
+    else
+      render(json: {error: 'Unable to process withdrawal'}, status: 422)
+    end
+    
+  end
+   
+  
+end

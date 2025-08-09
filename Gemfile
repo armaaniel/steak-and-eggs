@@ -32,6 +32,8 @@ gem 'redis'
 
 gem 'pg'
 
+gem 'jwt'
+
 gem 'sidekiq'
 gem 'sidekiq-cron'
 
