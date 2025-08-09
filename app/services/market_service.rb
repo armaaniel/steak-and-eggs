@@ -22,9 +22,12 @@ class MarketService
       user.save!
         
         if position
-          position.update!(shares: position.shares + quantity)
+          new_quantity = (position.shares + quantity)
+          new_average = ((position.shares * position.average_price) + trade_value) / new_quantity
+          
+          position.update!(average_price: new_average, shares: new_quantity)
         else
-          Position.create!(user_id:user_id, symbol: symbol, shares: quantity, name: name)
+          Position.create!(user_id:user_id, symbol: symbol, shares: quantity, name: name, average_price:stock_price)
         end
         RedisService.safe_del("positions:#{user_id}")
         Transaction.create!(symbol: symbol, quantity: quantity, value: trade_value, transaction_type: 'Buy', user_id: user_id)
@@ -50,6 +53,8 @@ class MarketService
       
       raise(InsufficientSharesError, "Invalid Quantity") if position.shares < quantity
       
+      realized_pnl = (trade_value - (position.average_price * quantity))
+      
       user.balance += trade_value
       user.save!
       
@@ -59,7 +64,8 @@ class MarketService
         position.update!(shares: position.shares - quantity)
       end
       RedisService.safe_del("positions:#{user_id}")
-      Transaction.create!(symbol:symbol, quantity:quantity, value:trade_value, transaction_type:'Sell', user_id:user_id)
+      Transaction.create!(symbol:symbol, quantity:quantity, value:trade_value, transaction_type:'Sell', user_id:user_id, 
+      realized_pnl: realized_pnl)
     end
     
   rescue => e

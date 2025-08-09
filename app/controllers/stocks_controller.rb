@@ -1,4 +1,4 @@
-class StocksApiController < ApiController
+class StocksController < ApiController
   before_action(:authenticate_user_two)
   
   def buy

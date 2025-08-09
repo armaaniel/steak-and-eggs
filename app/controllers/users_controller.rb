@@ -1,7 +1,7 @@
-class UsersApiController < ApiController
+class UsersController < ApiController
   before_action(:authenticate_user_two, except: [:logintwo, :signuptwo])
   
-  def logintwo
+  def login
     
     user = UserService.authenticate(username:params[:username],password:params[:password])
         
@@ -16,7 +16,7 @@ class UsersApiController < ApiController
     
   end
   
-  def signuptwo
+  def signup
     
     user = UserService.signup(username:params[:username], password:params[:password])
     

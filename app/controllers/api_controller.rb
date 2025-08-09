@@ -4,9 +4,8 @@ class ApiController < ActionController::API
   rescue_from(ActiveRecord::RecordNotFound, with: :not_found)
   rescue_from(ActiveRecord::RecordInvalid, with: :validation_error)
   rescue_from(StandardError, with: :service_error)
-    
   
-  def authenticate_user_two
+  def verify_token
     
     token = request.headers['authToken']
     return render(json: {error: 'No Token'}, status: 401) unless token
@@ -21,10 +20,6 @@ class ApiController < ActionController::API
   rescue => e
     Sentry.capture_exception(e)
     render(json: {error: 'Authentication failed'}, status: 401)
-  end
-  
-  def verify_token
-    authenticate_user_two
   end
   
   private

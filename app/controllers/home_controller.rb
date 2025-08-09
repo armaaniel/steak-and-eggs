@@ -1,7 +1,7 @@
-class HomeApiController < ApiController
+class HomeController < ApiController
   before_action(:authenticate_user_two)
   
-  def searchtwo
+  def search
     results = Ticker.search(term:params[:q])
     render(json: results)
   end
