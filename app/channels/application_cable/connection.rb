@@ -1,23 +1,36 @@
 module ApplicationCable
   class Connection < ActionCable::Connection::Base
-    identified_by(:current_user)
+    identified_by(:user)
 
     def connect
-      self.current_user = find_verified_user
-      REDIS.sadd("connected_users", current_user.id)
+      token = request.params[:token]
+      reject_unauthorized_connection unless token
+      
+      decoded = JWT.decode(token, Rails.application.secret_key_base, true, algorithm: 'HS256')
+      user_id = decoded[0]['user_id']
+      
+      self.user = User.find(user_id)  
+      
+      count = REDIS.incr("user_connections:#{user.id}")
+      
+      REDIS.sadd("connected_users", user.id) if count == 1
+      
+    rescue => e
+      Sentry.capture_exception(e)
+      reject_unauthorized_connection 
     end
 
     def disconnect
-      REDIS.srem("connected_users", current_user.id)
-    end
-
-    private
-      def find_verified_user
-        if request.session[:user_id]
-          User.find_by(id: request.session[:user_id])
-        else
-          reject_unauthorized_connection
-        end
+      count = REDIS.decr("user_connections:#{user.id}")
+      
+      if count <= 0
+        REDIS.del("user_connections:#{user.id}")
+        REDIS.srem("connected_users", user.id)
       end
+      
+    rescue => e
+      Sentry.capture_exception(e) 
+    end
+    
   end
 end

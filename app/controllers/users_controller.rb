@@ -1,5 +1,5 @@
 class UsersController < ApiController
-  before_action(:authenticate_user_two, except: [:logintwo, :signuptwo])
+  before_action(:verify_token, except: [:login, :signup])
   
   def login
     

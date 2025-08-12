@@ -1,6 +1,6 @@
 class PortfolioChannel < ApplicationCable::Channel
   def subscribed
-    stream_from("portfolio_channel:#{params[:id]}")
+    stream_from("portfolio_channel:#{user.id}")
   end
   
   def unsubscribed

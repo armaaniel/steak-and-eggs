@@ -1,35 +1,25 @@
 class StocksController < ApiController
-  before_action(:authenticate_user_two)
+  before_action(:verify_token)
   
   def buy
-    success = MarketService.buy(symbol:params[:symbol], user_id:@current_user.id, quantity:params[:quantity], 
+    data = MarketService.buy(symbol:params[:symbol], user_id:@current_user.id, quantity:params[:quantity], 
     name:params[:name])
     
-    if success
-      render(json: {value: success[:value], quantity: success[:quantity], status: 201})
-    else
-      render(json: {error: "Trade Processing Failed"}, status: 500)
-    end
+    render(json: data, status: 201)
      
   rescue MarketService::InsufficientFundsError => e
+    Sentry.capture_exception(e)
     render(json: {error: e.message}, status: 402) 
-  rescue => e
-    render(json: {error: "An unexpected error occurred"}, status: 500)
   end
   
   def sell
-    success = MarketService.sell(symbol:params[:symbol], user_id:@current_user.id, quantity:params[:quantity])
+    data = MarketService.sell(symbol:params[:symbol], user_id:@current_user.id, quantity:params[:quantity])
     
-    if success
-      render(json: {value: success[:value], quantity: success[:quantity], status: 201})
-    else
-      render(json: {error: "Trade Processing Failed"}, status: 500)
-    end
+    render(json: data, status: 201)
      
   rescue MarketService::InsufficientSharesError => e
+    Sentry.capture_exception(e)
     render(json: {error: e.message}, status: 402)
-  rescue => e
-    render(json: {error: "An unexpected error occurred"}, status: 500)   
   end
   
   def get_ticker_data
@@ -62,13 +52,11 @@ class StocksController < ApiController
     data = PositionService.find_position(symbol: params[:symbol], user_id: @current_user.id)
     
     if data
-      render(json: {position: [data], balance: @current_user.balance})
+      render(json: {position: data, balance: @current_user.balance})
     else
       render(json: {position: nil, balance: @current_user.balance})
     end
     
-  rescue => e
-    Sentry.capture_exception(e)
   end
   
   def get_stock_price

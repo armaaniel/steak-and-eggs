@@ -26,7 +26,8 @@ class UserService
       user.balance += amount
       user.save!
       
-      Transaction.create!(symbol:'USD', quantity: 1, value: amount, transaction_type: 'Deposit', user_id: user_id)
+      Transaction.create!(symbol:'USD', quantity: 1, value: amount, transaction_type: 'Deposit', user_id: user_id, 
+      market_price: 1.00)
             
       record = PortfolioRecord.find_or_initialize_by(user_id:user_id, date:Date.today)
       
@@ -52,7 +53,8 @@ class UserService
       user.balance -= amount
       user.save!
       
-      Transaction.create!(symbol:'USD', quantity: 1, value: amount, transaction_type:'Withdraw', user_id:user_id)
+      Transaction.create!(symbol:'USD', quantity: 1, value: amount, transaction_type:'Withdraw', user_id:user_id, 
+      market_price: 1.00)
       
       record = PortfolioRecord.find_or_initialize_by(user_id:user_id, date:Date.today)
       

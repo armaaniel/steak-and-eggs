@@ -25,18 +25,22 @@ class ApiController < ActionController::API
   private
   
   def bad_request(e)
+    Sentry.capture_exception(e)
     render(json: {error: e.message}, status: 400)
   end
   
   def not_found(e)
+    Sentry.capture_exception(e)
     render(json: {error: "Not Found"}, status: 404)
   end
   
   def validation_error(e)
+    Sentry.capture_exception(e)
     render(json: {error: e.message}, status: 422)
   end
   
   def service_error(e)
+    Sentry.capture_exception(e)
     render(json: {error: "Service temporarily unavailable"}, status: 503)
   end
   

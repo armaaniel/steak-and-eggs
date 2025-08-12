@@ -1,5 +1,5 @@
 class HomeController < ApiController
-  before_action(:authenticate_user_two)
+  before_action(:verify_token)
   
   def search
     results = Ticker.search(term:params[:q])
@@ -13,15 +13,12 @@ class HomeController < ApiController
   
   def get_portfolio_data
     result = PositionService.get_aum(user_id:@current_user.id, balance:@current_user.balance)
-    positions = result[:positions] || []
-    render(json: {aum: result[:aum], positions: positions, balance: @current_user.balance})
+    render(json: result)
   end
   
   def get_activity_data
     data = Transaction.get(user_id:@current_user.id)
     render(json: data)
-  rescue => e
-    render(json: {error: "An unexpected error occurred"}, status: 500)
   end
   
 end

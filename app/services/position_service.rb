@@ -8,7 +8,7 @@ class PositionService
     position = Position.where(user_id: user_id)
     
     positions = position.map do |n| 
-      {symbol: n.symbol, shares: n.shares, name: n.name}
+      {symbol: n.symbol, shares: n.shares, name: n.name, average_price:n.average_price}
     end
     
     RedisService.safe_setex("positions:#{user_id}", 24.hours.to_i, positions.to_json)
@@ -26,6 +26,10 @@ class PositionService
   
   def self.find_position(symbol:, user_id:)
     position = Position.find_by(user_id: user_id, symbol: symbol)
+    
+    if position
+      {average_price: position.average_price, shares: position.shares, symbol: position.symbol}
+    end
   end
   
   def self.get_name(symbol:)
@@ -36,7 +40,7 @@ class PositionService
     
     positions = PositionService.find_positions(user_id:user_id)    
     
-    return {aum:balance, positions:[]} if positions.empty?
+    return {aum:balance, positions:[], balance:balance} if positions.empty?
     
     price_keys = positions.map {|n| "price:#{n[:symbol]}"}
     
@@ -52,13 +56,13 @@ class PositionService
       price = position[:price].to_f
       acc + (price * position[:shares])
     end
-    
-    {aum:aum,positions:positions_with_prices}
+        
+    {aum:aum,positions:positions_with_prices, balance: balance}
     
   rescue => e
     Sentry.capture_exception(e)
-    {aum:balance, positions:[]}
-    
+    {aum:balance, positions:[], balance:balance}  
+      
   end
   
   def self.portfolio_records(user_id:)

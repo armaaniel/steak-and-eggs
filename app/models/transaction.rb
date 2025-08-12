@@ -16,8 +16,9 @@ class Transaction < ApplicationRecord
     data = Transaction.where(user_id: user_id).order(created_at: :desc)
     
     data.map do |transaction|
-      {id: transaction.id, value: transaction.value.round(2), quantity: transaction.quantity, symbol: transaction.symbol,
-        transaction_type: transaction.transaction_type, date: transaction.created_at.strftime("%m/%d/%Y %I:%M %p")}
+      {id: transaction.id, value: transaction.value, quantity: transaction.quantity, symbol: transaction.symbol,
+        transaction_type: transaction.transaction_type, date: transaction.created_at.strftime("%m/%d/%Y %I:%M %p"),
+        market_price:transaction.market_price, realized_pnl:transaction.realized_pnl}
       end
         
   rescue => e

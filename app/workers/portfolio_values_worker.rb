@@ -25,22 +25,14 @@ class PortfolioValuesWorker
       stock_value = 0
       user_prices = {}
       positions.each do |position|
-        stock_value += position.shares * prices[position.symbol]&.to_f
-        user_prices[position.symbol] = prices[position.symbol]&.to_f
+        stock_value += position.shares * prices[position.symbol].to_f
+        user_prices[position.symbol] = prices[position.symbol].to_f
       end
       
       cash_balance = all_users[id].balance
-      used_margin = all_users[id].used_margin
-      
       portfolio_value = stock_value + cash_balance
-      equity = portfolio_value - used_margin
       
-      available_margin = (equity * 0.5) - used_margin
-      buying_power = cash_balance + available_margin
-      
-      
-      ActionCable.server.broadcast("portfolio_channel:#{id}", {portfolio_value: portfolio_value, stock_prices: user_prices,
-        buying_power:buying_power, available_margin:available_margin, cash_balance:cash_balance})
+      ActionCable.server.broadcast("portfolio_channel:#{id}", {portfolio_value: portfolio_value, stock_prices: user_prices})
     end
   end
 end
