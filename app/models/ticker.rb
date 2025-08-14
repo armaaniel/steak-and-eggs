@@ -17,7 +17,7 @@ class Ticker < ApplicationRecord
       payload[:used_db] = true
     
       results = Ticker.where("symbol ILIKE ? OR name ILIKE ?", "#{term}%", "#{term}%").limit(15)
-      RedisService.safe_setex("search:#{term}", 1.hour.to_i, results.to_json)
+      RedisService.safe_setex("search:#{term}", 3.days.to_i, results.to_json)
     
       results
 

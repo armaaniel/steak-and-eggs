@@ -36,6 +36,7 @@ class UserService
     end
        
     RedisService.safe_del("portfolio:#{user_id}")
+    
     {success: true} 
      
   rescue => e

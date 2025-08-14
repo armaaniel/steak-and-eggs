@@ -1,6 +1,9 @@
 class MarketService
   class InsufficientFundsError < StandardError; end
   class InsufficientSharesError < StandardError; end
+  class ApiError < StandardError; end
+  
+  Api_key = "BwLaqIrn3PJnY6NfIDBaEtsqycllj8lE"
   
   
   def self.buy(symbol:, quantity:, user_id:, name:)
@@ -83,69 +86,20 @@ class MarketService
       
       if cached
         payload[:used_redis] = true
-        return cached.to_f
+        return cached
       end
       
-      payload[:used_api] = true
-      
-      stock_object = Alphavantage::TimeSeries.new(symbol: symbol)
-      quote = stock_object.quote
-      
-      if quote&.dig(:price)
-        RedisService.safe_setex("price:#{symbol}", 5.minutes.to_i, quote[:price])
-        return quote[:price].to_f
-      end
-    
-    0
-    
-  end
-    
-  rescue => e
-    Sentry.capture_exception(e)
-    'N/A'
-    
+      raise ApiError
+    end
   end
   
   def self.marketdata(symbol:)
     
-    payload = {symbol: symbol, used_redis: false, used_api: false}
+    payload = {symbol: symbol, used_redis:false, used_api:false}
     
-    ActiveSupport::Notifications.instrument('MarketService.marketdata', payload) do
+    ActiveSupport::Notifications.instrument('MarketService.marketadata', payload) do
       cached = RedisService.safe_get("market:#{symbol}")
       
-      if cached
-        payload[:used_redis] = true
-        return JSON.parse(cached, symbolize_names: true)
-      end
-      
-      payload[:used_api] = true
-      
-      stock_object = Alphavantage::TimeSeries.new(symbol: symbol)
-      quote = stock_object.quote
-      
-      return {price:'N/A', open:'N/A', high:'N/A', low:'N/A', volume:'N/A'} unless quote
-      
-      resilient_data = {price: quote[:price] || 'N/A', open: quote[:open] || 'N/A', high: quote[:high] || 'N/A', low: quote[:low] || 'N/A', 
-        volume: quote[:volume] || 'N/A'}
-        
-        RedisService.safe_setex("market:#{symbol}", 5.minutes.to_i, resilient_data.to_json)
-        
-        resilient_data
-        
-      end
-    
-  rescue => e
-    Sentry.capture_exception(e)
-    {price:'N/A', open:'N/A', high:'N/A', low:'N/A', volume:'N/A'}
-  end
-    
-  def self.chartdata(symbol:)
-    
-    payload = {symbol: symbol, used_redis: false, used_api: false}
-    
-    ActiveSupport::Notifications.instrument("MarketService.chartdata", payload) do
-      
-      cached = RedisService.safe_get("daily:#{symbol}")
       if cached
         payload[:used_redis] = true
         return cached
@@ -153,57 +107,73 @@ class MarketService
       
       payload[:used_api] = true
       
-      data = Alphavantage::TimeSeries.new(symbol: symbol).daily
+      uri=URI("https://api.polygon.io/v2/snapshot/locale/us/markets/stocks/tickers/#{symbol}?apiKey=#{Api_key}")
+      response = Net::HTTP.get_response(uri)
+      raise ApiError unless response.code == '200'
+
+      body = JSON.parse(response.body)
       
-      daily = []
-      data&.dig('time_series_daily')&.each do |date, values|
-        daily.unshift({date: date, close: values['close'].to_f})
-      end
-      
-      RedisService.safe_setex("daily:#{symbol}", 24.hours.to_i, daily.to_json)
-      
-      daily
-      
-    end
-  
-  rescue => e
-    Sentry.capture_exception(e)
-    []
+      data = {open: body['ticker']['day']['o'], high: body['ticker']['day']['h'], low:body['ticker']['day']['l'], 
+        volume:body['ticker']['day']['v']}
+                
+      RedisService.safe_setex("market:#{symbol}", 5.minutes.to_i, data.to_json)
+      data    
+    end    
   end
-  
+    
   def self.companydata(symbol:)
     
     payload = {symbol: symbol, used_redis: false, used_api: false}
     
     ActiveSupport::Notifications.instrument("MarketService.companydata", payload) do
-      
       cached = RedisService.safe_get("company:#{symbol}")
       
       if cached
         payload[:used_redis] = true 
-        return JSON.parse(cached, symbolize_names:true)
+        return cached
       end
       
       payload[:used_api] = true
       
-      company = Alphavantage::Fundamental.new(symbol: symbol).overview
+      uri=URI("https://api.polygon.io/v3/reference/tickers/#{symbol}?apiKey=#{Api_key}")
+      response = Net::HTTP.get_response(uri)
+      raise ApiError unless response.code == '200'
       
-      return {name:'N/A', currency:'N/A', :'52_week_high'=> 'N/A', exchange: 'N/A', :'52_week_low'=> 'N/A', market_capitalization:'N/A', 
-      description: 'N/A'} unless company[:name]
+      body = JSON.parse(response.body)
+      data = {market_cap: body['results']['market_cap'], description: body['results']['description']}    
       
-      RedisService.safe_setex("company:#{symbol}", 24.hours.to_i, company.to_json)
-      
-      company
-      
+      RedisService.safe_setex("company:#{symbol}", 3.days.to_i, data.to_json)
+      data
     end
-    
-  rescue => e
-    Sentry.capture_exception(e)
-    {name:'N/A', currency:'N/A', :'52_week_high'=> 'N/A', exchange: 'N/A', :'52_week_low'=> 'N/A', market_capitalization:'N/A', 
-      description: 'N/A'}
-    
   end
   
-  
+  def self.chartdata(symbol:)
+    
+    payload = {symbol: symbol, used_redis: false, used_api: false}
+    
+    ActiveSupport::Notifications.instrument("MarketService.chartdata", payload) do
+      cached = RedisService.safe_get("daily:#{symbol}")
+      if cached
+        payload[:used_redis] = true
+        return cached
+      end
+      
+      payload[:used_api] = true
+       
+      uri=URI("https://api.polygon.io/v2/aggs/ticker/#{symbol}/range/1/day/#{Date.today-5.months}/#{Date.today}?apiKey=#{Api_key}")
+      response=Net::HTTP.get_response(uri)
+      raise ApiError unless response.code == '200'
+      
+      body=JSON.parse(response.body)
+    
+      data = body['results'].map do |result|
+        time = Time.at(result['t']/1000).utc
+        {date:time.strftime("%Y-%m-%d"), close: result['c']}
+      end
+      
+      RedisService.safe_setex("daily:#{symbol}", 24.hours.to_i, data.to_json)
+      data
+    end
+  end
   
 end

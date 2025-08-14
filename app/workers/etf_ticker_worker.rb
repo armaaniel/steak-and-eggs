@@ -7,7 +7,7 @@ class EtfTickerWorker
     
     api_key = "BwLaqIrn3PJnY6NfIDBaEtsqycllj8lE"
     all_tickers = []
-    url = "https://api.polygon.io/v3/reference/tickers?apikey=#{api_key}&limit=1000&market=stocks&type=ETF"
+    url = "https://api.polygon.io/v3/reference/tickers?apikey=#{api_key}&limit=1000&market=stocks&type=ETV"
     
     while url
       puts "Fetching ETFs: #{url}"

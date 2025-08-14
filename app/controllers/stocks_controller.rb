@@ -35,6 +35,11 @@ class StocksController < ApiController
   def get_chart_data
     data = MarketService.chartdata(symbol:params[:symbol])
     render(json:data)
+    
+  rescue MarketService::ApiError => e
+    Sentry.capture_exception(e)
+    data = [{date:Date.today, close:0},{date:Date.today,close:0}]
+    render(json:data)  
   end
   
   def get_company_data
@@ -45,8 +50,13 @@ class StocksController < ApiController
   def get_market_data
     data = MarketService.marketdata(symbol:params[:symbol])
     render(json: data)
+    
+  rescue MarketService::ApiError => e
+    Sentry.capture_exception(e)
+    data = {open:0, high: 0, low: 0, volume: 0}
+    render(json:data)
   end
-  
+    
   def get_user_data
   
     data = PositionService.find_position(symbol: params[:symbol], user_id: @current_user.id)
@@ -61,8 +71,11 @@ class StocksController < ApiController
   
   def get_stock_price
     data = MarketService.marketprice(symbol:params[:symbol])
-    
     render(json:data)
+    
+  rescue MarketService::ApiError => e
+    Sentry.capture_exception(e)
+    render(json:0)        
   end
       
 end

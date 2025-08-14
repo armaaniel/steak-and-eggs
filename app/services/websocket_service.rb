@@ -2,8 +2,10 @@ class WebsocketService
   def self.subscribe_to
         
     client = Polygonio::Websocket::Client.new("stocks", "BwLaqIrn3PJnY6NfIDBaEtsqycllj8lE", delayed: true)
+    symbols = Ticker.pluck(:symbol)
+    ticker_symbols = "A.#{symbols.join(',A.')}"
     
-    client.subscribe("A.*") do |event|
+    client.subscribe(ticker_symbols) do |event|
       event.each do |data|
                 
         REDIS.set("price:#{data.sym}", data.c)
