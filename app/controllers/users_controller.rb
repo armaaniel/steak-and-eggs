@@ -1,5 +1,5 @@
 class UsersController < ApiController
-  before_action(:verify_token, except: [:login, :signup])
+  before_action(:verify_token, except: [:login, :signup, :connections])
   
   def login
     
@@ -29,6 +29,21 @@ class UsersController < ApiController
       render(json: {error: 'Signup failed'}, status: 422)
     end
   end
+  
+  def connections
+      connections_info = ActionCable.server.connections.map do |conn|
+        {
+          user_id: conn.user&.id,
+          started_at: conn.instance_variable_get(:@started_at),
+          subscriptions: conn.subscriptions.identifiers
+        }
+      end
+    
+      render json: {
+        actioncable_connections: connections_info.length,
+        details: connections_info,
+      }
+    end
       
   
   def deposit

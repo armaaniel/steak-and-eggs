@@ -1,12 +1,7 @@
 class PortfolioValuesWorker
   include Sidekiq::Worker
   
-  def perform
-    
-    connected_users = REDIS.smembers("connected_users").map {|n| n.to_i}
-    puts "Connected users: #{connected_users}"
-    
-    return if connected_users.empty?
+  def perform(connected_users:)
     
     all_positions = Position.where(user_id:connected_users)
     all_users = User.where(id: connected_users).index_by { |n| n.id}
@@ -15,7 +10,7 @@ class PortfolioValuesWorker
     
     price_keys = all_symbols.map {|symbol| "price:#{symbol}"}
     
-    price_values = REDIS.mget(*price_keys)
+    price_values = RedisService.safe_mget(*price_keys)
     
     prices = all_symbols.zip(price_values).to_h
     

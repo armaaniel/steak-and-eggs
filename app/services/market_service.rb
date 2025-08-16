@@ -10,7 +10,7 @@ class MarketService
     raise(ArgumentError, "Invalid Quantity") if quantity.blank? || quantity.to_i <=0
     quantity = quantity.to_i
     
-    stock_price = marketprice(symbol:symbol)
+    stock_price = RedisService.safe_get("price:#{symbol}")&.to_f
     raise(StandardError, "Unable to fetch Stock Price for #{symbol}") if stock_price.blank? || stock_price <=0
     
     trade_value = quantity*stock_price
@@ -46,7 +46,7 @@ class MarketService
     raise(ArgumentError, "Invalid Quantity") if quantity.blank? || quantity.to_i <= 0
     quantity = quantity.to_i
     
-    stock_price = marketprice(symbol:symbol)
+    stock_price = RedisService.safe_get("price:#{symbol}")&.to_f
     raise(StandardError, "Unable to fetch Stock Price for #{symbol}") if stock_price.blank? || stock_price <=0
     
     trade_value = quantity*stock_price
@@ -79,18 +79,14 @@ class MarketService
     
   def self.marketprice(symbol:)
     
-    payload = {symbol: symbol, used_redis: false, used_api: false}
-    
-    ActiveSupport::Notifications.instrument('MarketService.marketprice', payload) do
-      cached = RedisService.safe_get("price:#{symbol}")
-      
-      if cached
-        payload[:used_redis] = true
-        return cached
-      end
-      
-      raise ApiError
+    cached = RedisService.safe_get("price:#{symbol}")
+    cached_open = RedisService.safe_get("open:#{symbol}")
+            
+    if cached
+      return {price: cached, open: cached_open}
     end
+    
+    raise ApiError
   end
   
   def self.marketdata(symbol:)

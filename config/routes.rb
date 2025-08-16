@@ -21,6 +21,10 @@ Rails.application.routes.draw do
   post('stocks/:symbol/buy', to: 'stocks#buy')
   post('stocks/:symbol/sell', to: 'stocks#sell')
 end
+get '/connections', to: 'users#connections'
+
+
+  match '*path', to: 'application#not_found', via: :all
   
   mount ActionCable.server => '/cable'
 end

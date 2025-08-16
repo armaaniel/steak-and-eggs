@@ -40,21 +40,15 @@ gem 'sidekiq-cron'
 gem 'sentry-ruby'
 gem 'sentry-rails'
 
-gem 'clockwork'
-
 # Gemfile
 gem 'oj'
 
 #bcrypt
 gem 'bcrypt'
 
-gem 'finnhub_ruby'
-
 gem "react-rails", "= 3.2"
 
 gem 'polygonio', path: '../polygonio-ruby'
-
-gem 'alphavantage'
 
 gem 'rack-cors'
 

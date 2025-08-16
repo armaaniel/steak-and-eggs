@@ -40,11 +40,11 @@ class PositionService
     
     positions = PositionService.find_positions(user_id:user_id)    
     
-    return {aum:balance, positions:[], balance:balance} if positions.empty?
+    return {aum:balance, balance:balance} if positions.empty?
     
     price_keys = positions.map {|n| "price:#{n[:symbol]}"}
     
-    prices_array = REDIS.mget(*price_keys)    
+    prices_array = RedisService.safe_mget(*price_keys)    
     
     zipped = positions.zip(prices_array)
     
@@ -61,7 +61,7 @@ class PositionService
     
   rescue => e
     Sentry.capture_exception(e)
-    {aum:balance, positions:[], balance:balance}  
+    {aum:balance, balance:balance}  
       
   end
   

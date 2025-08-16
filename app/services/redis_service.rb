@@ -20,5 +20,12 @@ class RedisService
     Sentry.capture_exception(e)
     nil
   end
+  
+  def self.safe_mget(*keys)
+    REDIS.mget(*keys)
+  rescue Redis::BaseError => e
+    Sentry.capture_exception(e)
+    []
+  end
     
 end

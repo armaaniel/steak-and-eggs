@@ -49,12 +49,14 @@ class StocksController < ApiController
   
   def get_market_data
     data = MarketService.marketdata(symbol:params[:symbol])
+    puts data
     render(json: data)
     
   rescue MarketService::ApiError => e
     Sentry.capture_exception(e)
     data = {open:0, high: 0, low: 0, volume: 0}
     render(json:data)
+    puts 'yo'
   end
     
   def get_user_data
@@ -75,7 +77,7 @@ class StocksController < ApiController
     
   rescue MarketService::ApiError => e
     Sentry.capture_exception(e)
-    render(json:0)        
+    render(json:{price:0, open:0})        
   end
       
 end

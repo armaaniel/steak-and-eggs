@@ -8,17 +8,17 @@ class WebsocketService
     client.subscribe(ticker_symbols) do |event|
       event.each do |data|
                 
-        REDIS.set("price:#{data.sym}", data.c)
+        RedisService.safe_setex("price:#{data.sym}", 518400, data.c)
+        RedisService.safe_setex("open:#{data.sym}", 518400, data.op)
         
         ActionCable.server.broadcast("price_channel:#{data.sym}", data.c)
         
       rescue => e 
-        nil
         Sentry.capture_exception(e)
       end
     end
   rescue => e
-    nil
+    Sentry.capture_exception(e)
     sleep 10 
   end
 end
