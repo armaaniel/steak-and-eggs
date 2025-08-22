@@ -1,29 +1,5 @@
 class PositionService
-  
-  def self.find_positions(user_id:)
     
-    cached = RedisService.safe_get("positions:#{user_id}")
-    return JSON.parse(cached, symbolize_names:true) if cached
-        
-    position = Position.where(user_id: user_id)
-    
-    positions = position.map do |n| 
-      {symbol: n.symbol, shares: n.shares, name: n.name, average_price:n.average_price}
-    end
-    
-    RedisService.safe_setex("positions:#{user_id}", 24.hours.to_i, positions.to_json)
-    
-    positions
-    
-  rescue => e
-    Sentry.capture_exception(e)
-    nil
-  end
-  
-  def self.transactions(current_user:)
-    Transaction.where(user_id: current_user.id)
-  end
-  
   def self.find_position(symbol:, user_id:)
     position = Position.find_by(user_id: user_id, symbol: symbol)
     
@@ -31,44 +7,40 @@ class PositionService
       {average_price: position.average_price, shares: position.shares, symbol: position.symbol}
     end
   end
-  
-  def self.get_name(symbol:)
-    Ticker.find_by(symbol:symbol)&.name&.split('.')&.first
-  end
-  
-  def self.get_aum(user_id:, balance:)    
     
+  def self.get_aum(user_id:, balance:)  
+        
     positions = PositionService.find_positions(user_id:user_id)    
-    
     return {aum:balance, balance:balance} if positions.empty?
     
-    price_keys = positions.map {|n| "price:#{n[:symbol]}"}
-    
-    prices_array = RedisService.safe_mget(*price_keys)    
-    
-    zipped = positions.zip(prices_array)
-    
-    positions_with_prices = zipped.map do |position, price|
-      position.merge(price: price.to_f)
+    price_keys = positions.map do |position| 
+      "price:#{position[:symbol]}"
     end
     
-    aum = positions_with_prices.inject(balance) do |acc, position|
-      price = position[:price].to_f
-      acc + (price * position[:shares])
+    open_keys = positions.map do |position|
+      "open:#{position[:symbol]}"
+    end
+    
+    opens = RedisService.safe_mget(open_keys)
+    
+    prices = RedisService.safe_mget(*price_keys)
+    zip = positions.zip(prices, opens)
+    
+    priced_positions = zip.map do |position, price, open|
+      position.merge(price: price.to_f, open:open.to_f)
+    end
+    
+    aum = priced_positions.inject(balance) do |acc, position|
+      acc + (position[:price] * position[:shares])
     end
         
-    {aum:aum,positions:positions_with_prices, balance: balance}
-    
-  rescue => e
-    Sentry.capture_exception(e)
-    {aum:balance, balance:balance}  
-      
+    {aum:aum,positions:priced_positions, balance: balance}      
   end
   
   def self.portfolio_records(user_id:)
     
-    cached_values = RedisService.safe_get("portfolio:#{user_id}")
-    return cached_values if cached_values
+    cached = RedisService.safe_get("portfolio:#{user_id}")
+    return cached if cached
   
     data = PortfolioRecord.where(user_id:user_id).order(:date).pluck(:date, :portfolio_value)
     
@@ -83,6 +55,24 @@ class PositionService
     RedisService.safe_setex("portfolio:#{user_id}", 6.hours.to_i, values.to_json)
     
     values
+        
+  end
+  
+  private
+  
+  def self.find_positions(user_id:)
+    
+    cached = RedisService.safe_get("positions:#{user_id}")
+    return JSON.parse(cached, symbolize_names:true) if cached
+        
+    position = Position.where(user_id: user_id)
+    
+    positions = position.map do |n| 
+      {symbol: n.symbol, shares: n.shares, name: n.name, average_price:n.average_price}
+    end
+    
+    RedisService.safe_setex("positions:#{user_id}", 24.hours.to_i, positions.to_json)
+    positions
     
   rescue => e
     Sentry.capture_exception(e)

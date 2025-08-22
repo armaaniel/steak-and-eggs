@@ -1,23 +1,20 @@
-class UserService 
+class UserService   
   def self.signup(username:, password:)
+  
     ActiveRecord::Base.transaction do
       user = User.create!(username: username, password: password)
-      
       PortfolioRecord.create!(date:Date.today, portfolio_value:0, user_id:user.id)
+      
       user
     end
-    
-  rescue => e
-    Sentry.capture_exception(e)
-    nil 
   end
   
   def self.authenticate(username:, password:)
-    user = User.find_by(username: username)&.authenticate(password)
+    User.find_by(username: username)&.authenticate(password)
   end
   
   def self.deposit(amount:, user_id:)
-    return if amount.nil? || amount&.to_f <= 0
+    raise ArgumentError if amount.nil? || amount&.to_f <= 0
     amount = amount.to_f
     
     ActiveRecord::Base.transaction do
@@ -35,22 +32,17 @@ class UserService
       record.save!      
     end
        
-    RedisService.safe_del("portfolio:#{user_id}")
-    
-    {success: true} 
-     
-  rescue => e
-    Sentry.capture_exception(e)
-    {success: false}
+    RedisService.safe_del("portfolio:#{user_id}")  
   end
   
   def self.withdraw(amount:, user_id:)
-    return if amount.nil? || amount&.to_f <=0
+    raise ArgumentError if amount.nil? || amount&.to_f <= 0
     amount = amount.to_f
     
     ActiveRecord::Base.transaction do
       user = User.lock.find(user_id)
       
+      raise StandardError if user.balance < amount
       user.balance -= amount
       user.save!
       
@@ -64,12 +56,6 @@ class UserService
     end
     
     RedisService.safe_del("portfolio:#{user_id}")
-    {success:true}
-    
-  rescue => e
-    Sentry.capture_exception(e)
-    {sucess: false}
-    
   end
   
 end

@@ -19,11 +19,7 @@ class Transaction < ApplicationRecord
       {id: transaction.id, value: transaction.value, quantity: transaction.quantity, symbol: transaction.symbol,
         transaction_type: transaction.transaction_type, date: transaction.created_at.strftime("%m/%d/%Y %I:%M %p"),
         market_price:transaction.market_price, realized_pnl:transaction.realized_pnl}
-      end
         
-  rescue => e
-    Sentry.capture_exception(e)
-    raise
+      end
+    end  
   end
-  
-end

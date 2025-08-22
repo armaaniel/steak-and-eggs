@@ -10,26 +10,26 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2025_08_10_145251) do
+ActiveRecord::Schema[8.0].define(version: 2025_08_19_215247) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
   create_table "portfolio_records", force: :cascade do |t|
     t.integer "user_id", null: false
     t.date "date", null: false
-    t.decimal "portfolio_value", null: false
+    t.decimal "portfolio_value", precision: 17, scale: 4, null: false
     t.index ["user_id", "date"], name: "index_portfolio_records_on_user_id_and_date", unique: true
     t.index ["user_id"], name: "index_portfolio_records_on_user_id"
   end
 
   create_table "positions", force: :cascade do |t|
     t.string "symbol", null: false
-    t.integer "shares", null: false
+    t.bigint "shares", null: false
     t.integer "user_id", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.string "name"
-    t.decimal "average_price", null: false
+    t.decimal "average_price", precision: 10, scale: 4, null: false
     t.index ["user_id", "symbol"], name: "index_positions_on_user_id_and_symbol", unique: true
     t.index ["user_id"], name: "index_positions_on_user_id"
   end
@@ -60,21 +60,21 @@ ActiveRecord::Schema[8.0].define(version: 2025_08_10_145251) do
 
   create_table "transactions", force: :cascade do |t|
     t.integer "transaction_type", null: false
-    t.decimal "value", null: false
+    t.decimal "value", precision: 17, scale: 4, null: false
     t.integer "quantity", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.integer "user_id", null: false
     t.string "symbol", null: false
-    t.decimal "realized_pnl"
-    t.decimal "market_price", null: false
+    t.decimal "realized_pnl", precision: 17, scale: 4
+    t.decimal "market_price", precision: 10, scale: 4, null: false
     t.index ["user_id"], name: "index_transactions_on_user_id"
   end
 
   create_table "users", force: :cascade do |t|
     t.string "password_digest", null: false
-    t.decimal "balance", default: "0.0"
-    t.string "username", null: false
+    t.decimal "balance", precision: 17, scale: 4, default: "0.0"
+    t.string "username", limit: 20, null: false
     t.index ["username"], name: "index_users_on_username", unique: true
   end
 

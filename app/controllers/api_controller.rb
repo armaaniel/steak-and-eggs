@@ -1,10 +1,5 @@
 class ApiController < ActionController::API
   
-  rescue_from(ArgumentError, with: :bad_request)
-  rescue_from(ActiveRecord::RecordNotFound, with: :not_found)
-  rescue_from(ActiveRecord::RecordInvalid, with: :validation_error)
-  rescue_from(StandardError, with: :service_error)
-  
   def verify_token
     
     token = request.headers['authToken']
@@ -22,26 +17,5 @@ class ApiController < ActionController::API
     render(json: {error: 'Authentication failed'}, status: 401)
   end
   
-  private
-  
-  def bad_request(e)
-    Sentry.capture_exception(e)
-    render(json: {error: e.message}, status: 400)
-  end
-  
-  def not_found(e)
-    Sentry.capture_exception(e)
-    render(json: {error: "Not Found"}, status: 404)
-  end
-  
-  def validation_error(e)
-    Sentry.capture_exception(e)
-    render(json: {error: e.message}, status: 422)
-  end
-  
-  def service_error(e)
-    Sentry.capture_exception(e)
-    render(json: {error: "Service temporarily unavailable"}, status: 503)
-  end
   
 end

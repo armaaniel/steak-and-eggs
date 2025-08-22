@@ -6,61 +6,71 @@ class StocksController < ApiController
     name:params[:name])
     
     render(json: data, status: 201)
-     
+    
   rescue MarketService::InsufficientFundsError => e
     Sentry.capture_exception(e)
-    render(json: {error: e.message}, status: 402) 
+    render(json: {error: "Insufficient funds for this transaction"}, status: 402)
+  rescue => e
+    Sentry.capture_exception(e)
+    render(json:{error: "Service temporarily unavailable"}, status:503)
   end
   
   def sell
     data = MarketService.sell(symbol:params[:symbol], user_id:@current_user.id, quantity:params[:quantity])
     
     render(json: data, status: 201)
-     
+    
   rescue MarketService::InsufficientSharesError => e
     Sentry.capture_exception(e)
-    render(json: {error: e.message}, status: 402)
+    render(json: {error: "Insufficient shares for this transaction"}, status: 402)
+  rescue => e
+    Sentry.capture_exception(e)
+    render(json:{error:"Service temporarily unavailable"}, status:503)
   end
   
   def get_ticker_data
-    result = Ticker.query(symbol: params[:symbol])
+    data = Ticker.query(symbol: params[:symbol])
     
-    if result[:success]
-      render(json: result[:data])
+    if data
+      render(json: data)
     else
-      render(json: {error: 'Symbol not found'}, status:404)
+      head(:not_found)
     end
+    
+  rescue => e
+    Sentry.capture_exception(e)
+    head(:not_found)
   end
   
   def get_chart_data
     data = MarketService.chartdata(symbol:params[:symbol])
     render(json:data)
     
-  rescue MarketService::ApiError => e
+  rescue => e
     Sentry.capture_exception(e)
-    data = [{date:Date.today, close:0},{date:Date.today,close:0}]
-    render(json:data)  
+    render(json:[{date:Date.today, value:0},{date:Date.today,value:0}], status:503)  
   end
   
   def get_company_data
     data = MarketService.companydata(symbol:params[:symbol])
     render(json: data)
+    
+  rescue => e
+    Sentry.capture_exception(e)
+    render(json:{market_cap:'N/A', description:'N/A'}, status:503)
   end
   
   def get_market_data
     data = MarketService.marketdata(symbol:params[:symbol])
-    puts data
     render(json: data)
     
-  rescue MarketService::ApiError => e
+  rescue => e
     Sentry.capture_exception(e)
-    data = {open:0, high: 0, low: 0, volume: 0}
-    render(json:data)
-    puts 'yo'
+    render(json:{open:'N/A', high: 'N/A', low: 'N/A', volume: 'N/A'}, status:503)
   end
     
   def get_user_data
-  
+      
     data = PositionService.find_position(symbol: params[:symbol], user_id: @current_user.id)
     
     if data
@@ -69,15 +79,18 @@ class StocksController < ApiController
       render(json: {position: nil, balance: @current_user.balance})
     end
     
+  rescue => e
+    Sentry.capture_exception(e)
+    render(json: {position: nil, balance: 'N/A'}, status:503)
   end
   
   def get_stock_price
     data = MarketService.marketprice(symbol:params[:symbol])
     render(json:data)
     
-  rescue MarketService::ApiError => e
+  rescue => e
     Sentry.capture_exception(e)
-    render(json:{price:0, open:0})        
+    render(json:{price:"N/A", open:"N/A"}, status:503)        
   end
       
 end

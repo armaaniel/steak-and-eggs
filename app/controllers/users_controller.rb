@@ -2,32 +2,52 @@ class UsersController < ApiController
   before_action(:verify_token, except: [:login, :signup, :connections])
   
   def login
-    
     user = UserService.authenticate(username:params[:username],password:params[:password])
         
     if user
       payload = {user_id: user.id, exp: 24.hours.from_now.to_i}
       token = JWT.encode(payload, Rails.application.secret_key_base, 'HS256')
-      
       render(json: {token: token})
     else
-      render(json: {error: 'Invalid Credentials' }, status: 401) 
+      render(json: {error: 'Your email or password was incorrect. Please try again' }, status: 401) 
     end
     
+  rescue => e
+    render(json: {error: 'Something went wrong, please try again' }, status: 503) 
   end
   
   def signup
-    
     user = UserService.signup(username:params[:username], password:params[:password])
     
     if user
       payload = {user_id: user.id, exp: 24.hours.from_now.to_i}
       token = JWT.encode(payload, Rails.application.secret_key_base, 'HS256')
-      
       render(json: {token: token})
-    else
-      render(json: {error: 'Signup failed'}, status: 422)
     end
+    
+  rescue ActiveRecord::RecordInvalid => e
+    render(json: {error: "Username has been taken, please choose another"}, status: 422)
+  rescue => e
+    Sentry.capture_exception(e)
+    render(json: {error:"Something went wrong, please try again"}, status: 503)  
+  end
+    
+  def deposit
+    result = UserService.deposit(amount:params[:amount], user_id:@current_user.id)
+    head(:ok)
+    
+  rescue => e
+    Sentry.capture_exception(e)
+    render(json: {error: 'Unable to process deposit, please try again'}, status: 422)  
+  end
+  
+  def withdraw
+    result = UserService.withdraw(amount:params[:amount], user_id:@current_user.id)
+    head(:ok)
+
+  rescue => e
+    Sentry.capture_exception(e)
+    render(json: {error: 'Unable to process withdrawal, try again'}, status: 422)
   end
   
   def connections
@@ -44,31 +64,5 @@ class UsersController < ApiController
         details: connections_info,
       }
     end
-      
-  
-  def deposit
-    
-    result = UserService.deposit(amount:params[:amount], user_id:@current_user.id)
-    
-    if result[:success]
-      head(:ok)
-    else
-      render(json: {error: 'Unable to process deposit'}, status: 422)
-    end
-      
-  end
-  
-  def withdraw
-    
-    result = UserService.withdraw(amount:params[:amount], user_id:@current_user.id)
-    
-    if result[:success]
-      head(:ok)
-    else
-      render(json: {error: 'Unable to process withdrawal'}, status: 422)
-    end
-    
-  end
-   
-  
+     
 end

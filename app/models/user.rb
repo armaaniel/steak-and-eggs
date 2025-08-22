@@ -5,7 +5,10 @@ class User < ApplicationRecord
   has_many(:positions)
   has_many(:transactions)
   has_many(:portfolio_records)
-  validates(:username, presence: true, uniqueness: true)
+  validates(:username, presence: true, uniqueness: {case_sensitive:false}, length:{maximum:20}, 
+  format: {with: /\A[a-zA-Z0-9_]+\z/})
+  
+  validates(:balance, numericality: { greater_than: 0 })
   
   private
   

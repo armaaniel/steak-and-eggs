@@ -7,11 +7,11 @@ class MarketService
   
   
   def self.buy(symbol:, quantity:, user_id:, name:)
-    raise(ArgumentError, "Invalid Quantity") if quantity.blank? || quantity.to_i <=0
+    raise(ArgumentError) if quantity.blank? || quantity.to_i <=0
     quantity = quantity.to_i
     
     stock_price = RedisService.safe_get("price:#{symbol}")&.to_f
-    raise(StandardError, "Unable to fetch Stock Price for #{symbol}") if stock_price.blank? || stock_price <=0
+    raise(StandardError) if stock_price.blank? || stock_price <=0
     
     trade_value = quantity*stock_price
     
@@ -19,7 +19,7 @@ class MarketService
       user = User.lock.find(user_id)
       position = Position.lock.find_by(user_id:user_id, symbol: symbol)
       
-      raise(InsufficientFundsError, "Insufficient funds for this purchase") if user.balance < trade_value
+      raise(InsufficientFundsError) if user.balance < trade_value
       
       user.balance -= trade_value
       user.save!
@@ -77,16 +77,17 @@ class MarketService
   
   end
     
-  def self.marketprice(symbol:)
-    
-    cached = RedisService.safe_get("price:#{symbol}")
+  def self.marketprice(symbol:)   
+         
+    cached_price = RedisService.safe_get("price:#{symbol}")
     cached_open = RedisService.safe_get("open:#{symbol}")
             
-    if cached
-      return {price: cached, open: cached_open}
+    if cached_price
+      return {price: cached_price, open: cached_open}
     end
     
     raise ApiError
+    
   end
   
   def self.marketdata(symbol:)
@@ -164,7 +165,7 @@ class MarketService
     
       data = body['results'].map do |result|
         time = Time.at(result['t']/1000).utc
-        {date:time.strftime("%Y-%m-%d"), close: result['c']}
+        {date:time.strftime("%Y-%m-%d"), value: result['c']}
       end
       
       RedisService.safe_setex("daily:#{symbol}", 24.hours.to_i, data.to_json)
