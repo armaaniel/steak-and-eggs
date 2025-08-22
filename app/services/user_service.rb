@@ -1,6 +1,6 @@
 class UserService   
   def self.signup(username:, password:)
-  
+    
     ActiveRecord::Base.transaction do
       user = User.create!(username: username, password: password)
       PortfolioRecord.create!(date:Date.today, portfolio_value:0, user_id:user.id)

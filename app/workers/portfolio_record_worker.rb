@@ -13,8 +13,8 @@ class PortfolioRecordWorker
       
     rescue => e 
       Sentry.capture_exception(e)
-      next
     end
-    
+  rescue => e
+    Sentry.capture_exception(e)
   end
 end

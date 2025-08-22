@@ -19,11 +19,7 @@ module Types
       argument(:id, ID, required:true)
       description('fetch transaction data by user id')
     end
-    
-    field(:margin_call_status, [Types::UserType]) do
-      description('fetch users by margin call status')
-    end 
-    
+  
     field(:trace_summary, [Types::TraceSummaryType]) do
       description('fetch trace data by routes')
     end
@@ -45,6 +41,10 @@ module Types
     field(:most_requested_traces, [Types::TraceSummaryType]) do
       description('fetch most requested traces')
     end
+    
+    field(:connections, [Types::ConnectionsType], null:false) do
+      description('fetch active connections')
+    end
         
     def users_by_username(term:)
       User.where("lower(username) LIKE ?", "%#{term.downcase}%").limit(5)
@@ -61,9 +61,19 @@ module Types
     def transactions(id:)
       Transaction.where(user_id: id)
     end
-    
-    def margin_call_status
-      User.where(margin_call_status: 'active')
+     
+    def connections
+      ActionCable.server.connections.map do |connection|
+        {
+          id: connection.user&.id, 
+          started_at: connection.instance_variable_get(:@started_at),
+          user_agent: connection.instance_variable_get(:@request)&.user_agent,
+          connection_state: connection.instance_variable_get(:@websocket)&.alive?,
+          subscriptions: connection.subscriptions.identifiers.map do |identifier| 
+            JSON.parse(identifier, symbolize_names: true)
+          end
+        }
+      end
     end
     
     def trace_breakdown(endpoint:)
@@ -107,7 +117,6 @@ module Types
           WHEN endpoint LIKE 'GET /stocks/%/marketdata' THEN 'GET /stocks/:symbol/marketdata'
           WHEN endpoint LIKE 'GET /stocks/%/companydata' THEN 'GET /stocks/:symbol/companydata'
           WHEN endpoint LIKE 'GET /stocks/%/chartdata' THEN 'GET /stocks/:symbol/chartdata'
-          WHEN endpoint LIKE 'GET /stocks/%' THEN 'GET /stocks/:symbol'
           WHEN endpoint LIKE 'GET /positions/%' THEN 'GET /positions/:symbol'
           WHEN endpoint LIKE 'GET /search%' THEN 'GET /search'
           ELSE endpoint
