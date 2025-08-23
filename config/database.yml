@@ -21,7 +21,6 @@ queue:
   database_tasks: false
   
 cache:
-	<<: *default
-    url: <%= ENV['DATABASE_URL'] %>
-    database_tasks: false
-  
+  <<: *default
+  url: <%= ENV['DATABASE_URL'] %>
+  database_tasks: false
