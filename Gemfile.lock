@@ -1,5 +1,6 @@
-PATH
-  remote: ../polygonio-ruby
+GIT
+  remote: https://github.com/armaaniel/pr.git
+  revision: a11467c760718e62604fc523114995bd4bc2e302
   specs:
     polygonio (0.3.0)
       activesupport
@@ -142,7 +143,7 @@ GEM
       dry-types (~> 1.8, >= 1.8.2)
       ice_nine (~> 0.11)
       zeitwerk (~> 2.6)
-    dry-types (1.8.2)
+    dry-types (1.8.3)
       bigdecimal (~> 3.0)
       concurrent-ruby (~> 1.0)
       dry-core (~> 1.0)
@@ -168,10 +169,10 @@ GEM
       faraday-retry (~> 1.0)
       ruby2_keywords (>= 0.0.4)
     faraday-em_http (1.0.0)
-    faraday-em_synchrony (1.0.0)
+    faraday-em_synchrony (1.0.1)
     faraday-excon (1.1.0)
     faraday-httpclient (1.0.1)
-    faraday-multipart (1.1.0)
+    faraday-multipart (1.1.1)
       multipart-post (~> 2.0)
     faraday-net_http (1.0.2)
     faraday-net_http_persistent (1.2.0)

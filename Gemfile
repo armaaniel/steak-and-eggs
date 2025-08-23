@@ -48,7 +48,7 @@ gem 'bcrypt'
 
 gem "react-rails", "= 3.2"
 
-gem 'polygonio', path: '../polygonio-ruby'
+gem 'polygonio', git: 'https://github.com/armaaniel/pr.git'
 
 gem 'rack-cors'
 
