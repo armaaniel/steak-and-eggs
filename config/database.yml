@@ -7,10 +7,6 @@ development:
   <<: *default
   database: steak_and_eggs_development
 
-test:
-  <<: *default
-  database: steak_and_eggs_test
-
 production:
   <<: *default
   url: <%= ENV['DATABASE_URL'] %>
