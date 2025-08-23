@@ -46,8 +46,6 @@ gem 'oj'
 #bcrypt
 gem 'bcrypt'
 
-gem "react-rails", "= 3.2"
-
 gem 'polygonio', git: 'https://github.com/armaaniel/pr.git'
 
 gem 'rack-cors'
@@ -88,5 +86,3 @@ group :test do
   gem "capybara"
   gem "selenium-webdriver"
 end
-
-gem "shakapacker", "= 8.2"

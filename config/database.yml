@@ -13,4 +13,4 @@ test:
 
 production:
   <<: *default
-  database: steak_and_eggs_production
+  url: <%= ENV['DATABASE_URL'] %>
