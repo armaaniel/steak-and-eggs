@@ -2,17 +2,43 @@ class UsersController < ApiController
   before_action(:verify_token, except: [:login, :signup])
   
   def login
-    user = UserService.authenticate(username:params[:username],password:params[:password])
-        
+    overall_start = Time.current
+    Rails.logger.info "=== LOGIN REQUEST START ==="
+  
+    # Time parameter parsing
+    parse_start = Time.current
+    username = params[:username]
+    password = params[:password]
+    Rails.logger.info "Parameter parsing: #{(Time.current - parse_start) * 1000}ms"
+  
+    # Time authentication
+    auth_start = Time.current
+    user = UserService.authenticate(username: username, password: password)
+    auth_time = (Time.current - auth_start) * 1000
+    Rails.logger.info "UserService.authenticate: #{auth_time}ms"
+      
     if user
+      # Time JWT creation
+      jwt_start = Time.current
       payload = {user_id: user.id, exp: 24.hours.from_now.to_i}
       token = JWT.encode(payload, Rails.application.secret_key_base, 'HS256')
+      jwt_time = (Time.current - jwt_start) * 1000
+      Rails.logger.info "JWT creation: #{jwt_time}ms"
+    
+      # Time JSON rendering
+      render_start = Time.current
       render(json: {token: token})
+      render_time = (Time.current - render_start) * 1000
+      Rails.logger.info "JSON render: #{render_time}ms"
     else
       render(json: {error: 'Your email or password was incorrect. Please try again' }, status: 401) 
     end
-    
+  
+    total_time = (Time.current - overall_start) * 1000
+    Rails.logger.info "=== TOTAL LOGIN TIME: #{total_time}ms ==="
+  
   rescue => e
+    Rails.logger.error "Login error after #{(Time.current - overall_start) * 1000}ms: #{e.message}"
     render(json: {error: 'Something went wrong, please try again' }, status: 503) 
   end
   

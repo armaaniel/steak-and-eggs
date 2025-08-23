@@ -10,7 +10,20 @@ class UserService
   end
   
   def self.authenticate(username:, password:)
-    User.find_by(username: username)&.authenticate(password)
+    Rails.logger.info "UserService.authenticate START"
+  
+    db_start = Time.current
+    user = User.find_by(username: username)
+    Rails.logger.info "User.find_by: #{(Time.current - db_start) * 1000}ms"
+  
+    if user
+      bcrypt_start = Time.current
+      result = user.authenticate(password)
+      Rails.logger.info "bcrypt authenticate: #{(Time.current - bcrypt_start) * 1000}ms"
+      result
+    else
+      nil
+    end
   end
   
   def self.deposit(amount:, user_id:)
