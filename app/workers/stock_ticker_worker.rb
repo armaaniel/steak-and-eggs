@@ -5,9 +5,8 @@ class StockTickerWorker
     require 'net/http'
     require 'json'
     
-    api_key = "BwLaqIrn3PJnY6NfIDBaEtsqycllj8lE"
     all_tickers = []
-    url = "https://api.polygon.io/v3/reference/tickers?apikey=#{api_key}&limit=1000&market=stocks&type=CS"
+    url = "https://api.polygon.io/v3/reference/tickers?apikey=#{ENV['API_KEY']}&limit=1000&market=stocks&type=CS"
     
     while url
       puts "Fetching: #{url}"
@@ -18,7 +17,7 @@ class StockTickerWorker
         all_tickers += data['results'] if data['results']
         
         if data['next_url']
-          url = "#{data['next_url']}&apikey=#{api_key}"
+          url = "#{data['next_url']}&apikey=#{ENV['API_KEY']}"
         else
           url = nil
         end

@@ -12,19 +12,18 @@ Rails.application.routes.draw do
   get('activitydata', to: 'home#get_activity_data')
  
   constraints(symbol: /[^\/]+/) do 
-  get('stocks/:symbol/tickerdata', to: 'stocks#get_ticker_data')
-  get('stocks/:symbol/chartdata', to: 'stocks#get_chart_data')
-  get('stocks/:symbol/userdata', to: 'stocks#get_user_data')
-  get('stocks/:symbol/companydata', to: 'stocks#get_company_data')
-  get('stocks/:symbol/marketdata', to: 'stocks#get_market_data')
-  get('stocks/:symbol/stockprice', to: 'stocks#get_stock_price')
-  post('stocks/:symbol/buy', to: 'stocks#buy')
-  post('stocks/:symbol/sell', to: 'stocks#sell')
-end
-get '/connections', to: 'users#connections'
-
-
+    get('stocks/:symbol/tickerdata', to: 'stocks#get_ticker_data')
+    get('stocks/:symbol/chartdata', to: 'stocks#get_chart_data')
+    get('stocks/:symbol/userdata', to: 'stocks#get_user_data')
+    get('stocks/:symbol/companydata', to: 'stocks#get_company_data')
+    get('stocks/:symbol/marketdata', to: 'stocks#get_market_data')
+    get('stocks/:symbol/stockprice', to: 'stocks#get_stock_price')
+    post('stocks/:symbol/buy', to: 'stocks#buy')
+    post('stocks/:symbol/sell', to: 'stocks#sell')
+  end
+  
+  get('/', to: 'application#health')
+  mount ActionCable.server => '/cable'
   match '*path', to: 'application#not_found', via: :all
   
-  mount ActionCable.server => '/cable'
 end

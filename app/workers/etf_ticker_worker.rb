@@ -5,9 +5,8 @@ class EtfTickerWorker
     require 'net/http'
     require 'json'
     
-    api_key = "BwLaqIrn3PJnY6NfIDBaEtsqycllj8lE"
     all_tickers = []
-    url = "https://api.polygon.io/v3/reference/tickers?apikey=#{api_key}&limit=1000&market=stocks&type=ETF"
+    url = "https://api.polygon.io/v3/reference/tickers?apikey=#{ENV['API_KEY']}&limit=1000&market=stocks&type=ETF"
     
     while url
       puts "Fetching ETFs: #{url}"
@@ -18,7 +17,7 @@ class EtfTickerWorker
         all_tickers += data['results'] if data['results']
         
         if data['next_url']
-          url = "#{data['next_url']}&apikey=#{api_key}"
+          url = "#{data['next_url']}&apikey=#{ENV['API_KEY']}"
         else
           url = nil
         end

@@ -2,10 +2,7 @@ class MarketService
   class InsufficientFundsError < StandardError; end
   class InsufficientSharesError < StandardError; end
   class ApiError < StandardError; end
-  
-  Api_key = "BwLaqIrn3PJnY6NfIDBaEtsqycllj8lE"
-  
-  
+    
   def self.buy(symbol:, quantity:, user_id:, name:)
     raise(ArgumentError) if quantity.blank? || quantity.to_i <=0
     quantity = quantity.to_i
@@ -104,7 +101,7 @@ class MarketService
       
       payload[:used_api] = true
       
-      uri=URI("https://api.polygon.io/v2/snapshot/locale/us/markets/stocks/tickers/#{symbol}?apiKey=#{Api_key}")
+      uri=URI("https://api.polygon.io/v2/snapshot/locale/us/markets/stocks/tickers/#{symbol}?apiKey=#{ENV['API_KEY']}")
       response = Net::HTTP.get_response(uri)
       raise ApiError unless response.code == '200'
 
@@ -132,7 +129,7 @@ class MarketService
       
       payload[:used_api] = true
       
-      uri=URI("https://api.polygon.io/v3/reference/tickers/#{symbol}?apiKey=#{Api_key}")
+      uri=URI("https://api.polygon.io/v3/reference/tickers/#{symbol}?apiKey=#{ENV['API_KEY']}")
       response = Net::HTTP.get_response(uri)
       raise ApiError unless response.code == '200'
       
@@ -157,7 +154,7 @@ class MarketService
       
       payload[:used_api] = true
        
-      uri=URI("https://api.polygon.io/v2/aggs/ticker/#{symbol}/range/1/day/#{Date.today-5.months}/#{Date.today}?apiKey=#{Api_key}")
+      uri=URI("https://api.polygon.io/v2/aggs/ticker/#{symbol}/range/1/day/#{Date.today-5.months}/#{Date.today}?apiKey=#{ENV['API_KEY']}")
       response=Net::HTTP.get_response(uri)
       raise ApiError unless response.code == '200'
       

@@ -1,0 +1,10 @@
+*.git*
+.github/*
+node_modules/*
+tmp/*
+log/*
+storage/*
+.DS_Store
+dump.rdb
+.dockerignore
+.rubocop.yml

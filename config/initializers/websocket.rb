@@ -2,7 +2,7 @@ Rails.application.config.after_initialize do
   Thread.new do
     loop do
               
-      client = Polygonio::Websocket::Client.new("stocks", "BwLaqIrn3PJnY6NfIDBaEtsqycllj8lE", delayed: true)
+      client = Polygonio::Websocket::Client.new("stocks", ENV['API_KEY'], delayed: true)
       tickers = Ticker.pluck(:symbol)
       symbols = "A.#{tickers.join(',A.')}"
       
@@ -17,6 +17,11 @@ Rails.application.config.after_initialize do
       rescue => e
         Sentry.capture_exception(e)
       end
+      
+    rescue Dry::Struct::Error, Dry::Types::SchemaError, Dry::Types::ConstraintError => e
+      Rails.logger.info "Max connections reached - this worker will skip websocket (PID: #{Process.pid})"
+      Sentry.capture_exception(e)
+      break
     rescue => e
       Sentry.capture_exception(e)
       sleep 10
