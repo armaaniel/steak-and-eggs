@@ -1,12 +1,8 @@
 # frozen_string_literal: true
-
 class GraphqlController < ApplicationController
   skip_before_action :verify_authenticity_token
-  # If accessing from outside this domain, nullify the session
-  # This allows for outside API access while preventing CSRF attacks,
-  # but you'll have to authenticate your user separately
-  # protect_from_forgery with: :null_session
-
+  before_action(:verify_key)
+  
   def execute
     variables = prepare_variables(params[:variables])
     query = params[:query]
@@ -50,4 +46,15 @@ class GraphqlController < ApplicationController
 
     render json: { errors: [{ message: e.message, backtrace: e.backtrace }], data: {} }, status: 500
   end
+  
+  private
+  
+  def verify_key
+    api_key = request.headers['gqlKey']
+    
+    if api_key != ENV['GQL_KEY']
+      render(json:{error: 'Unauthorized'}, status: 401)
+    end
+  end 
+  
 end
