@@ -8,8 +8,8 @@ class PositionService
     end
   end
     
-  def self.get_aum(user_id:, balance:)  
-        
+  def self.get_aum(user_id:, balance:) 
+     
     positions = PositionService.find_positions(user_id:user_id)    
     return {aum:balance, balance:balance} if positions.empty?
     
@@ -39,23 +39,33 @@ class PositionService
   
   def self.portfolio_records(user_id:)
     
-    cached = RedisService.safe_get("portfolio:#{user_id}")
-    return cached if cached
+    payload = {used_redis: false, used_db: false}
+    
+    ActiveSupport::Notifications.instrument("PositionService.portfolio_records", payload) do
+      
+      cached = RedisService.safe_get("portfolio:#{user_id}")
+      
+      if cached
+        payload[:used_redis] = true
+        return cached
+      end
+    
+      payload[:used_db] = true
   
-    data = PortfolioRecord.where(user_id:user_id).order(:date).pluck(:date, :portfolio_value)
+      data = PortfolioRecord.where(user_id:user_id).order(:date).pluck(:date, :portfolio_value)
     
-    values = data.map do |date, value| 
-      {date: date, value: value.to_f} 
+      values = data.map do |date, value| 
+        {date: date, value: value.to_f} 
+      end
+    
+      if values.length < 2
+        values = [{date:Date.today, value:0.00},{date:Date.today, value:values.first[:value]}]
+      end
+    
+      RedisService.safe_setex("portfolio:#{user_id}", 6.hours.to_i, values.to_json)
+    
+      values 
     end
-    
-    if values.length < 2
-      values = [{date:Date.today, value:0.00},{date:Date.today, value:values.first[:value]}]
-    end
-    
-    RedisService.safe_setex("portfolio:#{user_id}", 6.hours.to_i, values.to_json)
-    
-    values
-        
   end
   
   private

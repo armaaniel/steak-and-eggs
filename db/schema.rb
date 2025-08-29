@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2025_08_29_154808) do
+ActiveRecord::Schema[8.0].define(version: 2025_08_29_175445) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -75,7 +75,7 @@ ActiveRecord::Schema[8.0].define(version: 2025_08_29_154808) do
     t.string "password_digest", null: false
     t.decimal "balance", precision: 17, scale: 4, default: "0.0"
     t.string "username", limit: 20, null: false
-    t.index ["username"], name: "index_users_on_username", unique: true
+    t.index "lower((username)::text)", name: "index_users_on_LOWER_username", unique: true
   end
 
   add_foreign_key "portfolio_records", "users"

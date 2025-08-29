@@ -2,7 +2,7 @@ class UsersController < ApiController
   before_action(:verify_token, except: [:login, :signup])
   
   def login
-    user = UserService.authenticate(username: params[:username], password: params[:password])
+    user = UserService.authenticate(username: params[:username].downcase, password: params[:password])
       
     if user
       payload = {user_id: user.id, exp: 24.hours.from_now.to_i}

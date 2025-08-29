@@ -8,7 +8,6 @@ Rails.application.routes.draw do
   get('search', to: 'home#search')
   get('portfoliochart', to: 'home#get_portfolio_chart_data')
   get('portfoliodata', to: 'home#get_portfolio_data')
-  get('verifytoken', to: 'api#verify_token')
   get('activitydata', to: 'home#get_activity_data')
  
   constraints(symbol: /[^\/]+/) do 
@@ -22,6 +21,7 @@ Rails.application.routes.draw do
     post('stocks/:symbol/sell', to: 'stocks#sell')
   end
   
+  post('/record', to: 'application#record')
   get('/', to: 'application#health')
   mount ActionCable.server => '/cable'
   match '*path', to: 'application#not_found', via: :all
