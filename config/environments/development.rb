@@ -45,7 +45,7 @@ Rails.application.configure do
 
   # Raise an error on page load if there are pending migrations.
   config.active_record.migration_error = :page_load
-
+  
   # Highlight code that triggered database queries in logs.
   config.active_record.verbose_query_logs = true
 
@@ -54,6 +54,10 @@ Rails.application.configure do
 
   # Highlight code that enqueued background job in logs.
   config.active_job.verbose_enqueue_logs = true
+  
+  config.after_initialize do
+    ActiveRecord::Base.logger.level = Logger::WARN  # or Logger::WARN
+  end
 
   # Raises error for missing translations.
   # config.i18n.raise_on_missing_translations = true

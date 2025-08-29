@@ -1,5 +1,4 @@
-class PortfolioRecordWorker
-  include Sidekiq::Worker
+class PortfolioRecordJob < ApplicationJob
   
   def perform
     User.find_each(batch_size: 100) do |user|
@@ -10,7 +9,7 @@ class PortfolioRecordWorker
       record.save!
       
       RedisService.safe_del("portfolio:#{user.id}")  
-      
+            
     rescue => e 
       Sentry.capture_exception(e)
     end

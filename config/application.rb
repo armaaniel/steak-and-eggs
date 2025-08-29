@@ -22,6 +22,8 @@ module SteakAndEggs
     config.assets.enabled = true
     config.assets.initialize_on_precompile = false
     
+    config.active_job.queue_adapter = :solid_queue
+        
     config.time_zone = 'Mountain Time (US & Canada)'
 
     # Please, add to the `ignore` list any other `lib` subdirectories that do
