@@ -3,7 +3,7 @@ class UserService
     
     ActiveRecord::Base.transaction do
       user = User.create!(username: username, password: password)
-      PortfolioRecord.create!(date:Date.today, portfolio_value:0, user_id:user.id)
+      PortfolioRecord.create!(date:Date.current, portfolio_value:0, user_id:user.id)
       
       user
     end
@@ -26,7 +26,7 @@ class UserService
       Transaction.create!(symbol:'USD', quantity: 1, value: amount, transaction_type: 'Deposit', user_id: user_id, 
       market_price: 1.00)
             
-      record = PortfolioRecord.find_or_initialize_by(user_id:user_id, date:Date.today)
+      record = PortfolioRecord.find_or_initialize_by(user_id:user_id, date:Date.current)
       
       record.portfolio_value = PositionService.get_aum(user_id:user_id, balance:user.balance)[:aum]
       record.save!      
@@ -49,7 +49,7 @@ class UserService
       Transaction.create!(symbol:'USD', quantity: 1, value: amount, transaction_type:'Withdraw', user_id:user_id, 
       market_price: 1.00)
       
-      record = PortfolioRecord.find_or_initialize_by(user_id:user_id, date:Date.today)
+      record = PortfolioRecord.find_or_initialize_by(user_id:user_id, date:Date.current)
       
       record.portfolio_value = PositionService.get_aum(user_id:user_id, balance:user.balance)[:aum]
       record.save!

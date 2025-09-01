@@ -59,7 +59,7 @@ class PositionService
       end
     
       if values.length < 2
-        values = [{date:Date.today, value:0.00},{date:Date.today, value:values.first[:value]}]
+        values = [{date:Date.current, value:0.00},{date:Date.current, value:values.first[:value]}]
       end
     
       RedisService.safe_setex("portfolio:#{user_id}", 6.hours.to_i, values.to_json)

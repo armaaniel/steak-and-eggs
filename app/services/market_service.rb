@@ -154,7 +154,7 @@ class MarketService
       
       payload[:used_api] = true
        
-      uri=URI("https://api.polygon.io/v2/aggs/ticker/#{symbol}/range/1/day/#{Date.today-5.months}/#{Date.today}?apiKey=#{ENV['API_KEY']}")
+      uri=URI("https://api.polygon.io/v2/aggs/ticker/#{symbol}/range/1/day/#{Date.current-5.months}/#{Date.current}?apiKey=#{ENV['API_KEY']}")
       response=Net::HTTP.get_response(uri)
       raise ApiError unless response.code == '200'
       

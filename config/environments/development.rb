@@ -30,7 +30,7 @@ Rails.application.configure do
 
   # Store uploaded files on the local file system (see config/storage.yml for options).
   config.active_storage.service = :local
-
+  
   # Don't care if the mailer can't send.
   config.action_mailer.raise_delivery_errors = false
 
@@ -56,9 +56,9 @@ Rails.application.configure do
   config.active_job.verbose_enqueue_logs = true
   
   config.after_initialize do
-    ActiveRecord::Base.logger.level = Logger::WARN  # or Logger::WARN
+    ActiveRecord::Base.logger.level = Logger::INFO  # or Logger::WARN
   end
-
+  
   # Raises error for missing translations.
   # config.i18n.raise_on_missing_translations = true
 

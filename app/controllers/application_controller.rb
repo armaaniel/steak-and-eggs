@@ -17,9 +17,9 @@ class ApplicationController < ActionController::Base
     verify_key
     
     User.find_each(batch_size: 100) do |user|
-      today = Date.today
+      today = Date.current
       
-      record = PortfolioRecord.find_or_initialize_by(user_id:user.id, date:Date.today)
+      record = PortfolioRecord.find_or_initialize_by(user_id:user.id, date:Date.current)
       record.portfolio_value = PositionService.get_aum(user_id:user.id, balance:user.balance)[:aum]
       record.save!
       

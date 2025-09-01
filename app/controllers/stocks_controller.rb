@@ -48,7 +48,7 @@ class StocksController < ApiController
     
   rescue => e
     Sentry.capture_exception(e)
-    render(json:[{date:Date.today, value:0},{date:Date.today,value:0}], status:503)  
+    render(json:[{date:Date.current, value:0},{date:Date.current,value:0}], status:503)  
   end
   
   def get_company_data

@@ -23,6 +23,9 @@ module SteakAndEggs
     config.assets.initialize_on_precompile = false
     
     config.active_job.queue_adapter = :solid_queue
+    
+    config.lograge.enabled = true
+    config.lograge.ignore_actions = ['ApplicationController#health']
         
     config.time_zone = 'Mountain Time (US & Canada)'
 
