@@ -66,7 +66,7 @@ class StocksController < ApiController
         
   rescue => e
     Sentry.capture_exception(e)
-    render(json:{open:'N/A', high: 'N/A', low: 'N/A', volume: 'N/A'}, status:503)
+    render(json:{open:'N/A', high: 'N/A', low: 'N/A', volume: 'N/A', last: 'N/A'}, status:503)
   end
     
   def get_user_data

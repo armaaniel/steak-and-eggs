@@ -91,7 +91,7 @@ class MarketService
     
     payload = {symbol: symbol, used_redis:false, used_api:false}
     
-    ActiveSupport::Notifications.instrument('MarketService.marketadata', payload) do
+    ActiveSupport::Notifications.instrument('MarketService.marketdata', payload) do
       cached = RedisService.safe_get("market:#{symbol}")
       
       if cached
@@ -101,14 +101,14 @@ class MarketService
       
       payload[:used_api] = true
       
-      uri=URI("https://api.polygon.io/v2/snapshot/locale/us/markets/stocks/tickers/#{symbol}?apiKey=#{ENV['API_KEY']}")
+      uri=URI("https://api.polygon.io/v3/snapshot?ticker=#{symbol}&apiKey=#{ENV['API_KEY']}")
       response = Net::HTTP.get_response(uri)
       raise ApiError unless response.code == '200'
 
       body = JSON.parse(response.body)
-      
-      data = {open: body['ticker']['day']['o'], high: body['ticker']['day']['h'], low:body['ticker']['day']['l'], 
-        volume:body['ticker']['day']['v']}
+            
+      data = {open: body['results'][0]['session']['open'], high: body['results'][0]['session']['high'], 
+        low:body['results'][0]['session']['low'], volume:body['results'][0]['session']['volume']}
                 
       RedisService.safe_setex("market:#{symbol}", 5.minutes.to_i, data.to_json)
       data    
