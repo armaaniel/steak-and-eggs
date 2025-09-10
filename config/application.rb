@@ -26,6 +26,10 @@ module SteakAndEggs
     
     config.lograge.enabled = true
     config.lograge.ignore_actions = ['ApplicationController#health']
+    
+    config.lograge.custom_options = lambda do |event|
+        { time: Time.current }
+      end
         
     config.time_zone = 'Mountain Time (US & Canada)'
 
