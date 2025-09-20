@@ -76,12 +76,12 @@ class StocksController < ApiController
     if data
       render(json: {position: data, balance: @current_user.balance})
     else
-      render(json: {position: nil, balance: @current_user.balance})
+      render(json: {balance: @current_user.balance})
     end
     
   rescue => e
     Sentry.capture_exception(e)
-    render(json: {position: nil, balance: 'N/A'}, status:503)
+    render(json: {balance: 'N/A'}, status:503)
   end
   
   def get_stock_price

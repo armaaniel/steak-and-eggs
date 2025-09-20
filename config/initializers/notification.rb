@@ -32,6 +32,7 @@ Rails.application.config.after_initialize do
         next if payload[:path]&.include?('devtools')
         next if payload[:path] == '/'
         next if payload[:path]&.include?('vendor') || payload[:path]&.include?('php')
+        next if payload[:action] == 'not_found'
         
         Trace.create!(endpoint: "#{payload[:method]} #{payload[:path]}", duration: duration , 
         db_runtime: payload[:db_runtime], view_runtime: payload[:view_runtime], status: payload[:status], 
