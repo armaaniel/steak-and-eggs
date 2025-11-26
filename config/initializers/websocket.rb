@@ -32,7 +32,7 @@ Rails.application.config.after_initialize do
         end
         
         # Set maximum lifetime for this connection thread
-        max_lifetime = 15.minutes
+        max_lifetime = 12.hours
         
         # Wait for that duration
         sleep(max_lifetime)
