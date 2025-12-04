@@ -1,55 +1,78 @@
 Rails.application.config.after_initialize do
   if Rails.env.production?
-    # Start a monitoring thread that will periodically restart the WebSocket
+    
+    HOLIDAYS = [
+      Date.new(2025, 1, 1),
+      Date.new(2025, 1, 20),
+      Date.new(2025, 2, 17),
+      Date.new(2025, 4, 18),
+      Date.new(2025, 5, 26),
+      Date.new(2025, 6, 19),
+      Date.new(2025, 7, 4),
+      Date.new(2025, 11, 27),
+      Date.new(2025, 12, 25),
+    ]
+    
+    market_open = -> {
+      now = Time.current.in_time_zone('Eastern Time (US & Canada)')
+      return false if now.saturday? || now.sunday?
+      return false if now.to_date.in?(HOLIDAYS)
+      (now.hour == 9 && now.min >= 30) || (now.hour >= 10 && now.hour < 16)
+    }
+        
     Thread.new do
       loop do
-        # Create a thread for the WebSocket connection
-        websocket_thread = Thread.new do
-          begin
-            puts("Starting new WebSocket connection at #{Time.current}")
-            client = Polygonio::Websocket::Client.new("stocks", ENV['API_KEY'], delayed: true)
-            tickers = Ticker.pluck(:symbol)
-            symbols = "A.#{tickers.join(',A.')}"
-            
-            client.subscribe(symbols) do |message|
-              message.each do |data|
-                RedisService.safe_setex("price:#{data.sym}", 6.days.to_i, data.c)
-                RedisService.safe_setex("open:#{data.sym}", 6.days.to_i, data.op)
-                ActionCable.server.broadcast("price_channel:#{data.sym}", data.c)
-              rescue => e
-                Sentry.capture_exception(e)
-              end
-            rescue => e
-              Sentry.capture_exception(e)
+        
+        @queue = Thread::Queue.new
+        @last = Time.current
+        @connection_refused = false
+        
+        subscriber = Thread.new do
+          client = Polygonio::Websocket::Client.new("stocks", ENV['API_KEY'], delayed: true)
+          tickers = Ticker.pluck(:symbol)
+          symbols = "A.#{tickers.join(',A.')}"
+          
+          client.subscribe(symbols) do |message|
+            message.each do |data|
+              @last = Time.current
+              @queue.push(data)
             end
-            
-            # If we ever get here naturally (which we likely won't), log it
-            puts("WebSocket connection ended naturally at #{Time.current}")
-          rescue => e
-            Sentry.capture_exception(e)
-            puts("WebSocket error: #{e.message} at #{Time.current}")
+          end
+        rescue => e
+          @connection_refused = true
+        end
+        
+        consumer = Thread.new do
+          loop do
+            data = @queue.pop
+            RedisService.safe_setex("price:#{data.sym}", 6.days.to_i, data.c)
+            RedisService.safe_setex("open:#{data.sym}", 6.days.to_i, data.op)
+            ActionCable.server.broadcast("price_channel:#{data.sym}", data.c)
           end
         end
         
-        # Set maximum lifetime for this connection thread
-        max_lifetime = 12.hours
-        
-        # Wait for that duration
-        sleep(max_lifetime)
-        
-        # After the timeout, kill the WebSocket thread if it's still alive
-        if websocket_thread.alive?
-          puts("Maximum lifetime reached. Killing WebSocket thread at #{Time.current}")
-          websocket_thread.kill
-          sleep(30) # Give it a moment to clean up
+        loop do
+          sleep(60)
+          break unless subscriber.alive?
+          break if market_open.call && Time.current - @last > 5.minutes
         end
         
-        # Log this cycle completed
-        puts("WebSocket cycle completed at #{Time.current}, restarting...")
+        subscriber.kill
+        consumer.kill
         
-        # Optional: short delay before starting a new connection
+        break if @connection_refused
+        
         sleep(30)
       end
     end
   end
 end
+
+
+        
+        
+        
+        
+        
+          
+   

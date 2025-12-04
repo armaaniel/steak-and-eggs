@@ -151,10 +151,7 @@ class MarketService
         payload[:used_redis] = true
         return cached
       end
-      
-      ActiveSupport::Notifications.instrument("MarketService.chartdata", payload) do
-        cached = RedisService.safe_get("daily:#{{symbol}")}
-      
+          
       payload[:used_api] = true
        
       uri=URI("https://api.polygon.io/v2/aggs/ticker/#{symbol}/range/1/day/#{Date.current-5.months}/#{Date.current}?apiKey=#{ENV['API_KEY']}")
