@@ -36,7 +36,7 @@ class MarketService
         {symbol: transaction.symbol, quantity: transaction.quantity, value: transaction.value, 
           market_price: transaction.market_price}
       end
-    
+      
     end
   
   def self.sell(symbol:, quantity:, user_id:)
@@ -71,14 +71,14 @@ class MarketService
       {symbol: transaction.symbol, quantity: transaction.quantity, value: transaction.value, realized_pnl: transaction.realized_pnl,
         market_price: transaction.market_price}
     end
-  
-  end
     
-  def self.marketprice(symbol:)   
-         
+  end
+  
+  def self.marketprice(symbol:)
+    
     cached_price = RedisService.safe_get("price:#{symbol}")
     cached_open = RedisService.safe_get("open:#{symbol}")
-            
+    
     if cached_price
       return {price: cached_price, open: cached_open}
     end
@@ -104,15 +104,15 @@ class MarketService
       uri=URI("https://api.polygon.io/v3/snapshot?ticker=#{symbol}&apiKey=#{ENV['API_KEY']}")
       response = Net::HTTP.get_response(uri)
       raise ApiError unless response.code == '200'
-
+      
       body = JSON.parse(response.body)
-            
+      
       data = {open: body['results'][0]['session']['open'], high: body['results'][0]['session']['high'], 
         low:body['results'][0]['session']['low'], volume:body['results'][0]['session']['volume']}
-                
+        
       RedisService.safe_setex("market:#{symbol}", 5.minutes.to_i, data.to_json)
-      data    
-    end    
+      data
+    end
   end
     
   def self.companydata(symbol:)
@@ -151,15 +151,15 @@ class MarketService
         payload[:used_redis] = true
         return cached
       end
-          
+      
       payload[:used_api] = true
-       
+      
       uri=URI("https://api.polygon.io/v2/aggs/ticker/#{symbol}/range/1/day/#{Date.current-5.months}/#{Date.current}?apiKey=#{ENV['API_KEY']}")
       response=Net::HTTP.get_response(uri)
       raise ApiError unless response.code == '200'
       
       body=JSON.parse(response.body)
-    
+      
       data = body['results'].map do |result|
         time = Time.at(result['t']/1000).utc
         {date:time.strftime("%Y-%m-%d"), value: result['c']}

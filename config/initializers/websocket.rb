@@ -60,6 +60,10 @@ Rails.application.config.after_initialize do
         subscriber.kill
         consumer.kill
         
+        5.times do 
+          puts("connection refused: #{@connection_refused} (false = reconnect, true = break)")
+        end
+        
         break if @connection_refused
         
         sleep(30)
