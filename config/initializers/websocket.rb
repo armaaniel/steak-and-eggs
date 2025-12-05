@@ -26,6 +26,7 @@ Rails.application.config.after_initialize do
         @queue = Thread::Queue.new
         @last = Time.current
         @connection_refused = false
+        puts("starting websocket at #{@last}")
         
         subscriber = Thread.new do
           client = Polygonio::Websocket::Client.new("stocks", ENV['API_KEY'], delayed: true)
@@ -40,6 +41,7 @@ Rails.application.config.after_initialize do
           end
         rescue => e
           @connection_refused = true
+          puts ("connection refused at #{Time.current}, #{e.class}: #{e.message}, breaking")
         end
         
         consumer = Thread.new do
@@ -48,21 +50,23 @@ Rails.application.config.after_initialize do
             RedisService.safe_setex("price:#{data.sym}", 6.days.to_i, data.c)
             RedisService.safe_setex("open:#{data.sym}", 6.days.to_i, data.op)
             ActionCable.server.broadcast("price_channel:#{data.sym}", data.c)
+          rescue => e
+            Sentry.capture_exception(e)
           end
         end
         
         loop do
           sleep(60)
+          puts("last message at #{@last}, time: #{Time.current}")
           break unless subscriber.alive?
+          break unless consumer.alive?
           break if market_open.call && Time.current - @last > 5.minutes
         end
         
         subscriber.kill
         consumer.kill
         
-        5.times do 
-          puts("connection refused: #{@connection_refused} (false = reconnect, true = break)")
-        end
+        puts("breaking at #{Time.current}: last at #{@last} - #{@connection_refused} (false = reconnect, true = break)")
         
         break if @connection_refused
         
