@@ -23,7 +23,6 @@ Rails.application.config.after_initialize do
     Thread.new do
       loop do
         
-        @queue = Thread::Queue.new
         @last = Time.current
         @connection_refused = false
         puts("starting websocket at #{@last}")
@@ -34,24 +33,20 @@ Rails.application.config.after_initialize do
           symbols = "A.#{tickers.join(',A.')}"
           
           client.subscribe(symbols) do |message|
+            @last = Time.current
             message.each do |data|
-              @last = Time.current
-              @queue.push(data)
+              RedisService.safe_setex("price:#{data.sym}", 6.days.to_i, data.c)
+              RedisService.safe_setex("open:#{data.sym}", 6.days.to_i, data.op)
+              ActionCable.server.broadcast("price_channel:#{data.sym}", data.c)            
             end
           end
         rescue => e
-          @connection_refused = true
-          puts ("connection refused at #{Time.current}, #{e.class}: #{e.message}, breaking")
-        end
-        
-        consumer = Thread.new do
-          loop do
-            data = @queue.pop
-            RedisService.safe_setex("price:#{data.sym}", 6.days.to_i, data.c)
-            RedisService.safe_setex("open:#{data.sym}", 6.days.to_i, data.op)
-            ActionCable.server.broadcast("price_channel:#{data.sym}", data.c)
-          rescue => e
-            Sentry.capture_exception(e)
+          if e.message.include?("max_connections")
+            @connection_refused = true
+            puts ("max connections at #{Time.current}, #{e.class}: #{e.message}, breaking")
+          else
+            puts ("force disconnect at #{Time.current}, #{e.class}: #{e.message}, breaking into reconnect")
+            Sentry.capture_exception(e) 
           end
         end
         
@@ -59,18 +54,16 @@ Rails.application.config.after_initialize do
           sleep(60)
           puts("last message at #{@last}, time: #{Time.current}")
           break unless subscriber.alive?
-          break unless consumer.alive?
           break if market_open.call && Time.current - @last > 5.minutes
         end
         
         subscriber.kill
-        consumer.kill
         
         puts("breaking at #{Time.current}: last at #{@last} - #{@connection_refused} (false = reconnect, true = break)")
         
         break if @connection_refused
         
-        sleep(30)
+        sleep(60)
       end
     end
   end
