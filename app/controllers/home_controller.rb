@@ -11,6 +11,7 @@ class HomeController < ApiController
   end
   
   def get_portfolio_chart_data
+    raise
     results = PositionService.portfolio_records(user_id:@current_user.id)
     render(json: results)
     
@@ -20,6 +21,7 @@ class HomeController < ApiController
   end
   
   def get_portfolio_data
+    raise
     result = PositionService.get_aum(user_id:@current_user.id, balance:@current_user.balance)
     render(json: result)
     
@@ -29,6 +31,7 @@ class HomeController < ApiController
   end
   
   def get_activity_data
+    raise
     data = Transaction.get(user_id:@current_user.id)    
     render(json: data)
     

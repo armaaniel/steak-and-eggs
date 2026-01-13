@@ -34,6 +34,7 @@ class UsersController < ApiController
   end
     
   def deposit
+    raise
     result = UserService.deposit(amount:params[:amount], user_id:@current_user.id)
     head(:ok)
     
@@ -43,6 +44,7 @@ class UsersController < ApiController
   end
   
   def withdraw
+    raise
     result = UserService.withdraw(amount:params[:amount], user_id:@current_user.id)
     head(:ok)
 

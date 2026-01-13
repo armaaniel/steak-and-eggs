@@ -2,6 +2,7 @@ class StocksController < ApiController
   before_action(:verify_token)
   
   def buy
+    raise
     data = MarketService.buy(symbol:params[:symbol], user_id:@current_user.id, quantity:params[:quantity], 
     name:params[:name])
     
@@ -16,6 +17,7 @@ class StocksController < ApiController
   end
   
   def sell
+    raise
     data = MarketService.sell(symbol:params[:symbol], user_id:@current_user.id, quantity:params[:quantity])
     
     render(json: data, status: 201)
@@ -43,6 +45,7 @@ class StocksController < ApiController
   end
   
   def get_chart_data
+    raise
     data = MarketService.chartdata(symbol:params[:symbol])
     render(json:data)
     
@@ -52,6 +55,7 @@ class StocksController < ApiController
   end
   
   def get_company_data
+    raise
     data = MarketService.companydata(symbol:params[:symbol])
     render(json: data)
     
@@ -61,6 +65,7 @@ class StocksController < ApiController
   end
   
   def get_market_data
+    raise
     data = MarketService.marketdata(symbol:params[:symbol])
     render(json: data)
         
@@ -70,6 +75,7 @@ class StocksController < ApiController
   end
     
   def get_user_data
+    raise
       
     data = PositionService.find_position(symbol: params[:symbol], user_id: @current_user.id)
     
@@ -85,6 +91,7 @@ class StocksController < ApiController
   end
   
   def get_stock_price
+    raise
     data = MarketService.marketprice(symbol:params[:symbol])
     render(json:data)
     
