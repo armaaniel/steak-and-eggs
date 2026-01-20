@@ -2,15 +2,16 @@ Rails.application.config.after_initialize do
   if Rails.env.production?
     
     HOLIDAYS = [
-      Date.new(2025, 1, 1),
-      Date.new(2025, 1, 20),
-      Date.new(2025, 2, 17),
-      Date.new(2025, 4, 18),
-      Date.new(2025, 5, 26),
-      Date.new(2025, 6, 19),
-      Date.new(2025, 7, 4),
-      Date.new(2025, 11, 27),
-      Date.new(2025, 12, 25),
+      Date.new(2026, 1, 1),
+      Date.new(2026, 1, 19),
+      Date.new(2026, 2, 16),
+      Date.new(2026, 4, 3),
+      Date.new(2026, 5, 25),
+      Date.new(2026, 6, 19),
+      Date.new(2026, 7, 3),
+      Date.new(2026, 9, 7),
+      Date.new(2026, 11, 26),
+      Date.new(2026, 12, 25),
     ]
     
     market_open = -> {
