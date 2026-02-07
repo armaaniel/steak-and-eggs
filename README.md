@@ -26,11 +26,11 @@ Redis sits in front of most reads. Market snapshots cache for 5 minutes, company
 
 ### APM / Observability
 
-A custom APM system built on `ActiveSupport::Notifications` instruments every request. Each service call (`MarketService`, `PositionService`, `Ticker`) reports its duration and whether it hit Redis, the database, or the external API. These are stored on a `Trace` record alongside total duration, DB runtime, view runtime, and HTTP status — enabling P99 analysis and per-route performance debugging via a separate internal tool.
+`ActiveSupport::Notifications` instruments every controller request. Each service call (`MarketService`, `PositionService`, `Ticker`) tracks its duration and whether it hit Redis, the database, or the external API. These are stored on a `Trace` record alongside total duration, DB runtime, view runtime, and HTTP status — enabling P99 analysis and per-route performance debugging via a separate internal tool.
 
 ### Daily Portfolio Snapshots
 
-An AWS Lambda function fires daily, hitting an authenticated endpoint that iterates through all users in batches of 100. For each user, it calculates their current AUM by bulk-fetching the current value of their positions and reducing them along with their cash balance, saving the result as a new `PortfolioRecord`.
+An AWS Lambda function runs daily, hitting an authenticated endpoint that iterates through all users in batches of 100. For each user, it calculates their current AUM by bulk-fetching the current value of their positions and reducing them alongside their cash balance, saving the result as a new `PortfolioRecord`.
 
 ### Error Handling
 
