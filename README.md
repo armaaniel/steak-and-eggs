@@ -2,8 +2,6 @@
 
 Backend for [steakneggs.app](https://steakneggs.app/) — a trading simulator with streaming market data.
 
-**Tech Stack:** Rails 8 · PostgreSQL · Redis · ActionCable · Polygon.io · AWS · GraphQL · Sentry
-
 ## Architecture
 
 - Rails backend maintains persistent WebSocket connection to market data provider, publishing prices to Redis and broadcasting to clients via Rails ActionCable
@@ -72,3 +70,5 @@ Most endpoints require JWT authentication.
 | `POST` | `/stocks/:symbol/sell` | Execute sell order |
 | `WS` | `/cable` | ActionCable (live price subscriptions) |
 | `POST` | `/graphql` | GraphQL endpoint |
+
+**Tech Stack:** Rails 8 · PostgreSQL · Redis · ActionCable · Polygon.io · AWS · GraphQL · Sentry
