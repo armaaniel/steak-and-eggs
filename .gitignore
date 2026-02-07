@@ -40,7 +40,6 @@
 
 /public/packs
 /public/packs-test
-/node_modules
 /yarn-error.log
 yarn-debug.log*
 .yarn-integrity
@@ -50,4 +49,14 @@ yarn-debug.log*
 !.elasticbeanstalk/*.cfg.yml
 !.elasticbeanstalk/*.global.yml
 
-/steak-and-eggs.zip
+# OS / editor junk
+.DS_Store
+
+# Redis
+dump.rdb
+
+# Git internals
+FETCH_HEAD
+
+# Archives
+*.zip
