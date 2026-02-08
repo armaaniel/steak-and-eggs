@@ -1,5 +1,20 @@
 Rails.application.config.after_initialize do
   
+  TRACKED_ROUTES = [
+    '/stocks/',
+    '/search',
+    '/login',
+    '/signup',
+    '/deposit',
+    '/withdraw',
+    '/portfoliochart',
+    '/portfoliodata',
+    '/activitydata',
+    '/graphql',
+    '/record',
+    '/cable'
+  ].freeze
+
   Thread.new do
     
     current_request = {}
@@ -28,11 +43,8 @@ Rails.application.config.after_initialize do
           symbol:payload[:symbol]}
         
       when 'process_action.action_controller'
-        next if payload[:path] == '/favicon.ico'
-        next if payload[:path]&.include?('devtools')
-        next if payload[:path] == '/'
-        next if payload[:path]&.include?('vendor') || payload[:path]&.include?('php')
         next if payload[:action] == 'not_found'
+        next unless TRACKED_ROUTES.any? { |route| payload[:path]&.start_with?(route) }
         
         Trace.create!(endpoint: "#{payload[:method]} #{payload[:path]}", duration: duration , 
         db_runtime: payload[:db_runtime], view_runtime: payload[:view_runtime], status: payload[:status], 
@@ -47,5 +59,3 @@ Rails.application.config.after_initialize do
     end
   end
 end
-
-      

@@ -100,9 +100,9 @@ module Types
       route = normalize_endpoint(endpoint)
       
       if endpoint == 'GET /stocks/symbol'
-        Trace.where("endpoint LIKE ? AND endpoint NOT LIKE ?", route, 'GET /stocks/%/%')&.order(created_at: :desc)
+        Trace.where("endpoint ILIKE ? AND endpoint NOT LIKE ?", route, 'GET /stocks/%/%')&.order(created_at: :desc)
       else
-      Trace.where("endpoint LIKE ?", route)&.order(created_at: :desc)
+      Trace.where("endpoint ILIKE ?", route)&.order(created_at: :desc)
       end
     end
     
@@ -119,6 +119,11 @@ module Types
           WHEN endpoint LIKE 'GET /stocks/%/chartdata' THEN 'GET /stocks/:symbol/chartdata'
           WHEN endpoint LIKE 'GET /positions/%' THEN 'GET /positions/:symbol'
           WHEN endpoint LIKE 'GET /search%' THEN 'GET /search'
+          WHEN endpoint LIKE 'GET /stocks/%/tickerdata' THEN 'GET /stocks/:symbol/tickerdata'
+          WHEN endpoint LIKE 'GET /stocks/%/userdata' THEN 'GET /stocks/:symbol/userdata'
+          WHEN endpoint LIKE 'GET /stocks/%/stockprice' THEN 'GET /stocks/:symbol/stockprice'
+          WHEN endpoint LIKE 'POST /stocks/%/buy' THEN 'POST /stocks/:symbol/buy'
+          WHEN endpoint LIKE 'POST /stocks/%/sell' THEN 'POST /stocks/:symbol/sell'
           ELSE endpoint
         END as route,
         COUNT(*) as total_requests,
@@ -177,10 +182,18 @@ module Types
         'GET /stocks/%/chartdata'
       when 'GET /stocks/symbol'
         'GET /stocks/%'
-      when 'GET /positions/symbol'
-        'GET /positions/%'
       when 'GET /search'
         'GET /search%'
+      when 'GET /stocks/symbol/tickerdata'
+        'GET /stocks/%/tickerdata'
+      when 'GET /stocks/symbol/userdata'
+        'GET /stocks/%/userdata'
+      when 'GET /stocks/symbol/stockprice'
+        'GET /stocks/%/stockprice'
+      when 'POST /stocks/symbol/buy'
+        'POST /stocks/%/buy'
+      when 'POST /stocks/symbol/sell'
+        'POST /stocks/%/sell'
       else
         endpoint
       end
