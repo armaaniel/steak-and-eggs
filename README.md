@@ -14,8 +14,6 @@ Frontend repo: [steak-and-eggs-spa](https://github.com/armaaniel/steak-and-eggs-
 - Financial transactions use pessimistic locking and database transactions; Transactions track cost basis and realized P&L
 - API layer returns graceful fallbacks in the event of service failures and logs errors to Sentry
 
----
-
 ## Deep Dive
 
 ### Market Data Connection
