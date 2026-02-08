@@ -33,6 +33,7 @@ class UserService
     end
        
     RedisService.safe_del("portfolio:#{user_id}")  
+    RedisService.safe_del("activity:#{user_id}")      
   end
   
   def self.withdraw(amount:, user_id:)
@@ -56,6 +57,7 @@ class UserService
     end
     
     RedisService.safe_del("portfolio:#{user_id}")
+    RedisService.safe_del("activity:#{user_id}")  
   end
   
 end

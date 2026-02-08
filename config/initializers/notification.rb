@@ -26,18 +26,19 @@ Rails.application.config.after_initialize do
       case name
         
       when /PositionService/
-        
         current_request[id] ||= {}
         current_request[id][name] = {duration: duration, used_redis: payload[:used_redis], used_db: payload[:used_db]}
         
       when /Ticker/
-        
         current_request[id] ||= {}
         current_request[id][name] = {duration: duration, used_redis: payload[:used_redis], used_db: payload[:used_db],
           term:payload[:term]}          
         
+      when /Transaction/
+        current_request[id] ||= {}
+        current_request[id][name] = {duration: duration, used_redis:payload[:used_redis], used_db: payload[:used_db]}
+      
       when /MarketService/
-        
         current_request[id] ||= {}
         current_request[id][name] = {duration: duration, used_redis: payload[:used_redis], used_api:payload[:used_api],
           symbol:payload[:symbol]}

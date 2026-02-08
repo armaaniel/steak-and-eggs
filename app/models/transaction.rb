@@ -13,13 +13,31 @@ class Transaction < ApplicationRecord
   })
   
   def self.get(user_id:)
-    data = Transaction.where(user_id: user_id).order(created_at: :desc)
     
-    data.map do |transaction|
-      {id: transaction.id, value: transaction.value, quantity: transaction.quantity, symbol: transaction.symbol,
-        transaction_type: transaction.transaction_type, date: transaction.created_at.strftime("%m/%d/%Y %I:%M %p"),
-        market_price:transaction.market_price, realized_pnl:transaction.realized_pnl}
-        
+    payload = {used_redis:false, used_db:false}
+    
+    ActiveSupport::Notifications.instrument("Transaction.get", payload) do
+      
+      cached = RedisService.safe_get("activity:#{user_id}")
+      
+      if cached
+        payload[:used_redis] = true
+        return cached
       end
-    end  
-  end
+      
+      payload[:used_db] = true
+      
+      data = Transaction.where(user_id: user_id).order(created_at: :desc)
+    
+      values = data.map do |transaction|
+        {id: transaction.id, value: transaction.value, quantity: transaction.quantity, symbol: transaction.symbol,
+          transaction_type: transaction.transaction_type, date: transaction.created_at.strftime("%m/%d/%Y %I:%M %p"),
+          market_price:transaction.market_price, realized_pnl:transaction.realized_pnl}
+      end
+      
+      RedisService.safe_setex("activity:#{user_id}", 6.hours.to_i, values.to_json)
+      
+      values
+    end      
+  end  
+end
