@@ -69,7 +69,7 @@ Most endpoints require JWT authentication.
 | `POST` | `/stocks/:symbol/buy` | Execute buy order |
 | `POST` | `/stocks/:symbol/sell` | Execute sell order |
 | `WS` | `/cable` | ActionCable (live price subscriptions) |
-| `POST` | `/graphql` | GraphQL endpoint |
+| `POST` | `/graphql` | GraphQL endpoint for APM queries |
 | `POST` | `/record` | Snapshot daily portfolio values |
 
 
