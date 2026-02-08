@@ -6,7 +6,7 @@ Frontend repo: [steak-and-eggs-spa](https://github.com/armaaniel/steak-and-eggs-
 
 ## Architecture
 
-- Rails backend maintains persistent WebSocket connection to market data provider, publishing prices to Redis and broadcasting to clients via Rails ActionCable
+- Rails backend maintains persistent WebSocket connection to market data provider, caching prices in Redis and broadcasting to clients via Rails ActionCable
 - React/TypeScript frontend subscribes to ActionCable channels via a WebSocket connection for real-time price updates
 - Implemented connection health monitoring with automatic reconnect to market data provider on stale connections or disconnects
 - Built APM tool using Rails instrumentation that tracks P99 latency per route, individual request latency, service call breakdown, and cache hit rates
