@@ -30,11 +30,11 @@ Redis sits in front of most reads. Market snapshots cache for 5 minutes, company
 
 ### Daily Portfolio Snapshots
 
-An AWS Lambda function runs daily, hitting an authenticated endpoint that iterates through all users in batches of 100. For each user, it calculates their current AUM by bulk-fetching the current value of their positions and reducing them alongside their cash balance, saving the result as a new `PortfolioRecord`.
+An AWS Lambda function runs daily, triggering a method that iterates through all users in batches of 100. For each user, it calculates their current AUM by bulk-fetching the current value of their positions and reducing them alongside their cash balance, saving the result as a new/updated `PortfolioRecord`.
 
 ### Error Handling
 
-Every controller action rescues exceptions and returns structured fallback responses (e.g. `{open: 'N/A', high: 'N/A', ...}`) so the frontend degrades gracefully rather than crashing. All caught errors are forwarded to Sentry.
+Every controller action rescues exceptions and returns structured fallback responses (e.g. `{open: 'N/A', high: 'N/A', ...}`) so the frontend degrades gracefully. All caught errors are forwarded to Sentry.
 
 ## Models
 
@@ -70,5 +70,7 @@ Most endpoints require JWT authentication.
 | `POST` | `/stocks/:symbol/sell` | Execute sell order |
 | `WS` | `/cable` | ActionCable (live price subscriptions) |
 | `POST` | `/graphql` | GraphQL endpoint |
+| `POST` | `/record` | Snapshot daily portfolio values |
+
 
 **Tech Stack:** Rails 8 · PostgreSQL · Redis · ActionCable · Polygon.io · AWS · GraphQL · Sentry
