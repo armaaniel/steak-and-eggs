@@ -1,40 +1,47 @@
 class PositionService
     
   def self.find_position(symbol:, user_id:)
-    position = Position.find_by(user_id: user_id, symbol: symbol)
     
-    if position
-      {average_price: position.average_price, shares: position.shares, symbol: position.symbol}
+    ActiveSupport::Notifications.instrument("PositionService.find_position", used_db: true) do
+      position = Position.find_by(user_id: user_id, symbol: symbol)
+    
+      if position
+        {average_price: position.average_price, shares: position.shares, symbol: position.symbol}
+      end
     end
+    
   end
     
   def self.get_aum(user_id:, balance:) 
-     
-    positions = PositionService.find_positions(user_id:user_id)    
-    return {aum:balance, balance:balance} if positions.empty?
     
-    price_keys = positions.map do |position| 
-      "price:#{position[:symbol]}"
-    end
+    ActiveSupport::Notifications.instrument("PositionService.get_aum", used_redis: true, used_db:true) do
+      
+      positions = PositionService.find_positions(user_id:user_id)
+      return {aum:balance, balance:balance} if positions.empty?
     
-    open_keys = positions.map do |position|
-      "open:#{position[:symbol]}"
-    end
+      price_keys = positions.map do |position| 
+        "price:#{position[:symbol]}"
+      end
     
-    opens = RedisService.safe_mget(open_keys)
+      open_keys = positions.map do |position|
+        "open:#{position[:symbol]}"
+      end
     
-    prices = RedisService.safe_mget(*price_keys)
-    zip = positions.zip(prices, opens)
+      opens = RedisService.safe_mget(open_keys)
     
-    priced_positions = zip.map do |position, price, open|
-      position.merge(price: price.to_f, open:open.to_f)
-    end
+      prices = RedisService.safe_mget(*price_keys)
+      zip = positions.zip(prices, opens)
     
-    aum = priced_positions.inject(balance) do |acc, position|
-      acc + (position[:price] * position[:shares])
-    end
+      priced_positions = zip.map do |position, price, open|
+        position.merge(price: price.to_f, open:open.to_f)
+      end
+    
+      aum = priced_positions.inject(balance) do |acc, position|
+        acc + (position[:price] * position[:shares])
+      end
         
-    {aum:aum,positions:priced_positions, balance: balance}      
+      {aum:aum,positions:priced_positions, balance: balance}      
+    end
   end
   
   def self.portfolio_records(user_id:)

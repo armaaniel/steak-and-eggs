@@ -43,7 +43,6 @@ class ApplicationController < ActionController::Base
     if key != ENV['GQL_KEY']
       render(json:{error: 'Unauthorized'}, status: 401)
     end
-    
   end 
-  
+    
 end

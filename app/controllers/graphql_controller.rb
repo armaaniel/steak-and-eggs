@@ -1,21 +1,21 @@
 # frozen_string_literal: true
 class GraphqlController < ApplicationController
   skip_before_action :verify_authenticity_token
-  before_action(:verify_key)
   
   def execute
     variables = prepare_variables(params[:variables])
     query = params[:query]
     operation_name = params[:operationName]
-    context = {
-      # Query context goes here, for example:
-      # current_user: current_user,
-    }
-    result = SteakAndEggsSchema.execute(query, variables: variables, context: context, operation_name: operation_name)
-    render json: result
+    
+    ActiveSupport::Notifications.instrument("GraphQL.execute", operation: operation_name) do
+      
+      context = {}
+      result = SteakAndEggsSchema.execute(query, variables: variables, context: context, operation_name: operation_name)
+      render(json: result)
+    end
   rescue StandardError => e
-    raise e unless Rails.env.development?
-    handle_error_in_development(e)
+    Sentry.capture_exception(e)
+    render(json:{errors: [{ message: "Something went wrong"  }] } })
   end
 
   private

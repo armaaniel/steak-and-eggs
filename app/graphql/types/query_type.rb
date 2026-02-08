@@ -1,25 +1,5 @@
 module Types
   class QueryType < Types::BaseObject
-    field(:users_by_username, [Types::UserType]) do 
-      argument(:term, String, required: true)
-      description('search users by username')
-    end
-    
-    field(:users_by_id, Types::UserType) do
-      argument(:id, ID, required:true)
-      description('fetch user data by ID')
-    end
-    
-    field(:positions, Types::PositionsType) do
-      argument(:id, ID, required:true)
-      description('fetch position data by user id')
-    end
-    
-    field(:transactions, [Types::TransactionsType]) do
-      argument(:id, ID, required:true)
-      description('fetch transaction data by user id')
-    end
-  
     field(:trace_summary, [Types::TraceSummaryType]) do
       description('fetch trace data by routes')
     end
@@ -46,28 +26,10 @@ module Types
       description('fetch active connections')
     end
         
-    def users_by_username(term:)
-      User.where("lower(username) LIKE ?", "%#{term.downcase}%").limit(5)
-    end
-    
-    def users_by_id(id:)
-      User.find_by(id: id)
-    end
-    
-    def positions(id:)
-      Position.where(user_id: id)
-    end
-    
-    def transactions(id:)
-      Transaction.where(user_id: id)
-    end
-     
     def connections
       ActionCable.server.connections.map do |connection|
         {
-          id: connection.user&.id, 
           started_at: connection.instance_variable_get(:@started_at),
-          user_agent: connection.instance_variable_get(:@request)&.user_agent,
           connection_state: connection.instance_variable_get(:@websocket)&.alive?,
           subscriptions: connection.subscriptions.identifiers.map do |identifier| 
             JSON.parse(identifier, symbolize_names: true)

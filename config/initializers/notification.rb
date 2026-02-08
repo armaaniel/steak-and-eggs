@@ -41,6 +41,10 @@ Rails.application.config.after_initialize do
         current_request[id] ||= {}
         current_request[id][name] = {duration: duration, used_redis: payload[:used_redis], used_api:payload[:used_api],
           symbol:payload[:symbol]}
+      
+      when /GraphQL/
+        current_request[id] ||= {}
+        current_request[id][name] = {duration: duration, operation: payload[:operation]}
         
       when 'process_action.action_controller'
         next if payload[:action] == 'not_found'
@@ -48,7 +52,7 @@ Rails.application.config.after_initialize do
         
         Trace.create!(endpoint: "#{payload[:method]} #{payload[:path]}", duration: duration , 
         db_runtime: payload[:db_runtime], view_runtime: payload[:view_runtime], status: payload[:status], 
-        controller: payload[:controller], action: payload[:action], breakdown: current_request[id] || {})
+        controller: payload[:controller], action: payload[:action], breakdown: current_request[id].presence)
                 
         current_request.delete(id)
               
