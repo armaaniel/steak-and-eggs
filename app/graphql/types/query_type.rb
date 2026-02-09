@@ -18,10 +18,6 @@ module Types
       description('fetch most latent traces')
     end
     
-    field(:most_requested_traces, [Types::TraceSummaryType]) do
-      description('fetch most requested traces')
-    end
-    
     field(:connections, [Types::ConnectionsType], null:false) do
       description('fetch active connections')
     end
@@ -107,31 +103,7 @@ module Types
         }  
       end
     end
-    
-    def most_requested_traces
-      sql = <<~SQL 
-          SELECT
-            endpoint,
-            COUNT(*) as total_requests,
-            PERCENTILE_CONT(0.99) WITHIN GROUP (ORDER BY duration) as p99
-          FROM traces 
-          GROUP BY endpoint
-          ORDER BY total_requests DESC
-          LIMIT 100
-        SQL
-  
-        results = ActiveRecord::Base.connection.execute(sql)
-  
-        results.map do |row|
-          {
-            route: row['endpoint'],
-            clean_route: row['endpoint'].gsub(' ','').gsub(':',''),
-            total_requests: row['total_requests'].to_i,
-            p99: row['p99']&.to_f || 0.0
-          }
-        end
-      end
-    
+   
     private
     
     def normalize_endpoint(endpoint)
