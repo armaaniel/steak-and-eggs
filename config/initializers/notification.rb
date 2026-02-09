@@ -42,6 +42,10 @@ Rails.application.config.after_initialize do
         current_request[id] ||= {}
         current_request[id][name] = {duration: duration, used_redis: payload[:used_redis], used_api:payload[:used_api],
           symbol:payload[:symbol]}
+          
+      when /UserService/
+        current_request[id] ||= {}
+        current_request[id][name] = {duration: duration} 
       
       when /GraphQL/
         current_request[id] ||= {}

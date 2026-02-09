@@ -24,17 +24,25 @@ class Ticker < ApplicationRecord
   def self.query(symbol:)
     raise StandardError if symbol.blank?
     
-    cached = RedisService.safe_get("ticker:#{symbol}")
-    return cached if cached
+    payload = {term: symbol, used_redis: false, used_db: false}
     
-    result = Ticker.find_by(symbol: symbol)
+    ActiveSupport::Notifications.instrument("Ticker.query", payload) do
+      
+      cached = RedisService.safe_get("ticker:#{symbol}")
+      if cached
+        payload[:used_redis] = true
+        return cached
+      end
     
-    if result
-      data = {ticker_type:result.ticker_type, name: result.name, exchange:result.exchange}
-      RedisService.safe_setex("ticker:#{symbol}", 1.month.to_i, data.to_json)
-      data
+      result = Ticker.find_by(symbol: symbol)
+    
+      if result
+        payload[:used_db] = true
+        data = {ticker_type:result.ticker_type, name: result.name, exchange:result.exchange}
+        RedisService.safe_setex("ticker:#{symbol}", 1.month.to_i, data.to_json)
+        data
+      end
     end
-    
   end
   
   validates(:symbol, :name, :ticker_type, :exchange, :currency, presence: true)

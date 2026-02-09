@@ -78,15 +78,21 @@ class MarketService
   
   def self.marketprice(symbol:)
     
-    cached_price = RedisService.safe_get("price:#{symbol}")
-    cached_open = RedisService.safe_get("open:#{symbol}")
+    ActiveSupport::Notifications.instrument("MarketService.marketprice", payload) do
+      
+      payload = {symbol: symbol, used_redis: false, used_db: false}
     
-    if cached_price
-      return {price: cached_price, open: cached_open}
+      cached_price = RedisService.safe_get("price:#{symbol}")
+      cached_open = RedisService.safe_get("open:#{symbol}")
+    
+      if cached_price
+        payload[:used_redis] = true
+        return {price: cached_price, open: cached_open}
+      end
+    
+      payload[:used_db] = true
+      raise ApiError
     end
-    
-    raise ApiError
-    
   end
   
   def self.marketdata(symbol:)
