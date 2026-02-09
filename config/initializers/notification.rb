@@ -40,8 +40,13 @@ Rails.application.config.after_initialize do
       
       when /MarketService/
         current_request[id] ||= {}
-        current_request[id][name] = {duration: duration, used_redis: payload[:used_redis], used_api:payload[:used_api],
-          symbol:payload[:symbol]}
+        
+        if name == "MarketService.buy" || name == "MarketService.sell"
+          current_request[id][name] = {duration: duration}
+        else
+          current_request[id][name] = {duration: duration, used_redis: payload[:used_redis], used_api:payload[:used_api],
+            symbol:payload[:symbol]}
+        end
           
       when /UserService/
         current_request[id] ||= {}
