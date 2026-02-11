@@ -26,7 +26,7 @@ Redis sits in front of most reads. Market snapshots cache for 5 minutes, company
 
 ### APM / Observability
 
-`ActiveSupport::Notifications` instruments every controller request, including nested service calls. Each service call (`MarketService`, `PositionService`, `Ticker`) tracks its duration and whether it hit Redis, the database, or an external API. These are stored on a `Trace` record alongside total duration, DB runtime, view runtime, and HTTP status — enabling P99 analysis and per-route performance debugging via DataCat.
+`ActiveSupport::Notifications` instruments every controller request, including nested service calls. Each service call (`MarketService`, `PositionService`, `Ticker`) tracks its duration and whether it hit Redis, the database, or the external API. These are stored on a `Trace` record alongside total duration, DB runtime, view runtime, and HTTP status — enabling P99 analysis and per-route performance debugging via DataCat.
 
 ### Daily Portfolio Snapshots
 

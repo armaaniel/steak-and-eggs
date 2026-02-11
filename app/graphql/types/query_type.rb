@@ -21,10 +21,6 @@ module Types
     field(:connections, [Types::ConnectionsType], null:false) do
       description('fetch active connections')
     end
-    
-    field(:trace_status, [Types::TraceStatusType]) do
-      description('fetch trace list by status')
-    end
         
     def connections
       ActionCable.server.connections.map do |connection|
@@ -70,12 +66,6 @@ module Types
     
     def latent_traces      
       Trace.all.order(duration: :desc).limit(1000)
-    end
-    
-    def trace_status
-      Trace.group(:status).count.map do |status, count|
-        { status: status, total_requests: count }
-      end
     end
     
     def trace_summary
