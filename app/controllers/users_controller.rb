@@ -5,7 +5,7 @@ class UsersController < ApiController
     user = UserService.authenticate(username: params[:username].downcase, password: params[:password])
       
     if user
-      payload = {user_id: user.id, exp: 24.hours.from_now.to_i}
+      payload = {user_id: user.id}
       token = JWT.encode(payload, Rails.application.secret_key_base, 'HS256')
       render(json: {token: token})
     else
@@ -21,7 +21,7 @@ class UsersController < ApiController
     user = UserService.signup(username:params[:username], password:params[:password])
         
     if user
-      payload = {user_id: user.id, exp: 24.hours.from_now.to_i}
+      payload = {user_id: user.id}
       token = JWT.encode(payload, Rails.application.secret_key_base, 'HS256')
       render(json: {token: token})
     end
