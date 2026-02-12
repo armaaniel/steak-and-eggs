@@ -21,6 +21,10 @@ module Types
     field(:connections, [Types::ConnectionsType], null:false) do
       description('fetch active connections')
     end
+    
+    field(:trace_stats, [Types::TraceStatsType]) do
+      description('fetch trace statistics')
+    end
         
     def connections
       ActionCable.server.connections.map do |connection|
@@ -62,6 +66,43 @@ module Types
       else
       Trace.where("endpoint ILIKE ?", route)&.order(created_at: :desc)
       end
+    end
+    
+    def endpoint_stats(endpoint:)
+      route = normalize_endpoint(endpoint)
+
+      sql = if endpoint == 'GET /stocks/symbol'
+        <<~SQL
+          SELECT
+            COUNT(*) as total_requests,
+            PERCENTILE_CONT(0.50) WITHIN GROUP (ORDER BY duration) as p50,
+            PERCENTILE_CONT(0.95) WITHIN GROUP (ORDER BY duration) as p95,
+            PERCENTILE_CONT(0.99) WITHIN GROUP (ORDER BY duration) as p99,
+            COUNT(*) FILTER (WHERE status >= 400) as error_count
+          FROM traces
+          WHERE endpoint ILIKE '#{route}' AND endpoint NOT LIKE 'GET /stocks/%/%'
+        SQL
+      else
+        <<~SQL
+          SELECT
+            COUNT(*) as total_requests,
+            PERCENTILE_CONT(0.50) WITHIN GROUP (ORDER BY duration) as p50,
+            PERCENTILE_CONT(0.95) WITHIN GROUP (ORDER BY duration) as p95,
+            PERCENTILE_CONT(0.99) WITHIN GROUP (ORDER BY duration) as p99,
+            COUNT(*) FILTER (WHERE status >= 400) as error_count
+          FROM traces
+          WHERE endpoint ILIKE '#{route}'
+        SQL
+      end
+
+      result = ActiveRecord::Base.connection.execute(sql).first
+
+      {total_requests: result['total_requests'].to_i,
+        p50: result['p50']&.to_f || 0.0,
+        p95: result['p95']&.to_f || 0.0,
+        p99: result['p99']&.to_f || 0.0,
+        error_rate: result['total_requests'].to_i > 0 ? (result['error_count'].to_f / result['total_requests'].to_f * 100).round(2) : 0.0
+      }
     end
     
     def latent_traces      
