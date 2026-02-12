@@ -23,6 +23,7 @@ module Types
     end
     
     field(:trace_stats, [Types::TraceStatsType]) do
+      argument(:endpoint, String)
       description('fetch trace statistics')
     end
         
@@ -68,7 +69,7 @@ module Types
       end
     end
     
-    def endpoint_stats(endpoint:)
+    def trace_stats(endpoint:)
       route = normalize_endpoint(endpoint)
 
       sql = if endpoint == 'GET /stocks/symbol'
