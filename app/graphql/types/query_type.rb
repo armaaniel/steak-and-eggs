@@ -22,7 +22,7 @@ module Types
       description('fetch active connections')
     end
     
-    field(:trace_stats, [Types::TraceStatsType]) do
+    field(:trace_stats, Types::TraceStatsType) do
       argument(:endpoint, String)
       description('fetch trace statistics')
     end
