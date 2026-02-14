@@ -106,8 +106,8 @@ module Types
       }
     end
     
-    def latent_traces      
-      Trace.all.order(duration: :desc).limit(1000)
+    def latent_traces
+      Trace.where.not(endpoint: ['POST /graphql', 'POST /record']).order(duration: :desc).limit(1000)
     end
     
     def trace_summary
