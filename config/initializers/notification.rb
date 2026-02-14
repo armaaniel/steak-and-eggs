@@ -27,7 +27,12 @@ Rails.application.config.after_initialize do
         
       when /PositionService/
         current_request[id] ||= {}
-        current_request[id][name] = {duration: duration, used_redis: payload[:used_redis], used_db: payload[:used_db]}
+        
+        if name == "PositionService.find_position"
+          current_request[id][name] = {duration: duration, used_db: payload[:used_db]}
+        else
+          current_request[id][name] = {duration: duration, used_redis: payload[:used_redis], used_db: payload[:used_db]}
+        end
         
       when /Ticker/
         current_request[id] ||= {}
