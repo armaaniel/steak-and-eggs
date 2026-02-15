@@ -6,10 +6,8 @@ class CreateTraces < ActiveRecord::Migration[8.0]
       t.float(:db_runtime)
       t.float(:view_runtime)
       t.integer(:status)
-      
+
       t.timestamps
     end
   end
 end
-
-      

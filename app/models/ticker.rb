@@ -1,41 +1,38 @@
 class Ticker < ApplicationRecord
-  
   def self.search(term:)
-    raise StandardError if term.blank? 
-    
+    raise StandardError if term.blank?
+
     payload = {term: term, used_redis: false, used_db: false}
     ActiveSupport::Notifications.instrument('Ticker.search', payload) do
-      
       cached = RedisService.safe_get("search:#{term}")
-    
+
       if cached
         payload[:used_redis] = true
         return cached
       end
-    
+
       payload[:used_db] = true
       results = Ticker.where("symbol ILIKE ? OR name ILIKE ?", "#{term}%", "#{term}%").limit(15)
-      
+
       RedisService.safe_setex("search:#{term}", 3.days.to_i, results.to_json)
       results
     end
   end
-  
+
   def self.query(symbol:)
     raise StandardError if symbol.blank?
-    
+
     payload = {term: symbol, used_redis: false, used_db: false}
-    
+
     ActiveSupport::Notifications.instrument("Ticker.query", payload) do
-      
       cached = RedisService.safe_get("ticker:#{symbol}")
       if cached
         payload[:used_redis] = true
         return cached
       end
-    
+
       result = Ticker.find_by(symbol: symbol)
-    
+
       if result
         payload[:used_db] = true
         data = {ticker_type:result.ticker_type, name: result.name, exchange:result.exchange}
@@ -44,7 +41,7 @@ class Ticker < ApplicationRecord
       end
     end
   end
-  
+
   validates(:symbol, :name, :ticker_type, :exchange, :currency, presence: true)
-  validates(:symbol, uniqueness: { case_sensitive: false })  
+  validates(:symbol, uniqueness: { case_sensitive: false })
 end

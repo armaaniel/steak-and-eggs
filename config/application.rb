@@ -21,16 +21,16 @@ module SteakAndEggs
     config.load_defaults 8.0
     config.assets.enabled = true
     config.assets.initialize_on_precompile = false
-    
+
     config.active_job.queue_adapter = :solid_queue
-    
+
     config.lograge.enabled = true
     config.lograge.ignore_actions = ['ApplicationController#health']
-    
+
     config.lograge.custom_options = lambda do |event|
         { time: Time.current }
       end
-        
+
     config.time_zone = 'Mountain Time (US & Canada)'
 
     # Please, add to the `ignore` list any other `lib` subdirectories that do

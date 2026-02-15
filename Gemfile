@@ -46,7 +46,7 @@ gem 'sentry-rails'
 # Gemfile
 gem 'oj'
 
-#bcrypt
+# bcrypt
 gem 'bcrypt'
 
 gem 'polygonio', git: 'https://github.com/armaaniel/pr.git'

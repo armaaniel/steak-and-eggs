@@ -24,7 +24,7 @@
 # Any libraries that use a connection pool or another resource pool should
 # be configured to provide at least as many connections as the number of
 # threads. This includes Active Record's `pool` parameter in `database.yml`.
-threads_count = ENV.fetch("RAILS_MAX_THREADS", 10) #EB overriding this with its own puma config, which is 8-32TPW & 2W (1 per core)
+threads_count = ENV.fetch("RAILS_MAX_THREADS", 10) # EB overriding this with its own puma config, which is 8-32TPW & 2W (1 per core)
 threads threads_count, threads_count
 
 # Specifies the `port` that Puma will listen on to receive requests; default is 3000.

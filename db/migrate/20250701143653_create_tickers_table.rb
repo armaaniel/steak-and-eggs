@@ -6,9 +6,9 @@ class CreateTickersTable < ActiveRecord::Migration[8.0]
       n.string(:ticker_type, null: false)
       n.string(:exchange, null: false)
       n.string(:currency, null: false)
-      
+
       n.timestamps
-      
+
       n.index(:symbol, unique: true)
     end
   end

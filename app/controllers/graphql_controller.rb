@@ -1,14 +1,14 @@
 # frozen_string_literal: true
+
 class GraphqlController < ApplicationController
   skip_before_action :verify_authenticity_token
-  
+
   def execute
     variables = prepare_variables(params[:variables])
     query = params[:query]
     operation_name = params[:operationName]
-    
+
     ActiveSupport::Notifications.instrument("GraphQL.execute", operation: operation_name) do
-      
       context = {}
       result = SteakAndEggsSchema.execute(query, variables: variables, context: context, operation_name: operation_name)
       render(json: result)
