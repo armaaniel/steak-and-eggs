@@ -9,7 +9,7 @@ Frontend repo: [steak-and-eggs-spa](https://github.com/armaaniel/steak-and-eggs-
 - Rails backend maintains persistent WebSocket connection to market data provider, caching prices in Redis and broadcasting to clients via Rails ActionCable
 - React/TypeScript frontend subscribes to ActionCable channels via a WebSocket connection for real-time price updates
 - Implemented connection health monitoring with automatic reconnect to market data provider on stale connections or disconnects
-- Built APM tool using Rails instrumentation that tracks P99 latency per route, individual request latency, service call breakdown, and cache hit rates
+- Instrumented every controller request and service call using `ActiveSupport::Notifications`, tracking latency percentiles, service call breakdown, individual request latency, error rates, and cache hit rates — rendered through DataCat, an in-app APM dashboard.
 - Scheduled daily portfolio snapshots for each user via AWS Lambda with batch processing, cache invalidation, and error tracking
 - Financial transactions use pessimistic locking and database transactions; Transactions track cost basis and realized P&L
 - API layer returns graceful fallbacks in the event of service failures and logs errors to Sentry
@@ -26,7 +26,7 @@ Redis sits in front of most reads. Market snapshots cache for 5 minutes, company
 
 ### APM / Observability
 
-`ActiveSupport::Notifications` instruments every controller request, including nested service calls. Each service call (`MarketService`, `PositionService`, `Ticker`) tracks its duration and whether it hit Redis, the database, or an external API. These are stored on a `Trace` record alongside total duration, DB runtime, view runtime, and HTTP status — enabling P99 analysis and per-route performance debugging via DataCat.
+`ActiveSupport::Notifications` instruments every controller request, including nested service calls. Each service call tracks its duration and whether it hit Redis, the database, or an external API. These are stored on a `Trace` record alongside total duration, DB runtime, view runtime, and HTTP status — enabling P99 analysis and per-route performance debugging via DataCat, an in-app APM dashboard.
 
 ### Daily Portfolio Snapshots
 

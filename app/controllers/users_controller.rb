@@ -30,7 +30,7 @@ class UsersController < ApiController
     render(json: {error: "Username has been taken, please choose another"}, status: 422)
   rescue => e
     Sentry.capture_exception(e)
-    render(json: {error:"Something went wrong, please try again"}, status: 503)
+    render(json: {error: "Something went wrong, please try again"}, status: 503)
   end
 
   def deposit
