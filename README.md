@@ -9,7 +9,7 @@ Frontend repo: [steak-and-eggs-spa](https://github.com/armaaniel/steak-and-eggs-
 - Rails backend maintains persistent WebSocket connection to market data provider, caching prices in Redis and broadcasting to clients via Rails ActionCable
 - React/TypeScript frontend subscribes to ActionCable channels via a WebSocket connection for real-time price updates
 - Implemented connection health monitoring with automatic reconnect to market data provider on stale connections or disconnects
-- Instrumented every controller request and service call using `ActiveSupport::Notifications`, tracking latency percentiles, service call breakdown, individual request latency, error rates, and cache hit rates — rendered through DataCat, an in-app APM dashboard.
+- DataCat, an in-app APM dashboard, tracks latency percentiles per route, individual request latency, error rates, and cache hit rates — powered by ActiveSupport::Notifications instrumentation across every controller request and service call, queried via GraphQL
 - Scheduled daily portfolio snapshots for each user via AWS Lambda with batch processing, cache invalidation, and error tracking
 - Financial transactions use pessimistic locking and database transactions; Transactions track cost basis and realized P&L
 - API layer returns graceful fallbacks in the event of service failures and logs errors to Sentry
