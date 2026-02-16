@@ -27,6 +27,8 @@ Rails.application.config.after_initialize do
 
         if name == "PositionService.find_position"
           current_request[id][name] = {duration: duration, used_db: payload[:used_db]}
+        elsif name == "PositionService.get_aum"
+          current_request[id][name] = {duration: duration, used_redis: payload[:used_redis]}
         else
           current_request[id][name] = {duration: duration, used_redis: payload[:used_redis], used_db: payload[:used_db]}
         end

@@ -10,14 +10,17 @@ class PositionService
   end
 
   def self.get_aum(user_id:, balance:)
-    ActiveSupport::Notifications.instrument("PositionService.get_aum", used_redis: true, used_db:true) do
+    ActiveSupport::Notifications.instrument("PositionService.get_aum", payload) do
+      payload[:used_redis] = false
       positions = PositionService.find_positions(user_id:user_id)
       return {aum:balance, balance:balance} if positions.empty?
-
+      
+      payload[:used_redis] = true
+      
       price_keys = positions.map do |position|
         "price:#{position[:symbol]}"
       end
-
+      
       open_keys = positions.map do |position|
         "open:#{position[:symbol]}"
       end
@@ -71,20 +74,27 @@ class PositionService
   private
 
   def self.find_positions(user_id:)
-    cached = RedisService.safe_get("positions:#{user_id}")
-    return JSON.parse(cached, symbolize_names:true) if cached
+    ActiveSupport::Notifications.instrument("PositionService.find_positions", payload) do
+      cached = RedisService.safe_get("positions:#{user_id}")
+      
+      if cached
+        payload[:used_redis] = true
+        next JSON.parse(cached, symbolize_names:true)
+      end
+      
+      payload[:used_db] = true
+      position = Position.where(user_id: user_id)
+      
+      positions = position.map do |n|
+        {symbol: n.symbol, shares: n.shares, name: n.name, average_price:n.average_price}
+      end
 
-    position = Position.where(user_id: user_id)
+      RedisService.safe_setex("positions:#{user_id}", 24.hours.to_i, positions.to_json)
+      positions
 
-    positions = position.map do |n|
-      {symbol: n.symbol, shares: n.shares, name: n.name, average_price:n.average_price}
+    rescue => e
+      Sentry.capture_exception(e)
+      []
     end
-
-    RedisService.safe_setex("positions:#{user_id}", 24.hours.to_i, positions.to_json)
-    positions
-
-  rescue => e
-    Sentry.capture_exception(e)
-    []
   end
 end
