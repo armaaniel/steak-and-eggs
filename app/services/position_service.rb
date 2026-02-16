@@ -10,7 +10,8 @@ class PositionService
   end
 
   def self.get_aum(user_id:, balance:)
-    payload[:used_redis] = false
+    payload = {used_redis: false}
+    
     ActiveSupport::Notifications.instrument("PositionService.get_aum", payload) do
       positions = PositionService.find_positions(user_id:user_id)
       return {aum:balance, balance:balance} if positions.empty?
@@ -74,7 +75,7 @@ class PositionService
   private
 
   def self.find_positions(user_id:)
-    payload[:used_redis] = false
+    payload = {used_redis: false}
     
     ActiveSupport::Notifications.instrument("PositionService.find_positions", payload) do
       cached = RedisService.safe_get("positions:#{user_id}")
