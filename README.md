@@ -18,7 +18,7 @@ Frontend repo: [steak-and-eggs-spa](https://github.com/armaaniel/steak-and-eggs-
 
 ### Market Data Connection
 
-A background thread maintains a persistent WebSocket connection to Polygon.io, a streaming data provider, ingesting live prices for all tracked stock tickers. Prices are cached in Redis and broadcast to clients via ActionCable channels. Stale connections and disconnects trigger an automatic reconnect.
+A background thread maintains a persistent WebSocket connection to Polygon.io, a streaming data provider, ingesting 15-minute-delayed prices for all tracked stock tickers. Prices are cached in Redis and broadcast to clients via ActionCable channels. Stale connections and disconnects trigger an automatic reconnect.
 
 ### APM / Observability
 
