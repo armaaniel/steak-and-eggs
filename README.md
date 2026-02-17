@@ -20,13 +20,13 @@ Frontend repo: [steak-and-eggs-spa](https://github.com/armaaniel/steak-and-eggs-
 
 A background thread maintains a persistent WebSocket connection to Polygon.io, a streaming data provider, ingesting live prices for all tracked stock tickers. Prices are cached in Redis and broadcast to clients via ActionCable channels. Stale connections and disconnects trigger an automatic reconnect.
 
-### Caching Strategy
-
-Redis sits in front of most reads. Market snapshots cache for 5 minutes, company data for 3 days, and chart data for 24 hours. The `MarketService` and `PositionService` layers check Redis first and fall back to Polygon.io or Postgres, with all cache hits/misses tracked via instrumentation.
-
 ### APM / Observability
 
 `ActiveSupport::Notifications` instruments every controller request, including nested service calls. Each service call tracks its duration and whether it hit Redis, the database, or an external API. These are stored on a `Trace` record alongside total duration, DB runtime, view runtime, and HTTP status — enabling percentile (P99, P95, P50) analysis and per-route observability via DataCat, an in-app APM dashboard.
+
+### Caching Strategy
+
+Redis sits in front of most reads. Market snapshots cache for 5 minutes, company data for 3 days, and chart data for 24 hours. The `MarketService` and `PositionService` layers check Redis first and fall back to Polygon.io or Postgres, with all cache hits/misses tracked via instrumentation.
 
 ### Daily Portfolio Snapshots
 

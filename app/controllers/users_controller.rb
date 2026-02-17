@@ -39,7 +39,7 @@ class UsersController < ApiController
 
   rescue => e
     Sentry.capture_exception(e)
-    render(json: {error: 'Unable to process deposit, please try again'}, status: 422)
+    render(json: {error: 'Deposit failed, please try again'}, status: 422)
   end
 
   def withdraw
@@ -48,6 +48,6 @@ class UsersController < ApiController
 
   rescue => e
     Sentry.capture_exception(e)
-    render(json: {error: 'Unable to process withdrawal, try again'}, status: 422)
+    render(json: {error: 'Withdraw failed, please retry'}, status: 422)
   end
 end

@@ -75,7 +75,7 @@ class PositionService
   private
 
   def self.find_positions(user_id:)
-    payload = {used_redis: false}
+    payload = {used_redis: false, used_db:false}
     
     ActiveSupport::Notifications.instrument("PositionService.find_positions", payload) do
       cached = RedisService.safe_get("positions:#{user_id}")
