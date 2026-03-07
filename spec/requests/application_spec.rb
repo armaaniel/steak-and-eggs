@@ -72,6 +72,9 @@ RSpec.describe("Application", type: :request) do
     let!(:user) { create(:user, balance: 5000) }
 
     before do
+      allow(ENV).to(receive(:[]).and_call_original)
+      allow(ENV).to(receive(:[]).with('GQL_KEY').and_return('test_secret'))
+      allow(ENV).to(receive(:fetch).and_call_original)
       allow(RedisService).to(receive(:safe_get).and_return(nil))
       allow(RedisService).to(receive(:safe_setex))
       allow(RedisService).to(receive(:safe_del))
@@ -79,7 +82,7 @@ RSpec.describe("Application", type: :request) do
     end
 
     it "returns 200 and creates portfolio records with valid key" do
-      post "/record", headers: { "Key" => ENV['GQL_KEY'] }
+      post "/record", headers: { "Key" => "test_secret" }
 
       expect(response).to(have_http_status(200))
 
@@ -105,7 +108,7 @@ RSpec.describe("Application", type: :request) do
       allow(PositionService).to(receive(:get_aum).with(user_id: user2.id, balance: user2.balance).and_return({ aum: 3000 }))
       allow(Sentry).to(receive(:capture_exception))
 
-      post "/record", headers: { "Key" => ENV['GQL_KEY'] }
+      post "/record", headers: { "Key" => "test_secret" }
 
       expect(response).to(have_http_status(200))
 
@@ -117,7 +120,7 @@ RSpec.describe("Application", type: :request) do
     it "invalidates portfolio cache for each user" do
       expect(RedisService).to(receive(:safe_del).with("portfolio:#{user.id}"))
 
-      post "/record", headers: { "Key" => ENV['GQL_KEY'] }
+      post "/record", headers: { "Key" => "test_secret" }
     end
   end
 end
