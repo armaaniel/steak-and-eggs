@@ -9,7 +9,7 @@ class UserService
   end
 
   def self.authenticate(username:, password:)
-    User.find_by(username: username)&.authenticate(password)
+    User.find_by(username: username&.downcase)&.authenticate(password)
   end
 
   def self.deposit(amount:, user_id:)
