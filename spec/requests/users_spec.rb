@@ -8,8 +8,6 @@ RSpec.describe("Users", type: :request) do
     it "creates user and returns JWT" do
       post "/signup", params: { username: "newuser", password: "password123" }
       
-      puts response.body
-
       expect(response).to(have_http_status(200))
 
       body = JSON.parse(response.body)
