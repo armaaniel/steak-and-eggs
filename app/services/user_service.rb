@@ -13,9 +13,6 @@ class UserService
   end
 
   def self.deposit(amount:, user_id:)
-    raise ArgumentError if amount.nil? || amount&.to_f <= 0
-    amount = amount.to_f
-
     ActiveSupport::Notifications.instrument("UserService.deposit") do
       ActiveRecord::Base.transaction do
         user = User.lock.find(user_id)
@@ -37,9 +34,6 @@ class UserService
   end
 
   def self.withdraw(amount:, user_id:)
-    raise ArgumentError if amount.nil? || amount&.to_f <= 0
-    amount = amount.to_f
-
     ActiveSupport::Notifications.instrument("UserService.withdraw") do
       ActiveRecord::Base.transaction do
         user = User.lock.find(user_id)

@@ -34,7 +34,10 @@ class UsersController < ApiController
   end
 
   def deposit
-    result = UserService.deposit(amount:params[:amount], user_id:@current_user.id)
+    amount = params[:amount].to_f
+    return render(json: {error: "Invalid amount"}, status: 422) if params[:amount].nil? || amount <= 0
+
+    result = UserService.deposit(amount:amount, user_id:@current_user.id)
     head(:ok)
 
   rescue => e
@@ -43,7 +46,10 @@ class UsersController < ApiController
   end
 
   def withdraw
-    result = UserService.withdraw(amount:params[:amount], user_id:@current_user.id)
+    amount = params[:amount].to_f
+    return render(json: {error: "Invalid amount"}, status: 422) if params[:amount].nil? || amount <= 0
+
+    result = UserService.withdraw(amount:amount, user_id:@current_user.id)
     head(:ok)
 
   rescue => e

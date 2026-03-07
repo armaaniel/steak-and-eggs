@@ -2,7 +2,10 @@ class StocksController < ApiController
   before_action(:verify_token)
 
   def buy
-    data = MarketService.buy(symbol:params[:symbol], user_id:@current_user.id, quantity:params[:quantity],
+    quantity = params[:quantity].to_i
+    return render(json: {error: "Invalid quantity"}, status: 422) if params[:quantity].blank? || quantity <= 0
+
+    data = MarketService.buy(symbol:params[:symbol], user_id:@current_user.id, quantity:quantity,
     name:params[:name])
 
     render(json: data, status: 201)
@@ -16,7 +19,10 @@ class StocksController < ApiController
   end
 
   def sell
-    data = MarketService.sell(symbol:params[:symbol], user_id:@current_user.id, quantity:params[:quantity])
+    quantity = params[:quantity].to_i
+    return render(json: {error: "Invalid quantity"}, status: 422) if params[:quantity].blank? || quantity <= 0
+
+    data = MarketService.sell(symbol:params[:symbol], user_id:@current_user.id, quantity:quantity)
 
     render(json: data, status: 201)
 

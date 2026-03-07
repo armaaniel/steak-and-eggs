@@ -4,9 +4,6 @@ class MarketService
   class ApiError < StandardError; end
 
   def self.buy(symbol:, quantity:, user_id:, name:)
-    raise(ArgumentError) if quantity.blank? || quantity.to_i <=0
-    quantity = quantity.to_i
-
     stock_price = RedisService.safe_get("price:#{symbol}")&.to_f
     raise(StandardError) if stock_price.blank? || stock_price <=0
 
@@ -42,9 +39,6 @@ class MarketService
       end
 
   def self.sell(symbol:, quantity:, user_id:)
-    raise(ArgumentError, "Invalid Quantity") if quantity.blank? || quantity.to_i <= 0
-    quantity = quantity.to_i
-
     stock_price = RedisService.safe_get("price:#{symbol}")&.to_f
     raise(StandardError, "Unable to fetch Stock Price for #{symbol}") if stock_price.blank? || stock_price <=0
 
