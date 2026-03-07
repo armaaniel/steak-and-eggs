@@ -6,6 +6,48 @@ RSpec.describe(Ticker) do
     allow(RedisService).to(receive(:safe_setex))
   end
 
+  describe "validations" do
+    let(:valid_ticker) do
+      Ticker.new(symbol: "AAAA", name: "Test", ticker_type: "CS", exchange: "NASDAQ", currency: "USD")
+    end
+
+    it "is valid with valid attributes" do
+      expect(valid_ticker).to(be_valid)
+    end
+
+    it "requires a symbol" do
+      valid_ticker.symbol = nil
+      expect(valid_ticker).not_to(be_valid)
+    end
+
+    it "requires a name" do
+      valid_ticker.name = nil
+      expect(valid_ticker).not_to(be_valid)
+    end
+
+    it "requires a ticker_type" do
+      valid_ticker.ticker_type = nil
+      expect(valid_ticker).not_to(be_valid)
+    end
+
+    it "requires an exchange" do
+      valid_ticker.exchange = nil
+      expect(valid_ticker).not_to(be_valid)
+    end
+
+    it "requires a currency" do
+      valid_ticker.currency = nil
+      expect(valid_ticker).not_to(be_valid)
+    end
+
+    it "requires symbol to be unique (case insensitive)" do
+      valid_ticker.save!
+
+      duplicate = Ticker.new(symbol: "aaaa", name: "Other", ticker_type: "CS", exchange: "NYSE", currency: "USD")
+      expect(duplicate).not_to(be_valid)
+    end
+  end
+
   describe("search") do
     it("returns matching tickers by symbol") do
       Ticker.create!(symbol: "TSLA", name: "Tesla, Inc.", ticker_type: "CS", exchange: "NASDAQ", currency: "USD")

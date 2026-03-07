@@ -3,6 +3,73 @@ require 'rails_helper'
 RSpec.describe(Transaction) do
   let(:user) { create(:user) }
 
+  describe "validations" do
+    let(:valid_transaction) do
+      Transaction.new(user: user, symbol: "TSLA", quantity: 10, value: 1000,
+        transaction_type: "Buy", market_price: 100)
+    end
+
+    it "is valid with valid attributes" do
+      expect(valid_transaction).to(be_valid)
+    end
+
+    it "requires a symbol" do
+      valid_transaction.symbol = nil
+      expect(valid_transaction).not_to(be_valid)
+    end
+
+    it "requires a transaction_type" do
+      valid_transaction.transaction_type = nil
+      expect(valid_transaction).not_to(be_valid)
+    end
+
+    it "requires quantity to be greater than zero" do
+      valid_transaction.quantity = 0
+      expect(valid_transaction).not_to(be_valid)
+    end
+
+    it "rejects negative quantity" do
+      valid_transaction.quantity = -1
+      expect(valid_transaction).not_to(be_valid)
+    end
+
+    it "requires value to be greater than zero" do
+      valid_transaction.value = 0
+      expect(valid_transaction).not_to(be_valid)
+    end
+
+    it "rejects negative value" do
+      valid_transaction.value = -100
+      expect(valid_transaction).not_to(be_valid)
+    end
+
+    it "requires market_price to be non-negative" do
+      valid_transaction.market_price = -1
+      expect(valid_transaction).not_to(be_valid)
+    end
+
+    it "allows market_price of zero" do
+      valid_transaction.market_price = 0
+      expect(valid_transaction).to(be_valid)
+    end
+
+    it "requires a user" do
+      valid_transaction.user = nil
+      expect(valid_transaction).not_to(be_valid)
+    end
+  end
+
+  describe "enum" do
+    it "supports all transaction types" do
+      expect(Transaction.transaction_types).to(eq({
+        "Deposit" => 0,
+        "Withdraw" => 1,
+        "Buy" => 2,
+        "Sell" => 3
+      }))
+    end
+  end
+
   describe("get") do
     it("returns cached data on cache hit") do
       cached = [{ id: 1, symbol: "TSLA", value: 1000 }].to_json

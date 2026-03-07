@@ -2,7 +2,8 @@ class Transaction < ApplicationRecord
   belongs_to(:user)
   validates(:quantity, :value, :transaction_type, :symbol, presence: true)
   validates(:quantity, :value, numericality: { greater_than: 0 })
-
+  validates(:market_price, numericality: { greater_than_or_equal_to: 0 })
+  
   enum(:transaction_type, {
 
     Deposit:0,
