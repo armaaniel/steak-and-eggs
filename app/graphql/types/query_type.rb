@@ -71,31 +71,27 @@ module Types
     def trace_stats(endpoint:)
       route = normalize_endpoint(endpoint)
 
-      sql = if endpoint == 'GET /stocks/symbol'
-        <<~SQL
-          SELECT
-            COUNT(*) as total_requests,
-            PERCENTILE_CONT(0.50) WITHIN GROUP (ORDER BY duration) as p50,
-            PERCENTILE_CONT(0.95) WITHIN GROUP (ORDER BY duration) as p95,
-            PERCENTILE_CONT(0.99) WITHIN GROUP (ORDER BY duration) as p99,
-            COUNT(*) FILTER (WHERE status >= 400) as error_count
-          FROM traces
-          WHERE endpoint ILIKE '#{route}' AND endpoint NOT LIKE 'GET /stocks/%/%'
-        SQL
+      base_sql = <<~SQL
+        SELECT
+          COUNT(*) as total_requests,
+          PERCENTILE_CONT(0.50) WITHIN GROUP (ORDER BY duration) as p50,
+          PERCENTILE_CONT(0.95) WITHIN GROUP (ORDER BY duration) as p95,
+          PERCENTILE_CONT(0.99) WITHIN GROUP (ORDER BY duration) as p99,
+          COUNT(*) FILTER (WHERE status >= 400) as error_count
+        FROM traces
+      SQL
+
+      sanitized = if endpoint == 'GET /stocks/symbol'
+        ActiveRecord::Base.sanitize_sql_array(
+          ["#{base_sql} WHERE endpoint ILIKE ? AND endpoint NOT LIKE ?", route, 'GET /stocks/%/%']
+        )
       else
-        <<~SQL
-          SELECT
-            COUNT(*) as total_requests,
-            PERCENTILE_CONT(0.50) WITHIN GROUP (ORDER BY duration) as p50,
-            PERCENTILE_CONT(0.95) WITHIN GROUP (ORDER BY duration) as p95,
-            PERCENTILE_CONT(0.99) WITHIN GROUP (ORDER BY duration) as p99,
-            COUNT(*) FILTER (WHERE status >= 400) as error_count
-          FROM traces
-          WHERE endpoint ILIKE '#{route}'
-        SQL
+        ActiveRecord::Base.sanitize_sql_array(
+          ["#{base_sql} WHERE endpoint ILIKE ?", route]
+        )
       end
 
-      result = ActiveRecord::Base.connection.execute(sql).first
+      result = ActiveRecord::Base.connection.execute(sanitized).first
 
       {total_requests: result['total_requests'].to_i,
         p50: result['p50']&.to_f || 0.0,
