@@ -1,10 +1,12 @@
 class Ticker < ApplicationRecord
   def self.search(term:)
     raise StandardError if term.blank?
-
-    payload = {term: term, used_redis: false, used_db: false}
+    
+    term_sanny = ActiveRecord::Base.sanitize_sql_like(term)
+    
+    payload = {term: term_sanny, used_redis: false, used_db: false}
     ActiveSupport::Notifications.instrument('Ticker.search', payload) do
-      cached = RedisService.safe_get("search:#{term}")
+      cached = RedisService.safe_get("search:#{term_sanny}")
 
       if cached
         payload[:used_redis] = true
@@ -12,9 +14,9 @@ class Ticker < ApplicationRecord
       end
 
       payload[:used_db] = true
-      results = Ticker.where("symbol ILIKE ? OR name ILIKE ?", "#{term}%", "#{term}%").limit(15)
+      results = Ticker.where("symbol ILIKE ? OR name ILIKE ?", "#{term_sanny}%", "#{term_sanny}%").limit(15)
 
-      RedisService.safe_setex("search:#{term}", 3.days.to_i, results.to_json)
+      RedisService.safe_setex("search:#{term_sanny}", 3.days.to_i, results.to_json)
       results
     end
   end
