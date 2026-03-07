@@ -4,8 +4,9 @@ class MarketService
   class ApiError < StandardError; end
 
   def self.buy(symbol:, quantity:, user_id:, name:)
-    stock_price = RedisService.safe_get("price:#{symbol}")&.to_f
-    raise(StandardError) if stock_price.blank? || stock_price <=0
+    stock_string = RedisService.safe_get("price:#{symbol}")
+    stock_price = BigDecimal(stock_string || "0")
+    raise(StandardError) if stock_price <=0
 
     ActiveSupport::Notifications.instrument("MarketService.buy") do
       trade_value = quantity*stock_price
@@ -39,8 +40,9 @@ class MarketService
       end
 
   def self.sell(symbol:, quantity:, user_id:)
-    stock_price = RedisService.safe_get("price:#{symbol}")&.to_f
-    raise(StandardError, "Unable to fetch Stock Price for #{symbol}") if stock_price.blank? || stock_price <=0
+    stock_string = RedisService.safe_get("price:#{symbol}")
+    stock_price = BigDecimal(stock_string || "0")
+    raise(StandardError, "Unable to fetch Stock Price for #{symbol}") if stock_price <=0
 
     ActiveSupport::Notifications.instrument("MarketService.sell") do
       trade_value = quantity*stock_price

@@ -32,7 +32,7 @@ class PositionService
       zip = positions.zip(prices, opens)
 
       priced_positions = zip.map do |position, price, open|
-        position.merge(price: price.to_f, open:open.to_f)
+        position.merge(price: BigDecimal(price || "0"), open:BigDecimal(open || "0"))
       end
 
       aum = priced_positions.inject(balance) do |acc, position|
