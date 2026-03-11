@@ -13,6 +13,7 @@ Frontend repo: [steak-and-eggs-spa](https://github.com/armaaniel/steak-and-eggs-
 - Scheduled daily portfolio snapshots for each user via AWS Lambda with batch processing, cache invalidation, and error tracking
 - Financial transactions use pessimistic locking and database transactions; Transactions track cost basis and realized P&L
 - API layer returns graceful fallbacks in the event of service failures and logs errors to Sentry
+- RSpec test suite with ~180 examples across models, services, request specs, and channels — enforced via GitHub Actions CI
 
 ## Deep Dive
 
@@ -35,6 +36,11 @@ An AWS Lambda function runs daily, triggering a method that iterates through all
 ### Error Handling
 
 Every controller action rescues exceptions and returns structured fallback responses (e.g. `{open: 'N/A', high: 'N/A', ...}`) so the frontend degrades gracefully. All caught errors are forwarded to Sentry.
+
+### Testing
+
+RSpec covers all layers of the application — models, services, requests, and channels. Tests verify transactional integrity (balance rollbacks, cost basis averaging, realized P&L), Redis cache behavior (hits, misses, TTLs, invalidation), and graceful degradation on service failures. All specs run via GitHub Actions CI.
+
 
 ## Models
 
