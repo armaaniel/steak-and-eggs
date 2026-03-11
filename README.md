@@ -41,7 +41,6 @@ Every controller action rescues exceptions and returns structured fallback respo
 
 RSpec covers all layers of the application — models, services, requests, and channels. Tests verify transactional integrity (balance rollbacks, cost basis averaging, realized P&L), Redis cache behavior (hits, misses, TTLs, invalidation), and graceful degradation on service failures. All specs run via GitHub Actions CI.
 
-
 ## Models
 
 | Table | Description |
