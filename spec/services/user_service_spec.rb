@@ -90,6 +90,46 @@ RSpec.describe(UserService) do
     end
   end
 
+  describe("delete_account") do
+    it("destroys the user when password is correct") do
+      user_id = user.id
+      UserService.delete_account(user_id: user_id, password: "password123")
+
+      expect(User.find_by(id: user_id)).to(be_nil)
+    end
+
+    it("raises when password is incorrect") do
+      expect {
+        UserService.delete_account(user_id: user.id, password: "wrong")
+      }.to(raise_error(StandardError))
+
+      expect(User.find_by(id: user.id)).to(be_present)
+    end
+
+    it("clears cache after deletion") do
+      expect(RedisService).to(receive(:safe_del).with("portfolio:#{user.id}"))
+      expect(RedisService).to(receive(:safe_del).with("activity:#{user.id}"))
+
+      UserService.delete_account(user_id: user.id, password: "password123")
+    end
+  end
+
+  describe("change_password") do
+    it("updates the password when current password is correct") do
+      UserService.change_password(user_id: user.id, current_password: "password123", new_password: "newpass456")
+
+      expect(UserService.authenticate(username: user.username, password: "newpass456")).to(be_truthy)
+    end
+
+    it("raises when current password is incorrect") do
+      expect {
+        UserService.change_password(user_id: user.id, current_password: "wrong", new_password: "newpass456")
+      }.to(raise_error(StandardError))
+
+      expect(UserService.authenticate(username: user.username, password: "password123")).to(be_truthy)
+    end
+  end
+
   describe("withdraw") do
     before do
       allow(PositionService).to(receive(:get_aum).and_return({ aum: 9500 }))
