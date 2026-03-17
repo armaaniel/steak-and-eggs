@@ -9,7 +9,7 @@ class UserService
   end
 
   def self.authenticate(username:, password:)
-    User.find_by(username: username&.downcase)&.authenticate(password)
+    User.find_by(username: username&.downcase&.strip)&.authenticate(password)
   end
 
   def self.deposit(amount:, user_id:)
@@ -31,6 +31,23 @@ class UserService
       RedisService.safe_del("portfolio:#{user_id}")
       RedisService.safe_del("activity:#{user_id}")
     end
+  end
+
+  def self.delete_account(user_id:, password:)
+    user = User.find(user_id)
+    raise StandardError unless user.authenticate(password)
+
+    user.destroy!
+    Rails.cache.delete("user_#{user_id}")
+    RedisService.safe_del("portfolio:#{user_id}")
+    RedisService.safe_del("activity:#{user_id}")
+  end
+
+  def self.change_password(user_id:, current_password:, new_password:)
+    user = User.find(user_id)
+    raise StandardError, "Current password is incorrect" unless user.authenticate(current_password)
+
+    user.update!(password: new_password)
   end
 
   def self.withdraw(amount:, user_id:)

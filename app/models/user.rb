@@ -1,5 +1,5 @@
 class User < ApplicationRecord
-  before_validation { self.username = username&.downcase }
+  before_validation { self.username = username&.strip&.downcase }
   after_update(:clear_cache, if: :saved_change_to_balance?)
 
   has_secure_password
