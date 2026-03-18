@@ -2,10 +2,11 @@ Rails.application.routes.draw do
   post "/graphql", to: "graphql#execute"
   post('login', to: 'users#login')
   post('signup', to: 'users#signup')
-  delete('delete_account', to: 'users#delete_account')
-  post('change_password', to: 'users#change_password')
   post('deposit', to: 'users#deposit')
   post('withdraw', to: 'users#withdraw')
+  post('change_password', to: 'users#change_password')
+  delete('delete_account', to: 'users#delete_account')
+  post('demo', to: 'users#demo')
 
   get('search', to: 'home#search')
   get('portfoliochart', to: 'home#get_portfolio_chart_data')
