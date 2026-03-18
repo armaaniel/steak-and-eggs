@@ -11,7 +11,10 @@ Rails.application.config.after_initialize do
     '/activitydata',
     '/graphql',
     '/record',
-    '/cable'
+    '/cable',
+    '/change_password',
+    '/delete_account',
+    '/demo'
   ].freeze
 
   Thread.new do
