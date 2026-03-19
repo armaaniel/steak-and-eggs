@@ -4,6 +4,8 @@ Backend for [steakneggs.app](https://steakneggs.app/) — a trading simulator wi
 
 Frontend repo: [steak-and-eggs-spa](https://github.com/armaaniel/steak-and-eggs-spa)
 
+Mobile app: [steak-and-eggs-mobile](https://github.com/armaaniel/steak-and-eggs-mobile)
+
 ## Architecture
 
 - Rails backend maintains persistent WebSocket connection to market data provider, caching prices in Redis and broadcasting to clients via Rails ActionCable
