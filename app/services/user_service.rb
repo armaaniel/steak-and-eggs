@@ -55,21 +55,19 @@ class UserService
     end
   end
   
-  def self.change_password(user_id:, current_password:, new_password:)
+  def self.change_password(user_id:, new_password:)
     ActiveSupport::Notifications.instrument("UserService.change_password") do
       user = User.find(user_id)
-      raise StandardError, "Current password is incorrect" unless user.authenticate(current_password)
-
       user.update!(password: new_password)
     end
   end
   
-  def self.delete_account(user_id:, password:)
+  def self.delete_account(user_id:)
     ActiveSupport::Notifications.instrument("UserService.delete_account") do
-      user = User.find(user_id)
-      raise StandardError unless user.authenticate(password)
-
-      user.destroy!
+      ActiveRecord::Base.transaction do
+        user = User.find(user_id)
+        user.destroy!
+      end
       Rails.cache.delete("user_#{user_id}")
       RedisService.safe_del("portfolio:#{user_id}")
       RedisService.safe_del("activity:#{user_id}")
