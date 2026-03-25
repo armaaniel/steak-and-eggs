@@ -68,7 +68,7 @@ Rails.application.config.after_initialize do
         next unless TRACKED_ROUTES.any? { |route| payload[:path]&.start_with?(route) }
 
         Trace.create!(endpoint: "#{payload[:method]} #{payload[:path]}", duration: duration,
-        db_runtime: payload[:db_runtime], view_runtime: payload[:view_runtime], status: payload[:status],
+        db_runtime: payload[:db_runtime], view_runtime: payload[:view_runtime] || 0, status: payload[:status],
         controller: payload[:controller], action: payload[:action], breakdown: current_request[id].presence)
 
         current_request.delete(id)
