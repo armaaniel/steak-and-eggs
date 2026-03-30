@@ -17,35 +17,38 @@
 # Ignore all logfiles and tempfiles.
 /log/*
 /tmp/*
-!/log/.keep
-!/tmp/.keep
-
-# Ignore pidfiles, but keep the directory.
-/tmp/pids/*
-!/tmp/pids/.keep
-
-# Ignore storage (uploaded files in development and any SQLite databases).
-/storage/*
-!/storage/.keep
-/tmp/storage/*
-!/tmp/storage/.keep
-
-# Ignore assets.
-/node_modules/
-/app/assets/builds/*
-!/app/assets/builds/.keep
-/public/assets
 
 # Ignore CI service files.
 /.github
 
-# Ignore Kamal files.
-/config/deploy*.yml
-/.kamal
-
-# Ignore development files
+# Ignore development/test files.
+/spec
+/.rspec
 /.devcontainer
+/.claude
 
-# Ignore Docker-related files
+# Ignore Elastic Beanstalk files.
+/.ebextensions
+/.elasticbeanstalk
+/.platform
+
+# Ignore Docker-related files.
 /.dockerignore
 /Dockerfile*
+
+# OS junk
+.DS_Store
+**/.DS_Store
+
+# Redis
+dump.rdb
+
+# Terraform
+*.tf
+*.tfvars
+.terraform/
+*.tfstate*
+*.tfplan
+
+# Archives
+*.zip
