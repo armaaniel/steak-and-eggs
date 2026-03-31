@@ -27,11 +27,6 @@
 /.devcontainer
 /.claude
 
-# Ignore Elastic Beanstalk files.
-/.ebextensions
-/.elasticbeanstalk
-/.platform
-
 # Ignore Docker-related files.
 /.dockerignore
 /Dockerfile*

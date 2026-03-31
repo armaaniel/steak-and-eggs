@@ -1,9 +1,9 @@
-name: CI
+name: CI/CD
 
 on:
   pull_request:
   push:
-    branches: [ main ]
+    branches: [main]
 
 jobs:
   scan_ruby:
@@ -49,3 +49,22 @@ jobs:
           REDIS_URL: redis://localhost:6379/0
           DATABASE_URL: postgres://postgres:password@localhost:5432/steak_and_eggs_test
         run: bin/rails db:test:prepare && bundle exec rspec
+
+  deploy:
+    runs-on: ubuntu-latest
+    needs: [scan_ruby, test]
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-west-1
+      - uses: aws-actions/amazon-ecr-login@v2
+      - name: Build, push, and deploy
+        run: |
+          IMAGE="${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.us-west-1.amazonaws.com/steakneggs:latest"
+          docker build -t $IMAGE .
+          docker push $IMAGE
+          aws ecs update-service --cluster steakneggs --service steakneggs --force-new-deployment
