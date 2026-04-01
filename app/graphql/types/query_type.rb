@@ -140,7 +140,7 @@ module Types
           clean_route: row['route'].downcase.gsub(' ', '').gsub(':', ''),
           total_requests: row['total_requests'].to_i,
           p99: row['p99']&.to_f || 0.0,
-          cache_hit_rate: route.start_with?('POST') ? nil : row['cache_hit_rate']&.to_f
+          cache_hit_rate: row['route'].start_with?('POST') ? nil : row['cache_hit_rate']&.to_f
         }
       end
     end
