@@ -107,35 +107,40 @@ module Types
 
     def trace_summary
       sql = <<~SQL
-      SELECT
-        CASE
-          WHEN endpoint LIKE 'GET /stocks/%/marketdata' THEN 'GET /stocks/:symbol/marketdata'
-          WHEN endpoint LIKE 'GET /stocks/%/companydata' THEN 'GET /stocks/:symbol/companydata'
-          WHEN endpoint LIKE 'GET /stocks/%/chartdata' THEN 'GET /stocks/:symbol/chartdata'
-          WHEN endpoint LIKE 'GET /positions/%' THEN 'GET /positions/:symbol'
-          WHEN endpoint LIKE 'GET /search%' THEN 'GET /search'
-          WHEN endpoint LIKE 'GET /stocks/%/tickerdata' THEN 'GET /stocks/:symbol/tickerdata'
-          WHEN endpoint LIKE 'GET /stocks/%/userdata' THEN 'GET /stocks/:symbol/userdata'
-          WHEN endpoint LIKE 'GET /stocks/%/stockprice' THEN 'GET /stocks/:symbol/stockprice'
-          WHEN endpoint LIKE 'POST /stocks/%/buy' THEN 'POST /stocks/:symbol/buy'
-          WHEN endpoint LIKE 'POST /stocks/%/sell' THEN 'POST /stocks/:symbol/sell'
-          ELSE endpoint
-        END as route,
-        COUNT(*) as total_requests,
-        PERCENTILE_CONT(0.99) WITHIN GROUP (ORDER BY duration) as p99
-      FROM traces#{' '}
-      GROUP BY route
-      ORDER BY total_requests DESC#{'  '}
-    SQL
+        SELECT
+          CASE
+            WHEN endpoint LIKE 'GET /stocks/%/marketdata' THEN 'GET /stocks/:symbol/marketdata'
+            WHEN endpoint LIKE 'GET /stocks/%/companydata' THEN 'GET /stocks/:symbol/companydata'
+            WHEN endpoint LIKE 'GET /stocks/%/chartdata' THEN 'GET /stocks/:symbol/chartdata'
+            WHEN endpoint LIKE 'GET /positions/%' THEN 'GET /positions/:symbol'
+            WHEN endpoint LIKE 'GET /search%' THEN 'GET /search'
+            WHEN endpoint LIKE 'GET /stocks/%/tickerdata' THEN 'GET /stocks/:symbol/tickerdata'
+            WHEN endpoint LIKE 'GET /stocks/%/userdata' THEN 'GET /stocks/:symbol/userdata'
+            WHEN endpoint LIKE 'GET /stocks/%/stockprice' THEN 'GET /stocks/:symbol/stockprice'
+            WHEN endpoint LIKE 'POST /stocks/%/buy' THEN 'POST /stocks/:symbol/buy'
+            WHEN endpoint LIKE 'POST /stocks/%/sell' THEN 'POST /stocks/:symbol/sell'
+            ELSE endpoint
+          END as route,
+          COUNT(*) as total_requests,
+          PERCENTILE_CONT(0.99) WITHIN GROUP (ORDER BY duration) as p99,
+          ROUND(
+            COUNT(*) FILTER (WHERE (breakdown->>'used_redis')::boolean = true) * 100.0
+            / NULLIF(COUNT(*) FILTER (WHERE breakdown IS NOT NULL AND breakdown::text != '{}'), 0),
+            1
+          ) as cache_hit_rate
+        FROM traces
+        GROUP BY route
+        ORDER BY total_requests DESC
+      SQL
 
-    results = ActiveRecord::Base.connection.execute(sql)
-
-    typed_results = results.map do |row|
+      results = ActiveRecord::Base.connection.execute(sql)
+      results.map do |row|
         {
           route: row['route'],
           clean_route: row['route'].downcase.gsub(' ', '').gsub(':', ''),
           total_requests: row['total_requests'].to_i,
-          p99: row['p99']&.to_f || 0.0
+          p99: row['p99']&.to_f || 0.0,
+          cache_hit_rate: row['cache_hit_rate']&.to_f
         }
       end
     end
