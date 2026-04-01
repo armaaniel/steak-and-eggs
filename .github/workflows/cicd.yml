@@ -65,6 +65,5 @@ jobs:
       - name: Build, push, and deploy
         run: |
           IMAGE="${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.us-west-1.amazonaws.com/steakneggs:latest"
-          docker build -t $IMAGE .
-          docker push $IMAGE
+          docker buildx build --platform linux/arm64 -t $IMAGE --push .
           aws ecs update-service --cluster steakneggs --service steakneggs --force-new-deployment

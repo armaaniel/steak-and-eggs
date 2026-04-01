@@ -21,6 +21,7 @@ class HomeController < ApiController
 
   def get_portfolio_data
     result = PositionService.get_aum(user_id:@current_user.id, balance:@current_user.balance)
+    Rails.logger.info "Deploy successful: #{Time.current}"
     render(json: result)
 
   rescue => e
