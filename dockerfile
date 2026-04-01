@@ -12,4 +12,3 @@ COPY . .
 
 ENTRYPOINT ["./bin/docker-entrypoint"]
 CMD ["./bin/rails", "server"]
-
