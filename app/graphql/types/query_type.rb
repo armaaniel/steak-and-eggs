@@ -124,7 +124,7 @@ module Types
           COUNT(*) as total_requests,
           PERCENTILE_CONT(0.99) WITHIN GROUP (ORDER BY duration) as p99,
           ROUND(
-            COUNT(*) FILTER (WHERE breakdown::text LIKE '%"used_redis": true%') * 100.0
+            COUNT(*) FILTER (WHERE breakdown::text LIKE '%"used_redis":true%') * 100.0
             / NULLIF(COUNT(*) FILTER (WHERE breakdown IS NOT NULL AND breakdown::text != '{}'), 0),
             1
           ) as cache_hit_rate
