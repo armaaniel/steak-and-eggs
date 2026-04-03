@@ -556,6 +556,9 @@ resource "aws_ecs_service" "ingester" {
   desired_count   = 1
   launch_type     = "FARGATE"
   enable_execute_command = true
+	availability_zone_rebalancing = "DISABLED"
+	deployment_minimum_healthy_percent = 0
+	deployment_maximum_percent = 100
 
   network_configuration {
     subnets          = [aws_subnet.alb_ecs_public.id, aws_subnet.alb_ecs_public_b.id]
