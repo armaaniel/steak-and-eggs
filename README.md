@@ -10,14 +10,15 @@ Price ingestion: [steak-and-eggs-ingester](https://github.com/armaaniel/steak-an
 
 ## Architecture
 
-- Rails backend maintains persistent WebSocket connection to market data provider, caching prices in Redis and broadcasting to clients via Rails ActionCable
+- Standalone price ingestion service ([steak-and-eggs-ingester](https://github.com/armaaniel/steak-and-eggs-ingester)) maintains persistent WebSocket connection to market data provider, publishing prices to Redis — decoupled from the backend for independent scaling and deploys
 - React/TypeScript frontend subscribes to ActionCable channels via a WebSocket connection for real-time price updates
 - DataCat, an in-app APM dashboard, tracks latency percentiles per route, individual request latency, error rates, and cache hit rates — powered by Rails instrumentation
-- Implemented connection health monitoring with automatic reconnect to market data provider on stale connections or disconnects
+- Connection health monitoring on the ingestion service with automatic reconnect on stale connections or disconnects
 - Scheduled daily portfolio snapshots for each user via AWS Lambda with batch processing, cache invalidation, and error tracking
 - Financial transactions use pessimistic locking and database transactions; Transactions track cost basis and realized P&L
 - API layer returns graceful fallbacks in the event of service failures and logs errors to Sentry
-- RSpec test suite with ~180 examples across models, services, request specs, and channels — enforced via GitHub Actions CI
+- GitHub Actions CI/CD pipeline runs a ~180-example RSpec test suite (transactional integrity, Redis caching, error fallbacks, JWT auth) on every PR, then auto-deploys to AWS ECS
+- All AWS infrastructure provisioned with Terraform — VPC with public/private subnets, ECS Fargate (web app + standalone price ingester), RDS Postgres, ElastiCache Redis, ALB, and ECR
 
 ## Deep Dive
 
