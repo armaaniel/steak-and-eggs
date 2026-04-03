@@ -357,6 +357,16 @@ resource "aws_ecr_repository" "steakneggs" {
   }
 }
 
+resource "aws_ecr_repository" "ingester" {
+  name = "ingester"
+
+  image_tag_mutability = "MUTABLE"
+
+  image_scanning_configuration {
+    scan_on_push = true
+  }
+}
+
 resource "aws_ecr_lifecycle_policy" "steakneggs" {
   repository = aws_ecr_repository.steakneggs.name
 
@@ -378,8 +388,34 @@ resource "aws_ecr_lifecycle_policy" "steakneggs" {
   })
 }
 
+resource "aws_ecr_lifecycle_policy" "ingester" {
+  repository = aws_ecr_repository.ingester.name
+
+  policy = jsonencode({
+    rules = [
+      {
+        rulePriority = 1
+        description  = "Keep last 3 images"
+        selection = {
+          tagStatus = "any"
+          countType = "imageCountMoreThan"
+          countNumber = 3
+        }
+        action = {
+          type = "expire"
+        }
+      }
+    ]
+  })
+}
+
 resource "aws_cloudwatch_log_group" "steakneggs" {
   name              = "/ecs/steakneggs"
+  retention_in_days = 3
+}
+
+resource "aws_cloudwatch_log_group" "ingester" {
+  name              = "/ecs/ingester"
   retention_in_days = 3
 }
 
@@ -420,9 +456,7 @@ resource "aws_ecs_task_definition" "steakneggs" {
           name  = "REDIS_URL",
 					value = "rediss://${aws_elasticache_replication_group.redis.primary_endpoint_address}:6379/0"
 				},					
-        { name = "API_KEY", value = var.api_key },
         { name = "GQL_KEY", value = var.gql_key },
-        { name = "SENTRY_DSN", value = var.sentry_dsn },
 				{ name = "SECRET_KEY_BASE", value = var.secret_key_base }
       ]
 
@@ -439,6 +473,56 @@ resource "aws_ecs_task_definition" "steakneggs" {
 
   tags = {
     Name = "steakneggs-task-definition"
+  }
+}
+
+resource "aws_ecs_task_definition" "ingester" {
+  family                   = "ingester"
+  requires_compatibilities = ["FARGATE"]
+  network_mode             = "awsvpc"
+  cpu                      = "256"
+  memory                   = "512"
+  execution_role_arn       = aws_iam_role.ecs_execution_role.arn
+	task_role_arn      			 = aws_iam_role.ecs_task_role.arn
+	
+	runtime_platform {
+	    operating_system_family = "LINUX"
+	    cpu_architecture        = "ARM64"
+	  }
+
+  container_definitions = jsonencode([
+    {
+      name      = "ingester"
+      image     = "${aws_ecr_repository.ingester.repository_url}:latest"
+      essential = true
+      
+
+      environment = [
+        {
+          name  = "DATABASE_URL",
+          value = "postgresql://steakneggs:${var.db_password}@${aws_db_instance.postgres.endpoint}/steakneggs"
+        },
+        {
+          name  = "REDIS_URL",
+					value = "rediss://${aws_elasticache_replication_group.redis.primary_endpoint_address}:6379/0"
+				},					
+        { name = "API_KEY", value = var.api_key },
+        { name = "SENTRY_DSN", value = var.sentry_dsn },
+      ]
+
+      logConfiguration = {
+        logDriver = "awslogs"
+        options = {
+          "awslogs-group"         = aws_cloudwatch_log_group.ingester.name
+          "awslogs-region"        = "us-west-1"
+          "awslogs-stream-prefix" = "ecs"
+        }
+      }
+    }
+  ])
+
+  tags = {
+    Name = "ingester-task-definition"
   }
 }
 
@@ -463,6 +547,22 @@ resource "aws_ecs_service" "steakneggs" {
   }
 
   depends_on = [aws_lb_listener.https]
+}
+
+resource "aws_ecs_service" "ingester" {
+  name            = "ingester"
+  cluster         = aws_ecs_cluster.main.id
+  task_definition = aws_ecs_task_definition.ingester.arn
+  desired_count   = 1
+  launch_type     = "FARGATE"
+  enable_execute_command = true
+
+  network_configuration {
+    subnets          = [aws_subnet.alb_ecs_public.id, aws_subnet.alb_ecs_public_b.id]
+    security_groups  = [aws_security_group.ecs.id]
+    assign_public_ip = true
+  }
+
 }
 
 variable "db_password" {
