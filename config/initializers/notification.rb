@@ -66,6 +66,8 @@ Rails.application.config.after_initialize do
       when 'process_action.action_controller'
         next if payload[:action] == 'not_found'
         next unless TRACKED_ROUTES.any? { |route| payload[:path]&.start_with?(route) }
+        
+        puts "SUBSCRIBER THREAD: #{Thread.current.object_id}"
 
         Trace.create!(endpoint: "#{payload[:method]} #{payload[:path]}", duration: duration,
         db_runtime: payload[:db_runtime], view_runtime: payload[:view_runtime] || 0, status: payload[:status],

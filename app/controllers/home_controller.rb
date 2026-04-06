@@ -29,6 +29,7 @@ class HomeController < ApiController
   end
 
   def get_activity_data
+    puts "CONTROLLER THREAD: #{Thread.current.object_id}"
     data = Transaction.get(user_id:@current_user.id)
     render(json: data)
 

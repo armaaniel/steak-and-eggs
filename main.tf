@@ -457,6 +457,8 @@ resource "aws_ecs_task_definition" "steakneggs" {
 					value = "rediss://${aws_elasticache_replication_group.redis.primary_endpoint_address}:6379/0"
 				},					
         { name = "GQL_KEY", value = var.gql_key },
+        { name = "API_KEY", value = var.api_key },
+        { name = "SENTRY_DSN", value = var.sentry_dsn },
 				{ name = "SECRET_KEY_BASE", value = var.secret_key_base }
       ]
 
