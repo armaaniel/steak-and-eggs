@@ -17,68 +17,82 @@ Rails.application.config.after_initialize do
     '/demo'
   ].freeze
 
+  current_request = {}
+  trace_queue = Queue.new
+
   Thread.new do
-    current_request = {}
-
-    ActiveSupport::Notifications.subscribe(/.*/) do |name, start, finish, id, payload|
-      duration = (finish - start) * 1000
-
-      case name
-
-      when /PositionService/
-        current_request[id] ||= {}
-
-        if name == "PositionService.find_position"
-          current_request[id][name] = {duration: duration, used_db: payload[:used_db]}
-        elsif name == "PositionService.get_aum"
-          current_request[id][name] = {duration: duration, used_redis: payload[:used_redis]}
-        else
-          current_request[id][name] = {duration: duration, used_redis: payload[:used_redis], used_db: payload[:used_db]}
-        end
-
-      when /Ticker/
-        current_request[id] ||= {}
-        current_request[id][name] = {duration: duration, used_redis: payload[:used_redis], used_db: payload[:used_db],
-          term:payload[:term]}
-
-      when /Transaction/
-        current_request[id] ||= {}
-        current_request[id][name] = {duration: duration, used_redis:payload[:used_redis], used_db: payload[:used_db]}
-
-      when /MarketService/
-        current_request[id] ||= {}
-
-        if name == "MarketService.buy" || name == "MarketService.sell" || name == "MarketService.marketprice"
-          current_request[id][name] = {duration: duration}
-        else
-          current_request[id][name] = {duration: duration, used_redis: payload[:used_redis], used_api:payload[:used_api],
-            symbol:payload[:symbol]}
-        end
-
-      when /UserService/
-        current_request[id] ||= {}
-        current_request[id][name] = {duration: duration}
-
-      when /GraphQL/
-        current_request[id] ||= {}
-        current_request[id][name] = {duration: duration, operation: payload[:operation]}
-
-      when 'process_action.action_controller'
-        next if payload[:action] == 'not_found'
-        next unless TRACKED_ROUTES.any? { |route| payload[:path]&.start_with?(route) }
-        
-        puts "SUBSCRIBER THREAD: #{Thread.current.object_id}"
-
-        Trace.create!(endpoint: "#{payload[:method]} #{payload[:path]}", duration: duration,
-        db_runtime: payload[:db_runtime], view_runtime: payload[:view_runtime] || 0, status: payload[:status],
-        controller: payload[:controller], action: payload[:action], breakdown: current_request[id].presence)
-
-        current_request.delete(id)
-
+    while trace = trace_queue.pop
+      begin
+        Trace.create!(trace)
+      rescue => e
+        Sentry.capture_exception(e)
       end
-    rescue => e
-      Sentry.capture_exception(e)
-      current_request.delete(id) if id
     end
+  end
+
+  ActiveSupport::Notifications.subscribe(/.*/) do |name, start, finish, id, payload|
+    duration = (finish - start) * 1000
+
+    case name
+
+    when /PositionService/
+      current_request[id] ||= {}
+
+      if name == "PositionService.find_position"
+        current_request[id][name] = {duration: duration, used_db: payload[:used_db]}
+      elsif name == "PositionService.get_aum"
+        current_request[id][name] = {duration: duration, used_redis: payload[:used_redis]}
+      else
+        current_request[id][name] = {duration: duration, used_redis: payload[:used_redis], used_db: payload[:used_db]}
+      end
+
+    when /Ticker/
+      current_request[id] ||= {}
+      current_request[id][name] = {duration: duration, used_redis: payload[:used_redis], used_db: payload[:used_db],
+        term: payload[:term]}
+
+    when /Transaction/
+      current_request[id] ||= {}
+      current_request[id][name] = {duration: duration, used_redis: payload[:used_redis], used_db: payload[:used_db]}
+
+    when /MarketService/
+      current_request[id] ||= {}
+
+      if name == "MarketService.buy" || name == "MarketService.sell" || name == "MarketService.marketprice"
+        current_request[id][name] = {duration: duration}
+      else
+        current_request[id][name] = {duration: duration, used_redis: payload[:used_redis], used_api: payload[:used_api],
+          symbol: payload[:symbol]}
+      end
+
+    when /UserService/
+      current_request[id] ||= {}
+      current_request[id][name] = {duration: duration}
+
+    when /GraphQL/
+      current_request[id] ||= {}
+      current_request[id][name] = {duration: duration, operation: payload[:operation]}
+
+    when 'process_action.action_controller'
+      next if payload[:action] == 'not_found'
+      next unless TRACKED_ROUTES.any? { |route| payload[:path]&.start_with?(route) }
+
+      trace_queue.push({
+        endpoint: "#{payload[:method]} #{payload[:path]}",
+        duration: duration,
+        db_runtime: payload[:db_runtime],
+        view_runtime: payload[:view_runtime] || 0,
+        status: payload[:status],
+        controller: payload[:controller],
+        action: payload[:action],
+        breakdown: current_request[id].presence
+      })
+
+      current_request.delete(id)
+
+    end
+  rescue => e
+    Sentry.capture_exception(e)
+    current_request.delete(id) if id
   end
 end
