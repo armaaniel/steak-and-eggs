@@ -10,6 +10,7 @@ class MarketService
 
     ActiveSupport::Notifications.instrument("MarketService.buy") do
       trade_value = quantity*stock_price
+      transaction = nil
 
       ActiveRecord::Base.transaction do
         user = User.lock.find(user_id)
@@ -48,6 +49,7 @@ class MarketService
 
     ActiveSupport::Notifications.instrument("MarketService.sell") do
       trade_value = quantity*stock_price
+      transaction = nil
 
       ActiveRecord::Base.transaction do
         user = User.lock.find(user_id)
