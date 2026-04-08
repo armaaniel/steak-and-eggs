@@ -30,12 +30,14 @@ class MarketService
           end
           transaction = Transaction.create!(symbol: symbol, quantity: quantity, value: trade_value, transaction_type: 'Buy', user_id: user_id,
           market_price:stock_price)
-
-          {symbol: transaction.symbol, quantity: transaction.quantity, value: transaction.value,
-            market_price: transaction.market_price}
+          
           end
           RedisService.safe_del("positions:#{user_id}")
           RedisService.safe_del("activity:#{user_id}")
+          
+          {symbol: transaction.symbol, quantity: transaction.quantity, value: transaction.value,
+            market_price: transaction.market_price}
+          
         end
       end
 
@@ -65,12 +67,13 @@ class MarketService
         end
         transaction = Transaction.create!(symbol:symbol, quantity:quantity, value:trade_value, transaction_type:'Sell', user_id:user_id,
         realized_pnl: realized_pnl, market_price:stock_price)
-
-        {symbol: transaction.symbol, quantity: transaction.quantity, value: transaction.value, realized_pnl: transaction.realized_pnl,
-          market_price: transaction.market_price}
+        
         end
         RedisService.safe_del("positions:#{user_id}")
         RedisService.safe_del("activity:#{user_id}")
+        
+        {symbol: transaction.symbol, quantity: transaction.quantity, value: transaction.value, realized_pnl: transaction.realized_pnl,
+          market_price: transaction.market_price}
       end
     end
 
