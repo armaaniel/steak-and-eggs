@@ -17,7 +17,7 @@ Rails.application.config.after_initialize do
     '/demo'
   ].freeze
 
-  current_request = {}
+  current_request = Concurrent::Map.new
   trace_queue = Queue.new
 
   Thread.new do
@@ -30,7 +30,9 @@ Rails.application.config.after_initialize do
     end
   end
 
-  ActiveSupport::Notifications.subscribe(/.*/) do |name, start, finish, id, payload|
+  ActiveSupport::Notifications.subscribe(
+    /\A(PositionService|Ticker|Transaction|MarketService|UserService|GraphQL)\.|\Aprocess_action\.action_controller\z/
+  ) do |name, start, finish, id, payload|
     duration = (finish - start) * 1000
 
     case name

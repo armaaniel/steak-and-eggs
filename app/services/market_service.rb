@@ -28,14 +28,14 @@ class MarketService
           else
             Position.create!(user_id:user_id, symbol: symbol, shares: quantity, name: name, average_price:stock_price)
           end
-          RedisService.safe_del("positions:#{user_id}")
-          RedisService.safe_del("activity:#{user_id}")
           transaction = Transaction.create!(symbol: symbol, quantity: quantity, value: trade_value, transaction_type: 'Buy', user_id: user_id,
           market_price:stock_price)
 
           {symbol: transaction.symbol, quantity: transaction.quantity, value: transaction.value,
             market_price: transaction.market_price}
           end
+          RedisService.safe_del("positions:#{user_id}")
+          RedisService.safe_del("activity:#{user_id}")
         end
       end
 
@@ -49,9 +49,9 @@ class MarketService
 
       ActiveRecord::Base.transaction do
         user = User.lock.find(user_id)
-        position = Position.lock.find_by!(user_id:user_id, symbol: symbol)
+        position = Position.lock.find_by(user_id:user_id, symbol: symbol)
 
-        raise(InsufficientSharesError, "Invalid Quantity") if position.shares < quantity
+        raise(InsufficientSharesError) if position.nil? || position.shares < quantity
 
         realized_pnl = (trade_value - (position.average_price * quantity))
 
@@ -63,14 +63,14 @@ class MarketService
         else
           position.update!(shares: position.shares - quantity)
         end
-        RedisService.safe_del("positions:#{user_id}")
-        RedisService.safe_del("activity:#{user_id}")
         transaction = Transaction.create!(symbol:symbol, quantity:quantity, value:trade_value, transaction_type:'Sell', user_id:user_id,
         realized_pnl: realized_pnl, market_price:stock_price)
 
         {symbol: transaction.symbol, quantity: transaction.quantity, value: transaction.value, realized_pnl: transaction.realized_pnl,
           market_price: transaction.market_price}
         end
+        RedisService.safe_del("positions:#{user_id}")
+        RedisService.safe_del("activity:#{user_id}")
       end
     end
 

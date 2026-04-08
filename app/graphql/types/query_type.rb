@@ -44,18 +44,10 @@ module Types
 
       query = Trace.where("endpoint LIKE ?", route).where.not("breakdown::text = ? OR breakdown IS NULL", '{}')
 
-      redis_query = query.where("breakdown::text LIKE ?", '%"used_redis":true%')&.order(created_at: :desc)
-      db_api_query = query.where("breakdown::text LIKE ? OR breakdown::text LIKE ?", '%"used_api":true%', '%"used_db":true%')&.order(created_at: :desc)
-
-      if redis_query.empty?
-        redis_query = []
-      end
-
-      if db_api_query.empty?
-        db_api_query = []
-      end
-
-      {redis_query: redis_query, db_api_query: db_api_query}
+      {
+        redis_query: query.where("breakdown::text LIKE ?", '%"used_redis":true%').order(created_at: :desc),
+        db_api_query: query.where("breakdown::text LIKE ? OR breakdown::text LIKE ?", '%"used_api":true%', '%"used_db":true%').order(created_at: :desc),
+      }
     end
 
     def trace_list(endpoint:)

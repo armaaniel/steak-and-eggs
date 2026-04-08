@@ -1,7 +1,7 @@
 default: &default
   adapter: postgresql
   encoding: unicode
-  pool: 32 #match EB's max threads per worker
+  pool: 10
 
 development:
   <<: *default

@@ -131,12 +131,12 @@ RSpec.describe(MarketService) do
       expect(Transaction.find_by(user_id: user.id, symbol: "TSLA")).to(be_nil)
     end
 
-    it("raises when no position exists") do
+    it("raises InsufficientSharesError when no position exists") do
       allow(RedisService).to(receive(:safe_get).with("price:AAPL").and_return("100"))
-      
+
       expect {
         MarketService.sell(symbol: "AAPL", quantity: 5, user_id: user.id)
-      }.to(raise_error(ActiveRecord::RecordNotFound))
+      }.to(raise_error(MarketService::InsufficientSharesError))
     end
 
     it("raises when stock price is zero") do

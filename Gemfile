@@ -17,9 +17,6 @@ gem 'pg'
 
 gem 'jwt'
 
-gem 'sidekiq'
-gem 'sidekiq-cron'
-
 gem 'sentry-ruby'
 gem 'sentry-rails'
 
