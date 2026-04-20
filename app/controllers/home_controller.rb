@@ -1,4 +1,4 @@
-class HomeController < ApiController
+class HomeController < ApplicationController
   before_action(:verify_token)
 
   def search

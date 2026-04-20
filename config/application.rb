@@ -24,7 +24,7 @@ module SteakAndEggs
     config.load_defaults 8.0
 
     config.lograge.enabled = true
-    config.lograge.ignore_actions = ['ApplicationController#health']
+    config.lograge.ignore_actions = ['SystemController#health']
 
     config.lograge.custom_options = lambda do |event|
         { time: Time.current }

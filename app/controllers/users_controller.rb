@@ -1,4 +1,4 @@
-class UsersController < ApiController
+class UsersController < ApplicationController
   before_action(:verify_token, except: [:login, :signup, :demo])
 
   def login

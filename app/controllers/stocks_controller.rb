@@ -1,4 +1,4 @@
-class StocksController < ApiController
+class StocksController < ApplicationController
   before_action(:verify_token)
 
   def buy
