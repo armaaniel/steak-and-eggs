@@ -28,8 +28,7 @@ class UserService
         record.portfolio_value = PositionService.get_aum(user_id:user_id, balance:user.balance)[:aum]
         record.save!
       end
-      RedisService.safe_del("portfolio:#{user_id}")
-      RedisService.safe_del("activity:#{user_id}")
+      CacheService.invalidate_user(user_id: user_id)
     end
   end
 
@@ -50,8 +49,7 @@ class UserService
         record.portfolio_value = PositionService.get_aum(user_id:user_id, balance:user.balance)[:aum]
         record.save!
       end
-      RedisService.safe_del("portfolio:#{user_id}")
-      RedisService.safe_del("activity:#{user_id}")
+      CacheService.invalidate_user(user_id: user_id)
     end
   end
   
@@ -68,9 +66,7 @@ class UserService
         user = User.find(user_id)
         user.destroy!
       end
-      Rails.cache.delete("user_#{user_id}")
-      RedisService.safe_del("portfolio:#{user_id}")
-      RedisService.safe_del("activity:#{user_id}")
+      CacheService.invalidate_user(user_id: user_id)
     end
   end
   
