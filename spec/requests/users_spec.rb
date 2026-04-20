@@ -84,7 +84,7 @@ RSpec.describe("Users", type: :request) do
   describe "POST /deposit" do
     before do
       allow(PositionService).to(receive(:get_aum).and_return({ aum: 10500 }))
-      allow(RedisService).to(receive(:safe_del))
+      allow(CacheService).to(receive(:invalidate_user))
     end
 
     it "returns 200 on valid deposit" do
@@ -123,7 +123,7 @@ RSpec.describe("Users", type: :request) do
 
   describe "DELETE /delete_account" do
     before do
-      allow(RedisService).to(receive(:safe_del))
+      allow(CacheService).to(receive(:invalidate_user))
     end
 
     it "returns 200 and destroys user" do
@@ -165,7 +165,7 @@ RSpec.describe("Users", type: :request) do
   describe "POST /withdraw" do
     before do
       allow(PositionService).to(receive(:get_aum).and_return({ aum: 9500 }))
-      allow(RedisService).to(receive(:safe_del))
+      allow(CacheService).to(receive(:invalidate_user))
     end
 
     it "returns 200 on valid withdrawal" do

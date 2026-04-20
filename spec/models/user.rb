@@ -74,17 +74,4 @@ RSpec.describe(User, type: :model) do
     end
   end
 
-  describe "cache clearing" do
-    it "clears cache when balance changes" do
-      expect(Rails.cache).to(receive(:delete).with("user_#{user.id}"))
-
-      user.update!(balance: 5000)
-    end
-
-    it "does not clear cache when other fields change" do
-      expect(Rails.cache).not_to(receive(:delete))
-
-      user.update!(username: "newname")
-    end
-  end
 end

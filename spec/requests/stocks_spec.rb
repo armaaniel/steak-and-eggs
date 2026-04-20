@@ -7,7 +7,7 @@ RSpec.describe("Stocks", type: :request) do
   describe "POST /stocks/:symbol/buy" do
     before do
       allow(RedisService).to(receive(:safe_get).with("price:TSLA").and_return("100"))
-      allow(RedisService).to(receive(:safe_del))
+      allow(CacheService).to(receive(:invalidate_user))
     end
 
     it "returns 201 with trade data" do
@@ -71,7 +71,7 @@ RSpec.describe("Stocks", type: :request) do
   describe "POST /stocks/:symbol/sell" do
     before do
       allow(RedisService).to(receive(:safe_get).with("price:TSLA").and_return("100"))
-      allow(RedisService).to(receive(:safe_del))
+      allow(CacheService).to(receive(:invalidate_user))
       Position.create!(user_id: user.id, symbol: "TSLA", shares: 20, average_price: 80, name: "Tesla, Inc.")
     end
 

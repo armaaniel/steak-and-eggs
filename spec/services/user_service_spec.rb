@@ -4,7 +4,7 @@ RSpec.describe(UserService) do
   let(:user) { create(:user) }
 
   before do
-    allow(RedisService).to(receive(:safe_del))
+    allow(CacheService).to(receive(:invalidate_user))
   end
 
   describe("signup") do
@@ -82,9 +82,8 @@ RSpec.describe(UserService) do
       expect(record.portfolio_value).to(eq(10500))
     end
 
-    it("invalidates redis cache") do
-      expect(RedisService).to(receive(:safe_del).with("portfolio:#{user.id}"))
-      expect(RedisService).to(receive(:safe_del).with("activity:#{user.id}"))
+    it("invalidates cache") do
+      expect(CacheService).to(receive(:invalidate_user).with(user_id: user.id))
 
       UserService.deposit(amount: BigDecimal("500"), user_id: user.id)
     end
@@ -99,8 +98,7 @@ RSpec.describe(UserService) do
     end
 
     it("clears cache after deletion") do
-      expect(RedisService).to(receive(:safe_del).with("portfolio:#{user.id}"))
-      expect(RedisService).to(receive(:safe_del).with("activity:#{user.id}"))
+      expect(CacheService).to(receive(:invalidate_user).with(user_id: user.id))
 
       UserService.delete_account(user_id: user.id)
     end
@@ -145,9 +143,8 @@ RSpec.describe(UserService) do
       expect(Transaction.find_by(user_id: user.id, transaction_type: "Withdraw")).to(be_nil)
     end
 
-    it("invalidates redis cache") do
-      expect(RedisService).to(receive(:safe_del).with("portfolio:#{user.id}"))
-      expect(RedisService).to(receive(:safe_del).with("activity:#{user.id}"))
+    it("invalidates cache") do
+      expect(CacheService).to(receive(:invalidate_user).with(user_id: user.id))
 
       UserService.withdraw(amount: BigDecimal("500"), user_id: user.id)
     end

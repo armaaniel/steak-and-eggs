@@ -5,7 +5,7 @@ RSpec.describe(MarketService) do
 
   before do
     allow(RedisService).to(receive(:safe_get).with("price:TSLA").and_return("100"))
-    allow(RedisService).to(receive(:safe_del))
+    allow(CacheService).to(receive(:invalidate_user))
   end
 
   describe("buy") do
@@ -72,9 +72,8 @@ RSpec.describe(MarketService) do
       }.to(raise_error(StandardError))
     end
 
-    it("invalidates the correct redis cache keys") do
-      expect(RedisService).to(receive(:safe_del).with("positions:#{user.id}"))
-      expect(RedisService).to(receive(:safe_del).with("activity:#{user.id}"))
+    it("invalidates cache") do
+      expect(CacheService).to(receive(:invalidate_user).with(user_id: user.id))
 
       MarketService.buy(symbol: "TSLA", quantity: 10, user_id: user.id, name: "Tesla, Inc.")
     end
@@ -155,9 +154,8 @@ RSpec.describe(MarketService) do
       }.to(raise_error(StandardError))
     end
 
-    it("invalidates the correct redis cache keys") do
-      expect(RedisService).to(receive(:safe_del).with("positions:#{user.id}"))
-      expect(RedisService).to(receive(:safe_del).with("activity:#{user.id}"))
+    it("invalidates cache") do
+      expect(CacheService).to(receive(:invalidate_user).with(user_id: user.id))
 
       MarketService.sell(symbol: "TSLA", quantity: 10, user_id: user.id)
     end

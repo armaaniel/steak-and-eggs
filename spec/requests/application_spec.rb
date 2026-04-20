@@ -77,7 +77,7 @@ RSpec.describe("Application", type: :request) do
       allow(ENV).to(receive(:fetch).and_call_original)
       allow(RedisService).to(receive(:safe_get).and_return(nil))
       allow(RedisService).to(receive(:safe_setex))
-      allow(RedisService).to(receive(:safe_del))
+      allow(CacheService).to(receive(:invalidate_user))
       allow(RedisService).to(receive(:safe_mget).and_return([]))
     end
 
@@ -117,8 +117,8 @@ RSpec.describe("Application", type: :request) do
       expect(record.portfolio_value).to(eq(3000))
     end
 
-    it "invalidates portfolio cache for each user" do
-      expect(RedisService).to(receive(:safe_del).with("portfolio:#{user.id}"))
+    it "invalidates cache for each user" do
+      expect(CacheService).to(receive(:invalidate_user).with(user_id: user.id))
 
       post "/record", headers: { "Key" => "test_secret" }
     end
