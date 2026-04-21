@@ -26,7 +26,7 @@ class PositionService
         "open:#{position[:symbol]}"
       end
 
-      opens = RedisService.safe_mget(open_keys)
+      opens = RedisService.safe_mget(*open_keys)
 
       prices = RedisService.safe_mget(*price_keys)
       zip = positions.zip(prices, opens)

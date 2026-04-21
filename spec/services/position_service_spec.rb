@@ -38,7 +38,7 @@ RSpec.describe(PositionService) do
         { symbol: "AAPL", shares: 5, name: "Apple Inc.", average_price: 150 }
       ]
       allow(RedisService).to(receive(:safe_get).with("positions:#{user.id}").and_return(positions.to_json))
-      allow(RedisService).to(receive(:safe_mget).with(["open:TSLA", "open:AAPL"]).and_return(["95", "148"]))
+      allow(RedisService).to(receive(:safe_mget).with("open:TSLA", "open:AAPL").and_return(["95", "148"]))
       allow(RedisService).to(receive(:safe_mget).with("price:TSLA", "price:AAPL").and_return(["100", "155"]))
 
       result = PositionService.get_aum(user_id: user.id, balance: 5000)
@@ -52,7 +52,7 @@ RSpec.describe(PositionService) do
     it("treats nil prices as zero") do
       positions = [{ symbol: "TSLA", shares: 10, name: "Tesla, Inc.", average_price: 80 }]
       allow(RedisService).to(receive(:safe_get).with("positions:#{user.id}").and_return(positions.to_json))
-      allow(RedisService).to(receive(:safe_mget).with(["open:TSLA"]).and_return([nil]))
+      allow(RedisService).to(receive(:safe_mget).with("open:TSLA").and_return([nil]))
       allow(RedisService).to(receive(:safe_mget).with("price:TSLA").and_return([nil]))
 
       result = PositionService.get_aum(user_id: user.id, balance: 5000)
