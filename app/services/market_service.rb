@@ -34,7 +34,8 @@ class MarketService
           
           end
           CacheService.invalidate_user(user_id: user_id)
-          
+          RedisService.safe_del("positions:#{user_id}")
+
           {symbol: transaction.symbol, quantity: transaction.quantity, value: transaction.value,
             market_price: transaction.market_price}
           
@@ -71,7 +72,8 @@ class MarketService
         
         end
         CacheService.invalidate_user(user_id: user_id)
-        
+        RedisService.safe_del("positions:#{user_id}")
+
         {symbol: transaction.symbol, quantity: transaction.quantity, value: transaction.value, realized_pnl: transaction.realized_pnl,
           market_price: transaction.market_price}
       end
