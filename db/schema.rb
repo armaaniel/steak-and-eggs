@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2025_08_31_223719) do
+ActiveRecord::Schema[8.0].define(version: 2026_04_23_194240) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -20,6 +20,7 @@ ActiveRecord::Schema[8.0].define(version: 2025_08_31_223719) do
     t.decimal "portfolio_value", precision: 17, scale: 4, null: false
     t.index ["user_id", "date"], name: "index_portfolio_records_on_user_id_and_date", unique: true
     t.index ["user_id"], name: "index_portfolio_records_on_user_id"
+    t.check_constraint "portfolio_value >= 0::numeric", name: "portfolio_value_non_negative"
   end
 
   create_table "positions", force: :cascade do |t|
@@ -32,6 +33,8 @@ ActiveRecord::Schema[8.0].define(version: 2025_08_31_223719) do
     t.decimal "average_price", precision: 10, scale: 4, null: false
     t.index ["user_id", "symbol"], name: "index_positions_on_user_id_and_symbol", unique: true
     t.index ["user_id"], name: "index_positions_on_user_id"
+    t.check_constraint "average_price > 0::numeric", name: "average_price_positive"
+    t.check_constraint "shares > 0", name: "shares_positive"
   end
 
   create_table "tickers", force: :cascade do |t|
@@ -70,6 +73,10 @@ ActiveRecord::Schema[8.0].define(version: 2025_08_31_223719) do
     t.decimal "realized_pnl", precision: 17, scale: 4
     t.decimal "market_price", precision: 10, scale: 4, null: false
     t.index ["user_id"], name: "index_transactions_on_user_id"
+    t.check_constraint "market_price >= 0::numeric", name: "market_price_non_negative"
+    t.check_constraint "quantity > 0", name: "quantity_positive"
+    t.check_constraint "transaction_type = ANY (ARRAY[0, 1, 2, 3])", name: "valid_transaction_type"
+    t.check_constraint "value > 0::numeric", name: "value_positive"
   end
 
   create_table "users", force: :cascade do |t|
@@ -77,6 +84,7 @@ ActiveRecord::Schema[8.0].define(version: 2025_08_31_223719) do
     t.decimal "balance", precision: 17, scale: 4, default: "0.0"
     t.string "username", limit: 20, null: false
     t.index "lower((username)::text)", name: "index_users_on_LOWER_username", unique: true
+    t.check_constraint "balance >= 0::numeric", name: "balance_non_negative"
   end
 
   add_foreign_key "portfolio_records", "users"
