@@ -201,7 +201,7 @@ RSpec.describe(MarketService) do
       allow(RedisService).to(receive(:safe_setex))
 
       response = instance_double(Net::HTTPResponse, code: "200", body: api_response_body)
-      http = instance_double(Net::HTTP, use_ssl: true, open_timeout: 1, read_timeout: 2)
+      http = instance_double(Net::HTTP)
       allow(http).to(receive(:use_ssl=))
       allow(http).to(receive(:open_timeout=))
       allow(http).to(receive(:read_timeout=))
