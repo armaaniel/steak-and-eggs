@@ -201,7 +201,12 @@ RSpec.describe(MarketService) do
       allow(RedisService).to(receive(:safe_setex))
 
       response = instance_double(Net::HTTPResponse, code: "200", body: api_response_body)
-      allow(Net::HTTP).to(receive(:get_response).and_return(response))
+      http = instance_double(Net::HTTP, use_ssl: true, open_timeout: 1, read_timeout: 2)
+      allow(http).to(receive(:use_ssl=))
+      allow(http).to(receive(:open_timeout=))
+      allow(http).to(receive(:read_timeout=))
+      allow(http).to(receive(:request).and_return(response))
+      allow(Net::HTTP).to(receive(:new).and_return(http))
 
       result = MarketService.marketdata(symbol: "TSLA")
 
@@ -213,7 +218,12 @@ RSpec.describe(MarketService) do
       allow(RedisService).to(receive(:safe_get).with("market:TSLA").and_return(nil))
 
       response = instance_double(Net::HTTPResponse, code: "500")
-      allow(Net::HTTP).to(receive(:get_response).and_return(response))
+      http = instance_double(Net::HTTP)
+      allow(http).to(receive(:use_ssl=))
+      allow(http).to(receive(:open_timeout=))
+      allow(http).to(receive(:read_timeout=))
+      allow(http).to(receive(:request).and_return(response))
+      allow(Net::HTTP).to(receive(:new).and_return(http))
 
       expect {
         MarketService.marketdata(symbol: "TSLA")
@@ -240,7 +250,12 @@ RSpec.describe(MarketService) do
       allow(RedisService).to(receive(:safe_setex))
 
       response = instance_double(Net::HTTPResponse, code: "200", body: api_response_body)
-      allow(Net::HTTP).to(receive(:get_response).and_return(response))
+      http = instance_double(Net::HTTP)
+      allow(http).to(receive(:use_ssl=))
+      allow(http).to(receive(:open_timeout=))
+      allow(http).to(receive(:read_timeout=))
+      allow(http).to(receive(:request).and_return(response))
+      allow(Net::HTTP).to(receive(:new).and_return(http))
 
       result = MarketService.companydata(symbol: "TSLA")
 
@@ -252,7 +267,12 @@ RSpec.describe(MarketService) do
       allow(RedisService).to(receive(:safe_get).with("company:TSLA").and_return(nil))
 
       response = instance_double(Net::HTTPResponse, code: "500")
-      allow(Net::HTTP).to(receive(:get_response).and_return(response))
+      http = instance_double(Net::HTTP)
+      allow(http).to(receive(:use_ssl=))
+      allow(http).to(receive(:open_timeout=))
+      allow(http).to(receive(:read_timeout=))
+      allow(http).to(receive(:request).and_return(response))
+      allow(Net::HTTP).to(receive(:new).and_return(http))
 
       expect {
         MarketService.companydata(symbol: "TSLA")
@@ -282,7 +302,12 @@ RSpec.describe(MarketService) do
       allow(RedisService).to(receive(:safe_setex))
 
       response = instance_double(Net::HTTPResponse, code: "200", body: api_response_body)
-      allow(Net::HTTP).to(receive(:get_response).and_return(response))
+      http = instance_double(Net::HTTP)
+      allow(http).to(receive(:use_ssl=))
+      allow(http).to(receive(:open_timeout=))
+      allow(http).to(receive(:read_timeout=))
+      allow(http).to(receive(:request).and_return(response))
+      allow(Net::HTTP).to(receive(:new).and_return(http))
 
       result = MarketService.chartdata(symbol: "TSLA")
 
@@ -296,7 +321,12 @@ RSpec.describe(MarketService) do
       allow(RedisService).to(receive(:safe_get).with("daily:TSLA").and_return(nil))
 
       response = instance_double(Net::HTTPResponse, code: "500")
-      allow(Net::HTTP).to(receive(:get_response).and_return(response))
+      http = instance_double(Net::HTTP)
+      allow(http).to(receive(:use_ssl=))
+      allow(http).to(receive(:open_timeout=))
+      allow(http).to(receive(:read_timeout=))
+      allow(http).to(receive(:request).and_return(response))
+      allow(Net::HTTP).to(receive(:new).and_return(http))
 
       expect {
         MarketService.chartdata(symbol: "TSLA")
