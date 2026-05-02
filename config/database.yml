@@ -2,6 +2,9 @@ default: &default
   adapter: postgresql
   encoding: unicode
   pool: 10
+  connect_timeout: 2
+  # consider lock_timeout (kill query that takes longer than N to acqure lock)
+  # and statement_timeout (kill query that takes longer than N)
 
 development:
   <<: *default

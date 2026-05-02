@@ -317,6 +317,18 @@ resource "aws_iam_role" "ecs_task_role" {
   })
 }
 
+resource "aws_iam_role" "scheduler_role" {
+	name = "steakneggs-scheduler-role"
+	assume_role_policy = jsonencode({
+		Version = "2012-10-17"
+		Statement = [{
+			Action = "sts:AssumeRole"
+			Effect = "Allow"
+			Principal = { Service = "scheduler.amazonaws.com" }
+		}]
+	})
+}
+
 resource "aws_iam_role_policy" "ecs_exec" {
   name = "ecs-exec"
   role = aws_iam_role.ecs_task_role.id
@@ -335,6 +347,18 @@ resource "aws_iam_role_policy" "ecs_exec" {
         Resource = "*"
       }
     ]
+  })
+}
+
+resource "aws_iam_role_policy" "scheduler_ecs" {
+  role = aws_iam_role.scheduler_role.id
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect   = "Allow"
+      Action   = ["ecs:RunTask", "iam:PassRole"]
+      Resource = "*"
+    }]
   })
 }
 
@@ -568,6 +592,38 @@ resource "aws_ecs_service" "ingester" {
     assign_public_ip = true
   }
 
+}
+
+resource "aws_scheduler_schedule" "record" {
+  name                = "record"
+  schedule_expression = "cron(0 5 * * ? *)"
+
+  flexible_time_window {
+    mode = "OFF"
+  }
+
+  target {
+    arn      = aws_ecs_cluster.main.arn
+    role_arn = aws_iam_role.scheduler_role.arn
+
+    ecs_parameters {
+      task_definition_arn = aws_ecs_task_definition.steakneggs.arn
+      launch_type         = "FARGATE"
+
+      network_configuration {
+        subnets          = [aws_subnet.alb_ecs_public.id, aws_subnet.alb_ecs_public_b.id]
+        security_groups  = [aws_security_group.ecs.id]
+        assign_public_ip = true
+      }
+    }
+
+    input = jsonencode({
+      containerOverrides = [{
+        name    = "steakneggs"
+        command = ["rake", "record"]
+      }]
+    })
+  }
 }
 
 variable "db_password" {

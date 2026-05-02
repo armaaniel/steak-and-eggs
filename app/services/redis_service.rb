@@ -13,8 +13,8 @@ class RedisService
     nil
   end
 
-  def self.safe_del(key)
-    REDIS.del(key)
+  def self.safe_del(*keys)
+    REDIS.del(*keys)
   rescue Redis::BaseError => e
     Sentry.capture_exception(e)
     nil

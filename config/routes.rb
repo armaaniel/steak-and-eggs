@@ -24,7 +24,6 @@ Rails.application.routes.draw do
     post('stocks/:symbol/sell', to: 'stocks#sell')
   end
 
-  post('/record', to: 'system#record')
   get('/', to: 'system#health')
   mount ActionCable.server => '/cable'
   match '*path', to: 'system#not_found', via: :all

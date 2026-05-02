@@ -106,7 +106,13 @@ class MarketService
       payload[:used_api] = true
 
       uri=URI("https://api.polygon.io/v3/snapshot?ticker=#{symbol}&apiKey=#{ENV['API_KEY']}")
-      response = Net::HTTP.get_response(uri)
+      
+      http = Net::HTTP.new(uri.host, uri.port)
+      http.use_ssl = true
+      http.open_timeout = 1
+      http.read_timeout = 2
+      
+      response = http.request(Net::HTTP::Get.new(uri))
       raise ApiError unless response.code == '200'
 
       body = JSON.parse(response.body)
@@ -133,7 +139,13 @@ class MarketService
       payload[:used_api] = true
 
       uri=URI("https://api.polygon.io/v3/reference/tickers/#{symbol}?apiKey=#{ENV['API_KEY']}")
-      response = Net::HTTP.get_response(uri)
+      
+      http = Net::HTTP.new(uri.host, uri.port)
+      http.use_ssl = true
+      http.open_timeout = 1
+      http.read_timeout = 2
+      
+      response = http.request(Net::HTTP::Get.new(uri))
       raise ApiError unless response.code == '200'
 
       body = JSON.parse(response.body)
@@ -157,7 +169,13 @@ class MarketService
       payload[:used_api] = true
 
       uri=URI("https://api.polygon.io/v2/aggs/ticker/#{symbol}/range/1/day/#{Date.current-5.months}/#{Date.current}?apiKey=#{ENV['API_KEY']}")
-      response=Net::HTTP.get_response(uri)
+      
+      http = Net::HTTP.new(uri.host, uri.port)
+      http.use_ssl = true
+      http.open_timeout = 1
+      http.read_timeout = 2
+      
+      response = http.request(Net::HTTP::Get.new(uri))
       raise ApiError unless response.code == '200'
 
       body=JSON.parse(response.body)
