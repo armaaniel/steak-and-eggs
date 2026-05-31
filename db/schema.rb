@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_04_23_194240) do
+ActiveRecord::Schema[8.0].define(version: 2026_05_30_201512) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -72,6 +72,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_04_23_194240) do
     t.string "symbol", null: false
     t.decimal "realized_pnl", precision: 17, scale: 4
     t.decimal "market_price", precision: 10, scale: 4, null: false
+    t.decimal "average_price", precision: 10, scale: 4
     t.index ["user_id"], name: "index_transactions_on_user_id"
     t.check_constraint "market_price >= 0::numeric", name: "market_price_non_negative"
     t.check_constraint "quantity > 0", name: "quantity_positive"
