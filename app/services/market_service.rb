@@ -27,10 +27,11 @@ class MarketService
 
             position.update!(average_price: new_average, shares: new_quantity)
           else
-            Position.create!(user_id:user_id, symbol: symbol, shares: quantity, name: name, average_price:stock_price)
+            new_average = stock_price
+            Position.create!(user_id:user_id, symbol: symbol, shares: quantity, name: name, average_price:new_average)
           end
           transaction = Transaction.create!(symbol: symbol, quantity: quantity, value: trade_value, transaction_type: 'Buy', user_id: user_id,
-          market_price:stock_price)
+          market_price:stock_price, average_price:new_average)
           
           end
           CacheService.invalidate_user(user_id: user_id)
@@ -58,6 +59,7 @@ class MarketService
         raise(InsufficientSharesError) if position.nil? || position.shares < quantity
 
         realized_pnl = (trade_value - (position.average_price * quantity))
+        avg_price = position.average_price
 
         user.balance += trade_value
         user.save!
@@ -68,7 +70,7 @@ class MarketService
           position.update!(shares: position.shares - quantity)
         end
         transaction = Transaction.create!(symbol:symbol, quantity:quantity, value:trade_value, transaction_type:'Sell', user_id:user_id,
-        realized_pnl: realized_pnl, market_price:stock_price)
+        realized_pnl: realized_pnl, market_price:stock_price, average_price:avg_price)
         
         end
         CacheService.invalidate_user(user_id: user_id)

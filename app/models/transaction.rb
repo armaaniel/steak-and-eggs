@@ -31,7 +31,7 @@ class Transaction < ApplicationRecord
       values = data.map do |transaction|
         {id: transaction.id, value: transaction.value, quantity: transaction.quantity, symbol: transaction.symbol,
           transaction_type: transaction.transaction_type, date: transaction.created_at.strftime("%m/%d/%Y %I:%M %p"),
-          market_price:transaction.market_price, realized_pnl:transaction.realized_pnl}
+          market_price:transaction.market_price, realized_pnl:transaction.realized_pnl, average_price:transaction.average_price}
       end
 
       RedisService.safe_setex("activity:#{user_id}", 6.hours.to_i, values.to_json)
