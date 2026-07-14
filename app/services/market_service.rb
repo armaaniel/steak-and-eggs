@@ -3,7 +3,7 @@ class MarketService
   class InsufficientSharesError < StandardError; end
   class ApiError < StandardError; end
 
-  def self.buy(symbol:, quantity:, user_id:, name:)
+  def self.buy(symbol:, quantity:, user_id:)
     stock_string = RedisService.safe_get("price:#{symbol}")
     stock_price = BigDecimal(stock_string || "0")
     raise(StandardError) if stock_price <=0
@@ -28,7 +28,7 @@ class MarketService
             position.update!(average_price: new_average, shares: new_quantity)
           else
             new_average = stock_price
-            Position.create!(user_id:user_id, symbol: symbol, shares: quantity, name: name, average_price:new_average)
+            Position.create!(user_id:user_id, symbol: symbol, shares: quantity, average_price:new_average)
           end
           transaction = Transaction.create!(symbol: symbol, quantity: quantity, value: trade_value, transaction_type: 'Buy', user_id: user_id,
           market_price:stock_price, average_price:new_average)
@@ -174,8 +174,8 @@ class MarketService
       
       http = Net::HTTP.new(uri.host, uri.port)
       http.use_ssl = true
-      http.open_timeout = 1
-      http.read_timeout = 2
+      http.open_timeout = 0.5
+      http.read_timeout = 1.5
       
       response = http.request(Net::HTTP::Get.new(uri))
       raise ApiError unless response.code == '200'

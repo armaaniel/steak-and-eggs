@@ -5,7 +5,7 @@ RSpec.describe(PositionService) do
 
   describe("find_position") do
     it("returns position data when position exists") do
-      Position.create!(user_id: user.id, symbol: "TSLA", shares: 10, average_price: 100, name: "Tesla, Inc.")
+      Position.create!(user_id: user.id, symbol: "TSLA", shares: 10, average_price: 100)
 
       result = PositionService.find_position(symbol: "TSLA", user_id: user.id)
 
@@ -115,12 +115,14 @@ RSpec.describe(PositionService) do
       allow(RedisService).to(receive(:safe_get).with("positions:#{user.id}").and_return(nil))
       allow(RedisService).to(receive(:safe_setex))
 
-      Position.create!(user_id: user.id, symbol: "TSLA", shares: 10, average_price: 100, name: "Tesla, Inc.")
+      Ticker.create!(symbol: "TSLA", name: "Tesla, Inc.", ticker_type: "CS", exchange: "NASDAQ", currency: "USD")
+      Position.create!(user_id: user.id, symbol: "TSLA", shares: 10, average_price: 100)
 
       result = PositionService.send(:find_positions, user_id: user.id)
 
       expect(result.length).to(eq(1))
       expect(result[0][:symbol]).to(eq("TSLA"))
+      expect(result[0][:name]).to(eq("Tesla, Inc."))
       expect(RedisService).to(have_received(:safe_setex).with("positions:#{user.id}", 24.hours.to_i, anything))
     end
 

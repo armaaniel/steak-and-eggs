@@ -11,7 +11,7 @@ RSpec.describe("Stocks", type: :request) do
     end
 
     it "returns 201 with trade data" do
-      post "/stocks/TSLA/buy", params: { quantity: 5, name: "Tesla, Inc." }, headers: headers
+      post "/stocks/TSLA/buy", params: { quantity: 5 }, headers: headers
 
       expect(response).to(have_http_status(201))
 
@@ -23,21 +23,21 @@ RSpec.describe("Stocks", type: :request) do
     end
 
     it "returns 422 when quantity is zero" do
-      post "/stocks/TSLA/buy", params: { quantity: 0, name: "Tesla" }, headers: headers
+      post "/stocks/TSLA/buy", params: { quantity: 0 }, headers: headers
 
       expect(response).to(have_http_status(422))
       expect(JSON.parse(response.body)["error"]).to(eq("Invalid quantity"))
     end
 
     it "returns 422 when quantity is negative" do
-      post "/stocks/TSLA/buy", params: { quantity: -5, name: "Tesla" }, headers: headers
+      post "/stocks/TSLA/buy", params: { quantity: -5 }, headers: headers
 
       expect(response).to(have_http_status(422))
       expect(JSON.parse(response.body)["error"]).to(eq("Invalid quantity"))
     end
 
     it "returns 422 when quantity is blank" do
-      post "/stocks/TSLA/buy", params: { name: "Tesla" }, headers: headers
+      post "/stocks/TSLA/buy", params: {}, headers: headers
 
       expect(response).to(have_http_status(422))
       expect(JSON.parse(response.body)["error"]).to(eq("Invalid quantity"))
@@ -46,7 +46,7 @@ RSpec.describe("Stocks", type: :request) do
     it "returns 402 on insufficient funds" do
       user.update!(balance: 1)
 
-      post "/stocks/TSLA/buy", params: { quantity: 5, name: "Tesla" }, headers: headers
+      post "/stocks/TSLA/buy", params: { quantity: 5 }, headers: headers
 
       expect(response).to(have_http_status(402))
       expect(JSON.parse(response.body)["error"]).to(eq("Insufficient funds for this transaction"))
@@ -55,14 +55,14 @@ RSpec.describe("Stocks", type: :request) do
     it "returns 503 on unexpected service error" do
       allow(RedisService).to(receive(:safe_get).with("price:TSLA").and_return(nil))
 
-      post "/stocks/TSLA/buy", params: { quantity: 5, name: "Tesla" }, headers: headers
+      post "/stocks/TSLA/buy", params: { quantity: 5 }, headers: headers
 
       expect(response).to(have_http_status(503))
       expect(JSON.parse(response.body)["error"]).to(eq("Service temporarily unavailable"))
     end
 
     it "returns 401 without auth token" do
-      post "/stocks/TSLA/buy", params: { quantity: 5, name: "Tesla" }
+      post "/stocks/TSLA/buy", params: { quantity: 5 }
 
       expect(response).to(have_http_status(401))
     end
@@ -72,7 +72,7 @@ RSpec.describe("Stocks", type: :request) do
     before do
       allow(RedisService).to(receive(:safe_get).with("price:TSLA").and_return("100"))
       allow(CacheService).to(receive(:invalidate_user))
-      Position.create!(user_id: user.id, symbol: "TSLA", shares: 20, average_price: 80, name: "Tesla, Inc.")
+      Position.create!(user_id: user.id, symbol: "TSLA", shares: 20, average_price: 80)
     end
 
     it "returns 201 with trade data including realized pnl" do
@@ -259,7 +259,7 @@ RSpec.describe("Stocks", type: :request) do
 
   describe "GET /stocks/:symbol/userdata" do
     it "returns position and balance when position exists" do
-      Position.create!(user_id: user.id, symbol: "TSLA", shares: 10, average_price: 100, name: "Tesla, Inc.")
+      Position.create!(user_id: user.id, symbol: "TSLA", shares: 10, average_price: 100)
 
       get "/stocks/TSLA/userdata", headers: headers
 

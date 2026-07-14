@@ -75,15 +75,15 @@ class UserService
       UserService.deposit(amount:250_000, user_id: user_id)
 
       stocks = [
-          { symbol: "GOOG",  quantity: 10, name: "Alphabet Inc. Class C Capital Stock" },
-          { symbol: "NVDA",  quantity: 5,  name: "Nvidia Corp" },
-          { symbol: "TSLA",  quantity: 8,  name: "Tesla, Inc." },
-          { symbol: "MSFT",  quantity: 12, name: "Microsoft Corp" },
-          { symbol: "AMZN",  quantity: 6,  name: "Amazon.Com Inc." },
+          { symbol: "GOOG",  quantity: 10 },
+          { symbol: "NVDA",  quantity: 5  },
+          { symbol: "TSLA",  quantity: 8  },
+          { symbol: "MSFT",  quantity: 12 },
+          { symbol: "AMZN",  quantity: 6  },
         ]
         
         stocks.each do |stock|
-          MarketService.buy(symbol: stock[:symbol], quantity: stock[:quantity], user_id: user_id, name: stock[:name])
+          MarketService.buy(symbol: stock[:symbol], quantity: stock[:quantity], user_id: user_id)
         rescue => e
           Sentry.capture_exception(e)
           next

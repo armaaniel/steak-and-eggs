@@ -10,7 +10,7 @@ RSpec.describe(MarketService) do
 
   describe("buy") do
     it("creates a position and deducts balance") do
-      result = MarketService.buy(symbol: "TSLA", quantity: 10, user_id: user.id, name: "Tesla, Inc.")
+      result = MarketService.buy(symbol: "TSLA", quantity: 10, user_id: user.id)
 
       expect(user.reload.balance).to(eq(9000))
 
@@ -31,9 +31,9 @@ RSpec.describe(MarketService) do
     end
 
     it("averages into an existing position") do
-      Position.create!(user_id: user.id, symbol: "TSLA", shares: 10, average_price: 80, name: "Tesla, Inc.")
+      Position.create!(user_id: user.id, symbol: "TSLA", shares: 10, average_price: 80)
 
-      result = MarketService.buy(symbol: "TSLA", quantity: 10, user_id: user.id, name: "Tesla, Inc.")
+      result = MarketService.buy(symbol: "TSLA", quantity: 10, user_id: user.id)
 
       position = Position.find_by(user_id: user.id, symbol: "TSLA")
       expect(position.shares).to(eq(20))
@@ -48,7 +48,7 @@ RSpec.describe(MarketService) do
       user.update!(balance: 500)
 
       expect {
-        MarketService.buy(symbol: "TSLA", quantity: 10, user_id: user.id, name: "Tesla, Inc.")
+        MarketService.buy(symbol: "TSLA", quantity: 10, user_id: user.id)
       }.to(raise_error(MarketService::InsufficientFundsError))
 
       expect(user.reload.balance).to(eq(500))
@@ -60,7 +60,7 @@ RSpec.describe(MarketService) do
       allow(RedisService).to(receive(:safe_get).with("price:TSLA").and_return("0"))
 
       expect {
-        MarketService.buy(symbol: "TSLA", quantity: 10, user_id: user.id, name: "Tesla, Inc.")
+        MarketService.buy(symbol: "TSLA", quantity: 10, user_id: user.id)
       }.to(raise_error(StandardError))
     end
 
@@ -68,19 +68,19 @@ RSpec.describe(MarketService) do
       allow(RedisService).to(receive(:safe_get).with("price:TSLA").and_return(nil))
 
       expect {
-        MarketService.buy(symbol: "TSLA", quantity: 10, user_id: user.id, name: "Tesla, Inc.")
+        MarketService.buy(symbol: "TSLA", quantity: 10, user_id: user.id)
       }.to(raise_error(StandardError))
     end
 
     it("invalidates cache") do
       expect(CacheService).to(receive(:invalidate_user).with(user_id: user.id))
 
-      MarketService.buy(symbol: "TSLA", quantity: 10, user_id: user.id, name: "Tesla, Inc.")
+      MarketService.buy(symbol: "TSLA", quantity: 10, user_id: user.id)
     end
   end
   
   describe("sell") do
-    let!(:position) { Position.create!(user_id: user.id, symbol: "TSLA", shares: 20, average_price: 80, name: "Tesla, Inc.") }
+    let!(:position) { Position.create!(user_id: user.id, symbol: "TSLA", shares: 20, average_price: 80) }
 
     it("sells partial shares and credits balance") do
       result = MarketService.sell(symbol: "TSLA", quantity: 10, user_id: user.id)

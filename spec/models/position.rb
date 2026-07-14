@@ -4,7 +4,7 @@ RSpec.describe(Position, type: :model) do
   let(:user) { create(:user) }
 
   let(:valid_position) do
-    Position.new(user: user, symbol: "TSLA", shares: 10, average_price: 100, name: "Tesla, Inc.")
+    Position.new(user: user, symbol: "TSLA", shares: 10, average_price: 100)
   end
 
   describe "validations" do
@@ -45,7 +45,7 @@ RSpec.describe(Position, type: :model) do
     it "requires symbol to be unique per user" do
       valid_position.save!
 
-      duplicate = Position.new(user: user, symbol: "TSLA", shares: 5, average_price: 50, name: "Tesla, Inc.")
+      duplicate = Position.new(user: user, symbol: "TSLA", shares: 5, average_price: 50)
       expect(duplicate).not_to(be_valid)
     end
 
@@ -53,7 +53,7 @@ RSpec.describe(Position, type: :model) do
       valid_position.save!
 
       other_user = create(:user)
-      other_position = Position.new(user: other_user, symbol: "TSLA", shares: 5, average_price: 50, name: "Tesla, Inc.")
+      other_position = Position.new(user: other_user, symbol: "TSLA", shares: 5, average_price: 50)
       expect(other_position).to(be_valid)
     end
   end

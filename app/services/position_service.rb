@@ -87,9 +87,11 @@ class PositionService
       
       payload[:used_db] = true
       position = Position.where(user_id: user_id)
+        .joins("LEFT JOIN tickers ON tickers.symbol = positions.symbol")
+        .pluck("positions.symbol", "positions.shares", "tickers.name", "positions.average_price")
       
-      positions = position.map do |n|
-        {symbol: n.symbol, shares: n.shares, name: n.name, average_price:n.average_price}
+      positions = position.map do |symbol, shares, name, average_price|
+        {symbol: symbol, shares: shares, name: name, average_price: average_price}
       end
 
       RedisService.safe_setex("positions:#{user_id}", 24.hours.to_i, positions.to_json)

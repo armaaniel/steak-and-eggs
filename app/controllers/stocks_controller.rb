@@ -5,8 +5,7 @@ class StocksController < ApplicationController
     quantity = params[:quantity].to_i
     return render(json: {error: "Invalid quantity"}, status: 422) if params[:quantity].blank? || quantity <= 0
 
-    data = MarketService.buy(symbol:params[:symbol], user_id:@current_user.id, quantity:quantity,
-    name:params[:name])
+    data = MarketService.buy(symbol:params[:symbol], user_id:@current_user.id, quantity:quantity)
 
     render(json: data, status: 201)
 
