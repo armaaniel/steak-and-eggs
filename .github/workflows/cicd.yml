@@ -17,7 +17,7 @@ jobs:
           ruby-version: .ruby-version
           bundler-cache: true
       - name: Scan for security vulnerabilities
-        run: bin/brakeman --no-pager
+        run: bundle exec brakeman --no-pager
 
   test:
     runs-on: ubuntu-latest

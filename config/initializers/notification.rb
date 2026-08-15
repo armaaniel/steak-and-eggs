@@ -30,7 +30,7 @@ Rails.application.config.after_initialize do
     end
   end
 
-  ActiveSupport::Notifications.subscribe(
+  ActiveSupport::Notifications.monotonic_subscribe(
     /\A(PositionService|Ticker|Transaction|MarketService|UserService|GraphQL)\.|\Aprocess_action\.action_controller\z/
   ) do |name, start, finish, id, payload|
     duration = (finish - start) * 1000
@@ -60,8 +60,12 @@ Rails.application.config.after_initialize do
     when /MarketService/
       current_request[id] ||= {}
 
-      if name == "MarketService.buy" || name == "MarketService.sell" || name == "MarketService.marketprice"
+      if name == "MarketService.sell" || name == "MarketService.marketprice"
         current_request[id][name] = {duration: duration}
+      elsif name == "MarketService.buy"
+        entry = (current_request[id][name] ||= {duration: 0.0, calls: 0})
+        entry[:duration] += duration
+        entry[:calls] += 1
       else
         current_request[id][name] = {duration: duration, used_redis: payload[:used_redis], used_api: payload[:used_api],
           symbol: payload[:symbol]}
@@ -76,6 +80,7 @@ Rails.application.config.after_initialize do
       current_request[id][name] = {duration: duration, operation: payload[:operation]}
 
     when 'process_action.action_controller'
+      breakdown = current_request.delete(id)  
       next if payload[:action] == 'not_found'
       next unless TRACKED_ROUTES.any? { |route| payload[:path]&.start_with?(route) }
 
@@ -87,10 +92,8 @@ Rails.application.config.after_initialize do
         status: payload[:status],
         controller: payload[:controller],
         action: payload[:action],
-        breakdown: current_request[id].presence
+        breakdown: breakdown.presence
       })
-
-      current_request.delete(id)
 
     end
   rescue => e
