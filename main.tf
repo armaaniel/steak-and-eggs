@@ -626,6 +626,38 @@ resource "aws_scheduler_schedule" "record" {
   }
 }
 
+resource "aws_scheduler_schedule" "prune_traces" {
+  name                = "prune_traces"
+  schedule_expression = "cron(0 6 * * ? *)"
+
+  flexible_time_window {
+    mode = "OFF"
+  }
+
+  target {
+    arn      = aws_ecs_cluster.main.arn
+    role_arn = aws_iam_role.scheduler_role.arn
+
+    ecs_parameters {
+      task_definition_arn = aws_ecs_task_definition.steakneggs.arn
+      launch_type         = "FARGATE"
+
+      network_configuration {
+        subnets          = [aws_subnet.alb_ecs_public.id, aws_subnet.alb_ecs_public_b.id]
+        security_groups  = [aws_security_group.ecs.id]
+        assign_public_ip = true
+      }
+    }
+
+    input = jsonencode({
+      containerOverrides = [{
+        name    = "steakneggs"
+        command = ["rake", "prune_traces"]
+      }]
+    })
+  }
+}
+
 variable "db_password" {
   type      = string
   sensitive = true
