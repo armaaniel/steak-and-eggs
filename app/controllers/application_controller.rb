@@ -25,7 +25,7 @@ class ApplicationController < ActionController::API
 
   def append_info_to_payload(payload)
     super
-    payload[:user_id] = @current_user&.id
+    payload[:user_id] = @current_user&.id || @traced_user_id
     payload[:synthetic] = synthetic?
 
   rescue => e

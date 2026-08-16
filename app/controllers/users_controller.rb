@@ -6,6 +6,7 @@ class UsersController < ApplicationController
 
     if user
       token = JWT.encode({user_id: user.id}, Rails.application.secret_key_base, 'HS256')
+      @traced_user_id = user.id
       render(json: {token: token, username: user.username })
     else
       render(json: {error: 'Your email or password was incorrect. Please try again' }, status: 401)
@@ -18,6 +19,8 @@ class UsersController < ApplicationController
 
   def signup
     user = UserService.signup(username:params[:username], password:params[:password])
+    
+    @traced_user_id = user.id
 
     token = JWT.encode({user_id: user.id}, Rails.application.secret_key_base, 'HS256')
     render(json: {token: token, username: user.username})

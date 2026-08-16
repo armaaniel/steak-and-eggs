@@ -42,7 +42,7 @@ module Types
     def trace_breakdown(endpoint:)
       route = normalize_endpoint(endpoint)
 
-      query = Trace.where("endpoint LIKE ?", route).where.not("breakdown::text = ? OR breakdown IS NULL", '{}')
+      query = Trace.where("endpoint LIKE ?", route).where.not("breakdown::text = ? OR breakdown IS NULL", '{}').where(synthetic: false)
 
       {
         redis_query: query.where("breakdown::text LIKE ?", '%"used_redis":true%').order(created_at: :desc),
@@ -54,9 +54,13 @@ module Types
       route = normalize_endpoint(endpoint)
 
       if endpoint == 'GET /stocks/symbol'
-        Trace.where("endpoint ILIKE ? AND endpoint NOT LIKE ?", route, 'GET /stocks/%/%')&.order(created_at: :desc)
+        Trace.where("endpoint ILIKE ? AND endpoint NOT LIKE ?", route, 'GET /stocks/%/%')
+        .where(synthetic: false)
+        .order(created_at: :desc)
       else
-      Trace.where("endpoint ILIKE ?", route)&.order(created_at: :desc)
+      Trace.where("endpoint ILIKE ?", route)
+      .where(synthetic: false)
+      .order(created_at: :desc)
       end
     end
 
@@ -69,17 +73,17 @@ module Types
           PERCENTILE_CONT(0.50) WITHIN GROUP (ORDER BY duration) as p50,
           PERCENTILE_CONT(0.95) WITHIN GROUP (ORDER BY duration) as p95,
           PERCENTILE_CONT(0.99) WITHIN GROUP (ORDER BY duration) as p99,
-          COUNT(*) FILTER (WHERE status >= 400) as error_count
+          COUNT(*) FILTER (WHERE status >= 500) as error_count
         FROM traces
       SQL
 
       sanitized = if endpoint == 'GET /stocks/symbol'
         ActiveRecord::Base.sanitize_sql_array(
-          ["#{base_sql} WHERE endpoint ILIKE ? AND endpoint NOT LIKE ?", route, 'GET /stocks/%/%']
+          ["#{base_sql} WHERE NOT synthetic AND endpoint ILIKE ? AND endpoint NOT LIKE ?", route, 'GET /stocks/%/%']
         )
       else
         ActiveRecord::Base.sanitize_sql_array(
-          ["#{base_sql} WHERE endpoint ILIKE ?", route]
+          ["#{base_sql} WHERE NOT synthetic AND endpoint ILIKE ?", route]
         )
       end
 
@@ -94,7 +98,7 @@ module Types
     end
 
     def latent_traces
-      Trace.where.not(endpoint: ['POST /graphql', 'POST /record']).order(duration: :desc).limit(1000)
+      Trace.where.not(endpoint: ['POST /graphql', 'POST /record']).where(synthetic: false).order(duration: :desc).limit(1000)
     end
 
     def trace_summary
@@ -121,6 +125,7 @@ module Types
             1
           ) as cache_hit_rate
         FROM traces
+        WHERE NOT synthetic
         GROUP BY route
         ORDER BY total_requests DESC
       SQL
