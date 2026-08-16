@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_07_13_120000) do
+ActiveRecord::Schema[8.0].define(version: 2026_08_15_191755) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -59,6 +59,8 @@ ActiveRecord::Schema[8.0].define(version: 2026_07_13_120000) do
     t.string "controller"
     t.string "action"
     t.json "breakdown"
+    t.bigint "user_id"
+    t.boolean "synthetic", default: false, null: false
   end
 
   create_table "transactions", force: :cascade do |t|

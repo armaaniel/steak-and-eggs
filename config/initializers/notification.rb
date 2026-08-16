@@ -92,6 +92,8 @@ Rails.application.config.after_initialize do
         status: payload[:status],
         controller: payload[:controller],
         action: payload[:action],
+        user_id: payload[:user_id],
+        synthetic: payload[:synthetic] || false,
         breakdown: breakdown.presence
       })
 

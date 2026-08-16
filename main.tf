@@ -480,7 +480,7 @@ resource "aws_ecs_task_definition" "steakneggs" {
           name  = "REDIS_URL",
 					value = "rediss://${aws_elasticache_replication_group.redis.primary_endpoint_address}:6379/0"
 				},					
-        { name = "GQL_KEY", value = var.gql_key },
+        { name = "SYNTHETIC_KEY", value = var.synthetic_key },
         { name = "API_KEY", value = var.api_key },
         { name = "SENTRY_DSN", value = var.sentry_dsn },
 				{ name = "SECRET_KEY_BASE", value = var.secret_key_base }
@@ -668,7 +668,7 @@ variable "api_key" {
   sensitive = true
 }
 
-variable "gql_key" {
+variable "synthetic_key" {
   type = string
 	sensitive = true
 }
