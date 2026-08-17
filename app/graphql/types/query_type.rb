@@ -172,7 +172,7 @@ module Types
       step   = config[:step]                      # bucket width in seconds
       sql = <<~SQL
         SELECT
-          to_timestamp(floor(extract(epoch FROM created_at) / ?) * ?) AS bucket,
+          to_timestamp(floor(extract(epoch FROM created_at) / ?) * ?)::bigint AS bucket,
           COUNT(*) FILTER (WHERE endpoint = 'POST /signup')           AS started,
           COUNT(*) FILTER (WHERE endpoint = 'DELETE /delete_account') AS completed,
           COUNT(*) FILTER (WHERE status >= 500)                       AS failures
@@ -189,7 +189,7 @@ module Types
         ActiveRecord::Base.sanitize_sql_array([sql, step, step, cutoff])
       )
       # keyed on epoch seconds — sidesteps Time vs TimeWithZone in hash lookups
-      by_bucket = rows.index_by { |r| Time.zone.parse(r['bucket']).to_i }
+      by_bucket = rows.index_by { |r| r['bucket'].to_i }
       # bucket N steps back from the one currently filling
       current = Time.at((Time.now.to_i / step) * step).utc
       config[:count].downto(1).map do |a|   # count buckets, oldest → newest
