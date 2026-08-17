@@ -1,5 +1,19 @@
 module Types
   class QueryType < Types::BaseObject
+    
+    PROBE_INTERVAL = 300  # seconds between synthetic probe runs (5 min)
+
+    # step  = width of one bucket, in seconds
+    # count = how many buckets to render (the bars on the chart)
+    RANGES = {
+      '1h'  => {step: 300,   count: 12},  # 12 × 5 min
+      '12h' => {step: 3600,  count: 12},  # 12 × 1 hr
+      '24h' => {step: 3600,  count: 24},  # 24 × 1 hr
+      '7d'  => {step: 21600, count: 28},  # 28 × 6 hr
+      '14d' => {step: 43200, count: 28},  # 28 × 12 hr
+      '30d' => {step: 86400, count: 30}   # 30 × 1 day
+    }.freeze
+    
     field(:trace_summary, [Types::TraceSummaryType]) do
       description('fetch trace data by routes')
     end
@@ -26,7 +40,18 @@ module Types
       argument(:endpoint, String)
       description('fetch trace statistics')
     end
-
+    
+    field(:synthetic_buckets, [Types::SyntheticBucketType]) do
+      argument(:range, String, required: false, default_value: '1h')
+      description('probe runs per time bucket')
+    end
+    
+    field(:synthetic_runs, [Types::SyntheticRunType]) do
+      argument(:range, String, required: false, default_value: '1h')
+      argument(:bucket, GraphQL::Types::ISO8601DateTime)
+      description('get individual runs by time bucket')
+    end
+    
     def connections
       ActionCable.server.connections.map do |connection|
         {
@@ -140,6 +165,63 @@ module Types
           cache_hit_rate: row['route'].start_with?('POST') ? nil : row['cache_hit_rate']&.to_f
         }
       end
+    end
+    
+    def synthetic_buckets(range: '1h')
+      config = RANGES.fetch(range, RANGES['1h'])  # unknown range falls back to 1h
+      step   = config[:step]                      # bucket width in seconds
+      sql = <<~SQL
+        SELECT
+          to_timestamp(floor(extract(epoch FROM created_at) / ?) * ?) AS bucket,
+          COUNT(*) FILTER (WHERE endpoint = 'POST /signup')           AS started,
+          COUNT(*) FILTER (WHERE endpoint = 'DELETE /delete_account') AS completed,
+          COUNT(*) FILTER (WHERE status >= 500)                       AS failures
+        FROM traces
+        WHERE synthetic
+          AND created_at > ?
+        GROUP BY bucket
+        ORDER BY bucket
+      SQL
+      # one bucket of slack, so the oldest bar drawn is backed by a full window
+      cutoff = Time.now.utc - (step * (config[:count] + 1))
+      rows = ActiveRecord::Base.connection.execute(
+        # first element is the query text, the rest fill its ? left to right, escaped
+        ActiveRecord::Base.sanitize_sql_array([sql, step, step, cutoff])
+      )
+      # keyed on epoch seconds — sidesteps Time vs TimeWithZone in hash lookups
+      by_bucket = rows.index_by { |r| Time.zone.parse(r['bucket']).to_i }
+      # bucket N steps back from the one currently filling
+      current = Time.at((Time.now.to_i / step) * step).utc
+      config[:count].downto(1).map do |a|   # count buckets, oldest → newest
+        bucket = current - (a * step)
+        row    = by_bucket[bucket.to_i]
+        {
+          bucket: bucket,
+          started:   row ? row['started'].to_i   : 0,
+          completed: row ? row['completed'].to_i : 0,
+          failures:  row ? row['failures'].to_i  : 0,
+          expected:  step / PROBE_INTERVAL  # probe runs that should land in one bucket
+        }
+      end
+    end
+    
+    def synthetic_runs(bucket:, range: '1h')
+      step = RANGES.fetch(range, RANGES['1h'])[:step]
+      Trace.where(synthetic: true)
+           .where.not(user_id: nil)
+           .where(created_at: bucket...(bucket + step.seconds))
+           .group(:user_id)
+           .pluck(
+             :user_id,
+             Arel.sql('MIN(created_at)'),
+             Arel.sql('COUNT(*)'),
+             Arel.sql('COUNT(*) FILTER (WHERE status >= 500)'),
+             Arel.sql("bool_or(endpoint = 'DELETE /delete_account')")
+           )
+           .map { |id, started, count, failures, completed|
+             {user_id: id, started_at: started, request_count: count,
+              failures: failures, completed: completed}
+           }
     end
 
     private
