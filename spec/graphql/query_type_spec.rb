@@ -279,7 +279,7 @@ RSpec.describe(Types::QueryType) do
       expect(stats["p99"]).to(be_a(Float))
     end
 
-    it("computes error_rate from status >= 400") do
+    it("computes error_rate from status >= 500") do
       Trace.create!(endpoint: "GET /users", duration: 50.0, status: 200)
       Trace.create!(endpoint: "GET /users", duration: 60.0, status: 500)
       Trace.create!(endpoint: "GET /users", duration: 70.0, status: 404)
@@ -288,7 +288,7 @@ RSpec.describe(Types::QueryType) do
       result = execute_query(endpoint: "GET /users")
       stats = result.dig("data", "traceStats")
 
-      expect(stats["errorRate"]).to(eq(50.0))
+      expect(stats["errorRate"]).to(eq(25.0))
     end
 
     it("returns zero error_rate when all requests succeed") do
