@@ -12,7 +12,7 @@ module Types
       '7d'  => {step: 21600, count: 28},  # 28 × 6 hr
       '14d' => {step: 43200, count: 28},  # 28 × 12 hr
       '30d' => {step: 86400, count: 30}   # 30 × 1 day
-    }.freeze
+    }
     
     field(:trace_summary, [Types::TraceSummaryType]) do
       description('fetch trace data by routes')
