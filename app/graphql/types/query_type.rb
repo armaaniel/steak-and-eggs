@@ -174,7 +174,7 @@ module Types
         SELECT
           floor(extract(epoch FROM created_at) / ?) * ? AS bucket,
           COUNT(*) FILTER (WHERE endpoint = 'POST /signup')           AS started,
-          COUNT(*) FILTER (WHERE endpoint = 'DELETE /delete_account') AS completed,
+          COUNT(*) FILTER (WHERE endpoint = 'GET /portfoliodata' AND status = 401) AS completed,
           COUNT(*) FILTER (WHERE status >= 500)                       AS failures
         FROM traces
         WHERE synthetic

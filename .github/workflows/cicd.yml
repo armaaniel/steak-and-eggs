@@ -51,7 +51,7 @@ jobs:
         run: bin/rails db:test:prepare && bundle exec rspec
 
   deploy:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04-arm
     needs: [scan_ruby, test]
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     steps:
@@ -62,7 +62,6 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: us-west-1
       - uses: aws-actions/amazon-ecr-login@v2
-      - uses: docker/setup-qemu-action@v3
       - uses: docker/setup-buildx-action@v3
       - name: Build, push, and deploy
         run: |
