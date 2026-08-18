@@ -11,7 +11,8 @@ gem 'lograge'
 gem 'rspec-rails'
 gem 'factory_bot_rails'
 
-gem 'redis'
+# actioncable's pubsub adapter requires redis < 6; on 6.x it fails to load and broadcasts silently stop
+gem 'redis', '~> 5.4'
 
 gem 'pg'
 
