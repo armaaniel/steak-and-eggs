@@ -52,6 +52,11 @@ module Types
       description('get individual runs by time bucket')
     end
     
+    field(:synthetic_run_traces, [Types::TraceType]) do
+      argument(:user_id, ID)
+      description('every request made by one run, in the order it made them')
+    end
+    
     def connections
       ActionCable.server.connections.map do |connection|
         {
@@ -222,6 +227,11 @@ module Types
              {user_id: id, started_at: started, request_count: count,
               failures: failures, completed: completed}
            }
+    end
+
+    # a run is identified by its ephemeral user, so its requests are just that user's traces
+    def synthetic_run_traces(user_id:)
+      Trace.where(synthetic: true, user_id: user_id).order(created_at: :asc)
     end
 
     private
