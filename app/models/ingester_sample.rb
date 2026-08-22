@@ -1,5 +1,5 @@
 class IngesterSample < ApplicationRecord
-  SPAN_CAP = 90
+  SPAN_CAP_SECONDS = 90
   MIN_RATE_GAP = 10
   TERMINAL_CAUSES = %w[stale error closed].freeze
 

@@ -54,7 +54,9 @@ module Types
       description('one row per process lifetime')
     end
 
-    field(:ingester_connections, [Types::IngesterConnectionType], null: false) do
+    # connection: false — graphql-ruby otherwise reads the IngesterConnection type name
+    # as a Relay connection and tries to paginate a plain array
+    field(:ingester_connections, [Types::IngesterConnectionType], null: false, connection: false) do
       argument(:hours, Integer, required: false, default_value: 24)
       description('one row per websocket connection')
     end
