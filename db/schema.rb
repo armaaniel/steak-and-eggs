@@ -10,9 +10,29 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_08_15_191755) do
+ActiveRecord::Schema[8.0].define(version: 2026_08_20_155759) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
+
+  create_table "ingester_samples", force: :cascade do |t|
+    t.datetime "at", null: false
+    t.uuid "boot_id", null: false
+    t.uuid "connection_id"
+    t.string "kind", default: "tick", null: false
+    t.string "state", null: false
+    t.string "cause"
+    t.bigint "frames", default: 0, null: false
+    t.bigint "events", default: 0, null: false
+    t.integer "symbols"
+    t.integer "max_lag_ms"
+    t.datetime "last_message_at"
+    t.datetime "first_message_at"
+    t.jsonb "detail"
+    t.index ["at"], name: "index_ingester_samples_on_at"
+    t.index ["boot_id", "at"], name: "index_ingester_samples_on_boot_id_and_at"
+    t.index ["connection_id", "at"], name: "index_ingester_samples_on_connection_id_and_at"
+    t.index ["kind", "at"], name: "index_ingester_samples_on_kind_and_at"
+  end
 
   create_table "portfolio_records", force: :cascade do |t|
     t.integer "user_id", null: false
