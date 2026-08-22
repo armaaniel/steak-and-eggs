@@ -216,6 +216,7 @@ module Types
            .where.not(user_id: nil)
            .where(created_at: bucket...(bucket + step.seconds))
            .group(:user_id)
+           .order(Arel.sql('MIN(created_at) ASC'))
            .pluck(
              :user_id,
              Arel.sql('MIN(created_at)'),
