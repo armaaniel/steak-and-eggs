@@ -1,5 +1,10 @@
 class StocksController < ApplicationController
-  before_action(:verify_token)
+  before_action(:verify_token, except: [:get_ticker_data,
+    :get_chart_data,
+    :get_company_data,
+    :get_market_data,
+    :get_stock_price
+  ])
 
   def buy
     quantity = params[:quantity].to_i

@@ -1,5 +1,5 @@
 class HomeController < ApplicationController
-  before_action(:verify_token)
+  before_action(:verify_token, except: [:search])
 
   def search
     results = Ticker.search(term:params[:q])
