@@ -145,10 +145,14 @@ RSpec.describe("Stocks", type: :request) do
       expect(response).to(have_http_status(404))
     end
 
-    it "returns 401 without auth token" do
+    it "returns ticker data without an auth token" do
+      Ticker.create!(symbol: "TSLA", name: "Tesla, Inc.", ticker_type: "CS", exchange: "NASDAQ", currency: "USD")
+      allow(RedisService).to(receive(:safe_get).and_return(nil))
+      allow(RedisService).to(receive(:safe_setex))
+
       get "/stocks/TSLA/tickerdata"
 
-      expect(response).to(have_http_status(401))
+      expect(response).to(have_http_status(200))
     end
   end
 
@@ -290,6 +294,12 @@ RSpec.describe("Stocks", type: :request) do
 
       body = JSON.parse(response.body)
       expect(body["balance"]).to(eq("N/A"))
+    end
+
+    it "returns 401 without auth token" do
+      get "/stocks/TSLA/userdata"
+
+      expect(response).to(have_http_status(401))
     end
   end
 end

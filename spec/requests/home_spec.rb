@@ -41,10 +41,12 @@ RSpec.describe("Home", type: :request) do
       expect(JSON.parse(response.body)).to(eq([]))
     end
 
-    it "returns 401 without auth token" do
-      get "/search", params: { q: "TSLA" }
+    it "returns matching tickers without an auth token" do
+      Ticker.create!(symbol: "TSLA", name: "Tesla, Inc.", ticker_type: "CS", exchange: "NASDAQ", currency: "USD")
 
-      expect(response).to(have_http_status(401))
+      get "/search", params: { q: "TSL" }
+
+      expect(response).to(have_http_status(200))
     end
   end
 
