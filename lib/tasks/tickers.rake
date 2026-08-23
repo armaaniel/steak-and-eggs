@@ -8,9 +8,24 @@ namespace :tickers do
   task etfs: :environment do
     fetch_polygon_tickers("ETF")
   end
+  
+  desc "Fetch ETF tickers from Polygon and upsert into the tickers table"
+  task adrcs: :environment do
+    fetch_polygon_tickers("ADRC")
+  end
+  
+  desc "Fetch ETF tickers from Polygon and upsert into the tickers table"
+  task units: :environment do
+    fetch_polygon_tickers("UNIT")
+  end
+  
+  desc "Fetch ETF tickers from Polygon and upsert into the tickers table"
+  task funds: :environment do
+    fetch_polygon_tickers("FUND")
+  end
 
   desc "Fetch both stock and ETF tickers"
-  task all: %i[stocks etfs]
+  task all: %i[stocks etfs adrcs units funds]
 end
 
 def fetch_polygon_tickers(type)
