@@ -83,7 +83,7 @@ class UsersController < ApplicationController
     password = SecureRandom.hex(10)
     
     user = UserService.signup(username:username, password: password)
-    UserService.seed_demo(user_id:user.id)
+    UserService.deposit(amount:100_000, user_id:user.id)
     
     token = JWT.encode({user_id: user.id}, Rails.application.secret_key_base, 'HS256')
     render(json: {token: token, username: user.username})

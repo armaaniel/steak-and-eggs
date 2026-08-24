@@ -69,25 +69,4 @@ class UserService
       CacheService.invalidate_user(user_id: user_id)
     end
   end
-  
-  def self.seed_demo(user_id:)
-    ActiveSupport::Notifications.instrument("UserService.seed_demo") do
-      UserService.deposit(amount:250_000, user_id: user_id)
-
-      stocks = [
-          { symbol: "GOOG",  quantity: 10 },
-          { symbol: "NVDA",  quantity: 5  },
-          { symbol: "TSLA",  quantity: 8  },
-          { symbol: "MSFT",  quantity: 12 },
-          { symbol: "AMZN",  quantity: 6  },
-        ]
-        
-        stocks.each do |stock|
-          MarketService.buy(symbol: stock[:symbol], quantity: stock[:quantity], user_id: user_id)
-        rescue => e
-          Sentry.capture_exception(e)
-          next
-        end
-      end
-  end
 end
