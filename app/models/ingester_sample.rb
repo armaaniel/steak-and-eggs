@@ -213,7 +213,6 @@ class IngesterSample < ApplicationRecord
           WHEN last_seen_at::timestamptz >= :to::timestamptz - (#{SPAN_CAP_SECONDS} * INTERVAL '1 second') THEN 'open'
           ELSE 'no record'
         END AS ended_by,
-        EXTRACT(epoch FROM first_message_at - spawned_at) AS connect_seconds,
         EXTRACT(epoch FROM last_seen_at - spawned_at) AS duration_seconds
       FROM per_connection
       ORDER BY last_seen_at DESC

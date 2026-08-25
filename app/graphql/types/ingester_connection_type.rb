@@ -7,7 +7,6 @@ module Types
     field :last_seen_at, GraphQL::Types::ISO8601DateTime, null: false
     field :ended_at, GraphQL::Types::ISO8601DateTime, null: true
     field :ended_by, String, null: false
-    field :connect_seconds, Float, null: true
     field :duration_seconds, Float, null: true
   end
 end
