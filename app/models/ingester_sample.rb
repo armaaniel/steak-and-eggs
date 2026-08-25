@@ -125,18 +125,34 @@ class IngesterSample < ApplicationRecord
   end
 
   def self.connections(from:, to:)
+    terminal = TERMINAL_CAUSES.map { |cause| "'#{cause}'" }.join(', ')
+
+    # The window decides which connections to list; it must not decide what we know about
+    # them. A socket spawned before :from still has its spawn sample on record, so the
+    # facts are aggregated over every sample for those ids — otherwise the healthiest
+    # case, one connection held across the whole window, has no spawn row inside it and
+    # drops out entirely.
     sql = <<~SQL
-      WITH per_connection AS (
-        SELECT
-          connection_id,
-          min(boot_id::text) AS boot_id,
-          min(at) FILTER (WHERE cause = 'subscriber_spawned') AS spawned_at,
-          min(first_message_at) AS first_message_at,
-          max(at) AS last_seen_at,
-          min(cause) FILTER (WHERE cause IN ('stale', 'error', 'closed')) AS ended_by
+      WITH in_window AS (
+        SELECT DISTINCT connection_id
         FROM ingester_samples
         WHERE at >= :from AND at < :to AND connection_id IS NOT NULL
-        GROUP BY connection_id
+      ),
+      per_connection AS (
+        SELECT
+          samples.connection_id,
+          min(samples.boot_id::text) AS boot_id,
+          min(samples.at) FILTER (WHERE samples.cause = 'subscriber_spawned') AS spawned_at,
+          min(samples.first_message_at) AS first_message_at,
+          max(samples.at) AS last_seen_at,
+          min(samples.at) FILTER (WHERE samples.cause IN (#{terminal})) AS ended_at,
+          -- the cause at that same moment: min(cause) would pick alphabetically, so a
+          -- connection that both errored and went stale would report the wrong reason
+          (array_agg(samples.cause ORDER BY samples.at)
+            FILTER (WHERE samples.cause IN (#{terminal})))[1] AS ended_by
+        FROM ingester_samples samples
+        JOIN in_window ON in_window.connection_id = samples.connection_id
+        GROUP BY samples.connection_id
       )
       SELECT
         connection_id::text AS connection_id,
@@ -144,12 +160,12 @@ class IngesterSample < ApplicationRecord
         spawned_at,
         first_message_at,
         last_seen_at,
+        ended_at,
         ended_by,
         EXTRACT(epoch FROM first_message_at - spawned_at) AS connect_seconds,
         EXTRACT(epoch FROM last_seen_at - spawned_at) AS duration_seconds
       FROM per_connection
-      WHERE spawned_at IS NOT NULL
-      ORDER BY spawned_at DESC
+      ORDER BY last_seen_at DESC
     SQL
 
     sanitized = sanitize_sql_array([sql, { from: from, to: to }])
