@@ -54,8 +54,6 @@ module Types
       description('one row per process lifetime')
     end
 
-    # connection: false — graphql-ruby otherwise reads the IngesterConnection type name
-    # as a Relay connection and tries to paginate a plain array
     field(:ingester_connections, [Types::IngesterConnectionType], null: false, connection: false) do
       argument(:hours, Integer, required: false, default_value: 24)
       description('one row per websocket connection')
@@ -74,6 +72,10 @@ module Types
     field(:ingester_causes, [Types::IngesterCauseType], null: false) do
       argument(:hours, Integer, required: false, default_value: 24)
       description('reconnect counts grouped by terminal cause')
+    end
+    
+    field :ingester_lag, [Types::IngesterLagPointType], null: false do
+      argument :hours, Integer, required: false, default_value: 24
     end
     
     def connections
@@ -148,6 +150,11 @@ module Types
     def ingester_causes(hours:)
       from, to = ingester_window(hours)
       IngesterSample.reconnect_causes(from: from, to: to)
+    end
+    
+    def ingester_lag(hours:)
+      from, to = ingester_window(hours)
+      IngesterSample.lag(from: from, to: to)
     end
 
     private

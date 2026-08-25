@@ -2,7 +2,27 @@ class IngesterSample < ApplicationRecord
   SPAN_CAP_SECONDS = 90
   MIN_RATE_GAP = 10
   TERMINAL_CAUSES = %w[stale error closed].freeze
+  BASE_LAG_MS = 902_000
 
+  def self.lag(from:, to:)
+    query(<<~SQL, from, to).to_a
+      SELECT
+        at,
+        max_lag_ms - #{BASE_LAG_MS} AS max_excess_ms,
+        CASE WHEN lagged_events > 0
+             THEN (sum_lag_ms::float / lagged_events) - #{BASE_LAG_MS}
+        END AS mean_excess_ms,
+        lagged_events,
+        symbols
+      FROM ingester_samples
+      WHERE at >= :from AND at < :to
+        AND kind = 'tick'
+        AND state = 'streaming'
+        AND lagged_events > 0
+      ORDER BY at
+    SQL
+  end
+  
   def self.spans(from:, to:)
     sql = <<~SQL
       WITH ordered AS (
