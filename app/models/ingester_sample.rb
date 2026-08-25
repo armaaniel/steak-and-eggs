@@ -1,5 +1,57 @@
 class IngesterSample < ApplicationRecord
   SPAN_CAP_SECONDS = 90
+
+  # How wall-clock time is attributed to states. Shared by .spans and .uptime so the strip
+  # and the percentage cannot disagree about the same window.
+  #
+  # A sample vouches for at most SPAN_CAP_SECONDS. Time past that is time nothing reported,
+  # and for a process that samples every minute — into the same database this reads from —
+  # not reporting means it was not running, so the remainder is emitted as its own `down`
+  # span. That row is derived, not stored: it comes from the pair of samples straddling the
+  # gap, which is also why `ordered` is deliberately NOT partitioned by boot_id. Partitioning
+  # would sever the very pair that spans a restart.
+  SPAN_SQL = <<~SQL.freeze
+    WITH ordered AS (
+      SELECT
+        at,
+        id,
+        boot_id,
+        connection_id,
+        state,
+        lead(at) OVER (ORDER BY at, id) AS next_at
+      FROM ingester_samples
+      WHERE at >= :from AND at < :to
+    ),
+    measured AS (
+      SELECT
+        at,
+        boot_id,
+        connection_id,
+        state,
+        EXTRACT(epoch FROM COALESCE(next_at, :to) - at) AS raw_seconds
+      FROM ordered
+    ),
+    spans AS (
+      SELECT
+        at,
+        boot_id,
+        connection_id,
+        state,
+        LEAST(raw_seconds, #{SPAN_CAP_SECONDS}) AS seconds
+      FROM measured
+
+      UNION ALL
+
+      SELECT
+        at + (#{SPAN_CAP_SECONDS} * INTERVAL '1 second'),
+        boot_id,
+        NULL::uuid,
+        'down',
+        raw_seconds - #{SPAN_CAP_SECONDS}
+      FROM measured
+      WHERE raw_seconds > #{SPAN_CAP_SECONDS}
+    )
+  SQL
   MIN_RATE_GAP = 10
   TERMINAL_CAUSES = %w[stale error closed].freeze
   BASE_LAG_MS = 902_000
@@ -29,23 +81,14 @@ class IngesterSample < ApplicationRecord
   
   def self.spans(from:, to:)
     sql = <<~SQL
-      WITH ordered AS (
-        SELECT 
-        at, 
-        boot_id, 
-        connection_id, 
+      #{SPAN_SQL}
+      SELECT
+        at,
+        boot_id::text,
+        connection_id::text,
         state,
-        lead(at) OVER (ORDER BY at, id) AS next_at
-        FROM ingester_samples
-        WHERE at >= :from AND at < :to
-      )
-      SELECT at,
-             boot_id::text,
-             connection_id::text,
-             state,
-             LEAST(
-               EXTRACT(epoch FROM COALESCE(next_at, :to) - at), #{SPAN_CAP_SECONDS}) AS seconds
-      FROM ordered
+        seconds
+      FROM spans
       ORDER BY at
     SQL
 
@@ -55,27 +98,19 @@ class IngesterSample < ApplicationRecord
   end
 
   def self.uptime(from:, to:)
+    # The window is measured from the first sample on record when :from predates it, so a
+    # long window over a young deployment reports on the time it actually has telemetry for
+    # rather than booking the difference as downtime. GREATEST ignores NULL, so an empty
+    # table falls back to the requested window.
     sql = <<~SQL
-      WITH ordered AS (
-        SELECT
-          at,
-          state,
-          lead(at) OVER (ORDER BY at, id) AS next_at
-        FROM ingester_samples
-        WHERE at >= :from AND at < :to
-      ),
-      spans AS (
-        SELECT
-          state,
-          LEAST(
-            EXTRACT(epoch FROM COALESCE(next_at, :to) - at),#{SPAN_CAP_SECONDS}) AS span_seconds
-        FROM ordered
-      )
+      #{SPAN_SQL}
       SELECT
-        COALESCE(sum(span_seconds) FILTER (WHERE state = 'streaming'), 0) AS streaming_seconds,
-        COALESCE(sum(span_seconds) FILTER (WHERE state = 'idle'), 0) AS idle_seconds,
-        COALESCE(sum(span_seconds) FILTER (WHERE state NOT IN ('streaming', 'idle')), 0) AS down_seconds,
-        EXTRACT(epoch FROM (:to::timestamptz - :from::timestamptz)) AS window_seconds
+        COALESCE(sum(seconds) FILTER (WHERE state = 'streaming'), 0) AS streaming_seconds,
+        COALESCE(sum(seconds) FILTER (WHERE state = 'idle'), 0) AS idle_seconds,
+        COALESCE(sum(seconds) FILTER (WHERE state NOT IN ('streaming', 'idle')), 0) AS down_seconds,
+        EXTRACT(epoch FROM (
+          :to::timestamptz - GREATEST(:from::timestamptz, (SELECT min(at) FROM ingester_samples)::timestamptz)
+        )) AS window_seconds
       FROM spans
     SQL
 
@@ -88,14 +123,12 @@ class IngesterSample < ApplicationRecord
     down      = row['down_seconds'].to_f
     window    = row['window_seconds'].to_f
 
-    unaccounted = [window - streaming - idle - down, 0].max
     denominator = window - idle
 
     {
       streaming_seconds: streaming,
       idle_seconds: idle,
       down_seconds: down,
-      unaccounted_seconds: unaccounted,
       window_seconds: window,
       pct: denominator.positive? ? ((streaming / denominator) * 100).round(3) : 0.0
     }
