@@ -228,7 +228,12 @@ class IngesterSample < ApplicationRecord
       WITH deltas AS (
         SELECT
           at,
-          max_lag_ms,
+          -- Not a WHERE: the delta below needs every consecutive tick, and dropping the
+          -- non-streaming ones would charge a whole disconnection's backlog to one
+          -- interval. Restricting the reading instead leaves the rate math untouched.
+          CASE WHEN state = 'streaming' AND sampled_events > 0
+               THEN max_lag_ms - #{BASE_LAG_MS}
+          END AS max_excess_ms,
           symbols,
           events - lag(events) OVER w AS d_events,
           frames - lag(frames) OVER w AS d_frames,
@@ -239,7 +244,7 @@ class IngesterSample < ApplicationRecord
       )
       SELECT
         at,
-        max_lag_ms,
+        max_excess_ms,
         symbols,
         d_events / d_seconds AS events_per_sec,
         d_frames / d_seconds AS frames_per_sec
