@@ -204,7 +204,15 @@ class IngesterSample < ApplicationRecord
         first_message_at,
         last_seen_at,
         ended_at,
-        ended_by,
+        -- Same rule as a boot's exit_state: a terminal cause is the only positive evidence
+        -- a connection ended. Without one it is only open if it was still being sampled as
+        -- the window closed — otherwise the process died before it could record a reason,
+        -- and calling that 'open' shows a dead socket as a healthy one.
+        CASE
+          WHEN ended_by IS NOT NULL THEN ended_by
+          WHEN last_seen_at::timestamptz >= :to::timestamptz - (#{SPAN_CAP_SECONDS} * INTERVAL '1 second') THEN 'open'
+          ELSE 'no record'
+        END AS ended_by,
         EXTRACT(epoch FROM first_message_at - spawned_at) AS connect_seconds,
         EXTRACT(epoch FROM last_seen_at - spawned_at) AS duration_seconds
       FROM per_connection
