@@ -5,22 +5,26 @@ class IngesterSample < ApplicationRecord
   BASE_LAG_MS = 902_000
 
   def self.lag(from:, to:)
-    query(<<~SQL, from, to).to_a
+    sql = <<~SQL
       SELECT
         at,
         max_lag_ms - #{BASE_LAG_MS} AS max_excess_ms,
-        CASE WHEN lagged_events > 0
-             THEN (sum_lag_ms::float / lagged_events) - #{BASE_LAG_MS}
+        CASE WHEN sampled_events > 0
+             THEN (sum_lag_ms::float / sampled_events) - #{BASE_LAG_MS}
         END AS mean_excess_ms,
-        lagged_events,
+        sampled_events,
         symbols
       FROM ingester_samples
       WHERE at >= :from AND at < :to
         AND kind = 'tick'
         AND state = 'streaming'
-        AND lagged_events > 0
+        AND sampled_events > 0
       ORDER BY at
     SQL
+
+    sanitized = sanitize_sql_array([sql, { from: from, to: to }])
+
+    connection.exec_query(sanitized, 'IngesterSample').to_a
   end
   
   def self.spans(from:, to:)
