@@ -144,7 +144,16 @@ class IngesterSample < ApplicationRecord
         EXTRACT(epoch FROM max(at) - min(at)) AS duration_seconds,
         count(DISTINCT connection_id) AS connections,
         greatest(count(DISTINCT connection_id) - 1, 0) AS reconnects,
-        bool_or(cause = 'sigterm') AS clean_exit,
+        -- What we observed, not a verdict on it. A sigterm sample is the only positive
+        -- evidence of a graceful stop; its absence covers SIGKILL, a crash, and a tidy
+        -- shutdown whose final insert never landed, so it claims nothing beyond 'none'.
+        -- A boot still sampling as the window closes has not exited at all, and without
+        -- that case a live process is indistinguishable from one that was killed.
+        CASE
+          WHEN bool_or(cause = 'sigterm') THEN 'sigterm'
+          WHEN max(at)::timestamptz >= :to::timestamptz - (#{SPAN_CAP_SECONDS} * INTERVAL '1 second') THEN 'running'
+          ELSE 'none'
+        END AS exit_state,
         max(events) AS events,
         max(max_lag_ms) AS peak_lag_ms
       FROM ingester_samples
