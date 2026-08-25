@@ -78,6 +78,11 @@ module Types
       argument :hours, Integer, required: false, default_value: 24
     end
     
+    field :ingester_transitions, [Types::IngesterTransitionType], null: false do
+      argument :hours, Integer, required: false, default_value: 24
+      description('boot, spawn and teardown events, with their detail payload')
+    end
+    
     def connections
       ActionCable.server.connections.map do |connection|
         {
@@ -155,6 +160,11 @@ module Types
     def ingester_lag(hours:)
       from, to = ingester_window(hours)
       IngesterSample.lag(from: from, to: to)
+    end
+
+    def ingester_transitions(hours:)
+      from, to = ingester_window(hours)
+      IngesterSample.transitions(from: from, to: to)
     end
 
     private

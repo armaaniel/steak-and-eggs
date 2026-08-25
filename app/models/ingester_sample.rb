@@ -1,5 +1,6 @@
 class IngesterSample < ApplicationRecord
   SPAN_CAP_SECONDS = 90
+  TRANSITION_LIMIT = 200
 
   # How wall-clock time is attributed to states. Shared by .spans and .uptime so the strip
   # and the percentage cannot disagree about the same window.
@@ -249,5 +250,20 @@ class IngesterSample < ApplicationRecord
     sanitized = sanitize_sql_array([sql, { from: from, to: to }])
 
     connection.exec_query(sanitized, 'IngesterSample').to_a
+  end
+
+  # Point-in-time events rather than aggregates. This is where `cause` and the `detail`
+  # payload live: the error class and message, the ticker count, whether the subscriber
+  # thread outlived its kill. A plain scope — unlike its siblings there is nothing to
+  # aggregate, and `detail` comes back as a Hash without any casting.
+  #
+  # Newest first and capped: a flapping ingester writes two of these per reconnect cycle,
+  # so a bad month runs to tens of thousands of rows and only the recent ones diagnose
+  # anything.
+  def self.transitions(from:, to:)
+    where(kind: 'transition')
+      .where(at: from...to)
+      .order(at: :desc)
+      .limit(TRANSITION_LIMIT)
   end
 end
