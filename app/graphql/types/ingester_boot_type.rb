@@ -7,7 +7,5 @@ module Types
     field :connections, Integer, null: false
     field :reconnects, Integer, null: false
     field :exit_state, String, null: false
-    field :events, GraphQL::Types::BigInt, null: true
-    field :peak_lag_ms, Integer, null: true
   end
 end

@@ -116,8 +116,8 @@ class Trace < ApplicationRecord
   end
 
   def self.synthetic_buckets(range: '1h')
-    config = RANGES.fetch(range, RANGES['1h'])  # unknown range falls back to 1h
-    step   = config[:step]                      # bucket width in seconds
+    config = RANGES.fetch(range, RANGES['1h'])
+    step   = config[:step]
     sql = <<~SQL
       SELECT
         floor(extract(epoch FROM created_at) / ?) * ? AS bucket,
@@ -130,17 +130,13 @@ class Trace < ApplicationRecord
       GROUP BY bucket
       ORDER BY bucket
     SQL
-    # one bucket of slack, so the oldest bar drawn is backed by a full window
     cutoff = Time.now.utc - (step * (config[:count] + 1))
     rows = connection.execute(
-      # first element is the query text, the rest fill its ? left to right, escaped
       sanitize_sql_array([sql, step, step, cutoff])
     )
-    # keyed on epoch seconds — sidesteps Time vs TimeWithZone in hash lookups
     by_bucket = rows.index_by { |r| r['bucket'].to_i }
-    # bucket N steps back from the one currently filling
     current = Time.at((Time.now.to_i / step) * step).utc
-    config[:count].downto(1).map do |a|   # count buckets, oldest → newest
+    config[:count].downto(1).map do |a|
       bucket = current - (a * step)
       row    = by_bucket[bucket.to_i]
       {
@@ -148,7 +144,7 @@ class Trace < ApplicationRecord
         started:   row ? row['started'].to_i   : 0,
         completed: row ? row['completed'].to_i : 0,
         failures:  row ? row['failures'].to_i  : 0,
-        expected:  step / PROBE_INTERVAL  # probe runs that should land in one bucket
+        expected:  step / PROBE_INTERVAL
       }
     end
   end
