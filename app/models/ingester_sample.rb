@@ -244,21 +244,6 @@ class IngesterSample < ApplicationRecord
   end
 
   # How many connections ended for each terminal cause.
-  def self.reconnect_causes(from:, to:)
-    sql = <<~SQL
-      SELECT cause, count(*) AS count
-      FROM ingester_samples
-      WHERE at >= :from AND at < :to
-        AND cause IN (#{TERMINAL_CAUSES.map { |c| "'#{c}'" }.join(', ')})
-      GROUP BY cause
-      ORDER BY count DESC
-    SQL
-
-    sanitized = sanitize_sql_array([sql, { from: from, to: to }])
-
-    connection.exec_query(sanitized, 'IngesterSample').to_a
-  end
-
   # The most recent transition rows, newest first, carrying cause and detail.
   def self.transitions(from:, to:)
     where(kind: 'transition')

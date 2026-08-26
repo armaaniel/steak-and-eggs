@@ -69,11 +69,6 @@ module Types
       description('streaming / idle / down totals for the window')
     end
 
-    field(:ingester_causes, [Types::IngesterCauseType], null: false) do
-      argument(:hours, Integer, required: false, default_value: 24)
-      description('reconnect counts grouped by terminal cause')
-    end
-    
     field :ingester_lag, [Types::IngesterLagPointType], null: false do
       argument :hours, Integer, required: false, default_value: 24
     end
@@ -152,11 +147,6 @@ module Types
       IngesterSample.uptime(from: from, to: to)
     end
 
-    def ingester_causes(hours:)
-      from, to = ingester_window(hours)
-      IngesterSample.reconnect_causes(from: from, to: to)
-    end
-    
     def ingester_lag(hours:)
       from, to = ingester_window(hours)
       IngesterSample.lag(from: from, to: to)
