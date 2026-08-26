@@ -18,7 +18,7 @@ class Trace < ApplicationRecord
         CASE
           WHEN endpoint LIKE 'GET /stocks/%/marketdata' THEN 'GET /stocks/:symbol/marketdata'
           WHEN endpoint LIKE 'GET /stocks/%/companydata' THEN 'GET /stocks/:symbol/companydata'
-          WHEN endpoint LIKE 'GET /stocks/%/chartdata' THEN 'GET /stocks/:symbol/chartdata'
+          WHEN endpoint LIKE 'GET /stocks/%/chartdata%' THEN 'GET /stocks/:symbol/chartdata'
           WHEN endpoint LIKE 'GET /positions/%' THEN 'GET /positions/:symbol'
           WHEN endpoint LIKE 'GET /search%' THEN 'GET /search'
           WHEN endpoint LIKE 'GET /stocks/%/tickerdata' THEN 'GET /stocks/:symbol/tickerdata'
@@ -181,7 +181,7 @@ class Trace < ApplicationRecord
     when 'GET /stocks/symbol/companydata'
       'GET /stocks/%/companydata'
     when 'GET /stocks/symbol/chartdata'
-      'GET /stocks/%/chartdata'
+      'GET /stocks/%/chartdata%'
     when 'GET /stocks/symbol'
       'GET /stocks/%'
     when 'GET /search'

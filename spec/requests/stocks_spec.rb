@@ -158,16 +158,34 @@ RSpec.describe("Stocks", type: :request) do
 
   describe "GET /stocks/:symbol/chartdata" do
     it "returns chart data from cache" do
-      cached = [{ date: "2024-01-01", value: 200 }].to_json
-      allow(RedisService).to(receive(:safe_get).with("daily:TSLA").and_return(cached))
+      cached = [{ date: "2024-01-02 09:30", value: 200 }].to_json
+      allow(RedisService).to(receive(:safe_get).with("chart:TSLA:1D").and_return(cached))
 
       get "/stocks/TSLA/chartdata", headers: headers
 
       expect(response).to(have_http_status(200))
     end
 
+    it "serves the requested range from its own cache key" do
+      cached = [{ date: "2024-01-01", value: 200 }].to_json
+      allow(RedisService).to(receive(:safe_get).with("chart:TSLA:1Y").and_return(cached))
+
+      get "/stocks/TSLA/chartdata", params: { range: "1y" }, headers: headers
+
+      expect(response).to(have_http_status(200))
+    end
+
+    it "falls back to the default range when the range is unknown" do
+      cached = [{ date: "2024-01-02 09:30", value: 200 }].to_json
+      allow(RedisService).to(receive(:safe_get).with("chart:TSLA:1D").and_return(cached))
+
+      get "/stocks/TSLA/chartdata", params: { range: "2H" }, headers: headers
+
+      expect(response).to(have_http_status(200))
+    end
+
     it "returns fallback data on service error" do
-      allow(RedisService).to(receive(:safe_get).with("daily:TSLA").and_return(nil))
+      allow(RedisService).to(receive(:safe_get).with("chart:TSLA:1D").and_return(nil))
       allow(Net::HTTP).to(receive(:get_response).and_raise(StandardError))
       allow(Sentry).to(receive(:capture_exception))
 

@@ -283,14 +283,34 @@ RSpec.describe(MarketService) do
   describe("chartdata") do
     let(:api_response_body) do
       { "results" => [
-        { "t" => 1700000000000, "c" => 200 },
-        { "t" => 1700086400000, "c" => 205 }
+        { "t" => 1700000000000, "o" => 195, "c" => 200 },
+        { "t" => 1700086400000, "o" => 201, "c" => 205 }
       ] }.to_json
     end
 
+    let(:intraday_response_body) do
+      { "results" => [
+        { "t" => 1704205800000, "o" => 100, "c" => 101 },
+        { "t" => 1704283200000, "o" => 150, "c" => 151 },
+        { "t" => 1704292200000, "o" => 200, "c" => 201 },
+        { "t" => 1704294000000, "o" => 202, "c" => 203 },
+        { "t" => 1704315600000, "o" => 210, "c" => 215 }
+      ] }.to_json
+    end
+
+    def stub_polygon(body)
+      response = instance_double(Net::HTTPResponse, code: "200", body: body)
+      http = instance_double(Net::HTTP)
+      allow(http).to(receive(:use_ssl=))
+      allow(http).to(receive(:open_timeout=))
+      allow(http).to(receive(:read_timeout=))
+      allow(http).to(receive(:request).and_return(response))
+      allow(Net::HTTP).to(receive(:new).and_return(http))
+    end
+
     it("returns cached data on cache hit") do
-      cached = [{ date: "2023-11-14", value: 200 }].to_json
-      allow(RedisService).to(receive(:safe_get).with("daily:TSLA").and_return(cached))
+      cached = [{ date: "2023-11-14 09:30", value: 200 }].to_json
+      allow(RedisService).to(receive(:safe_get).with("chart:TSLA:1D").and_return(cached))
 
       result = MarketService.chartdata(symbol: "TSLA")
 
@@ -298,27 +318,78 @@ RSpec.describe(MarketService) do
     end
 
     it("fetches from API on cache miss and caches result") do
-      allow(RedisService).to(receive(:safe_get).with("daily:TSLA").and_return(nil))
+      allow(RedisService).to(receive(:safe_get).with("chart:TSLA:3M").and_return(nil))
       allow(RedisService).to(receive(:safe_setex))
+      stub_polygon(api_response_body)
 
-      response = instance_double(Net::HTTPResponse, code: "200", body: api_response_body)
-      http = instance_double(Net::HTTP)
-      allow(http).to(receive(:use_ssl=))
-      allow(http).to(receive(:open_timeout=))
-      allow(http).to(receive(:read_timeout=))
-      allow(http).to(receive(:request).and_return(response))
-      allow(Net::HTTP).to(receive(:new).and_return(http))
-
-      result = MarketService.chartdata(symbol: "TSLA")
+      result = MarketService.chartdata(symbol: "TSLA", range: "3M")
 
       expect(result.length).to(eq(2))
-      expect(result[0][:value]).to(eq(200))
       expect(result[1][:value]).to(eq(205))
-      expect(RedisService).to(have_received(:safe_setex).with("daily:TSLA", 24.hours.to_i, anything))
+      expect(RedisService).to(have_received(:safe_setex).with("chart:TSLA:3M", 1.hour.to_i, anything))
+    end
+
+    it("starts the series at the first bar's open rather than its close") do
+      allow(RedisService).to(receive(:safe_get).with("chart:TSLA:3M").and_return(nil))
+      allow(RedisService).to(receive(:safe_setex))
+      stub_polygon(api_response_body)
+
+      result = MarketService.chartdata(symbol: "TSLA", range: "3M")
+
+      expect(result[0][:value]).to(eq(195))
+    end
+
+    it("keeps only the latest regular session for the 1D range") do
+      allow(RedisService).to(receive(:safe_get).with("chart:TSLA:1D").and_return(nil))
+      allow(RedisService).to(receive(:safe_setex))
+      stub_polygon(intraday_response_body)
+
+      result = MarketService.chartdata(symbol: "TSLA", range: "1D")
+
+      expect(result).to(eq([
+        { date: "2024-01-03 09:30", value: 200 },
+        { date: "2024-01-03 10:00", value: 203 },
+        { date: "2024-01-03 16:00", value: 210 }
+      ]))
+      expect(RedisService).to(have_received(:safe_setex).with("chart:TSLA:1D", 5.minutes.to_i, anything))
+    end
+
+    it("takes the closing auction from the 16:00 bar's open, not its close") do
+      allow(RedisService).to(receive(:safe_get).with("chart:TSLA:1D").and_return(nil))
+      allow(RedisService).to(receive(:safe_setex))
+      stub_polygon(intraday_response_body)
+
+      result = MarketService.chartdata(symbol: "TSLA", range: "1D")
+
+      expect(result.last).to(eq({ date: "2024-01-03 16:00", value: 210 }))
+    end
+
+    it("drops premarket bars from intraday ranges") do
+      allow(RedisService).to(receive(:safe_get).with("chart:TSLA:1W").and_return(nil))
+      allow(RedisService).to(receive(:safe_setex))
+      stub_polygon(intraday_response_body)
+
+      result = MarketService.chartdata(symbol: "TSLA", range: "1W")
+
+      expect(result.map { |point| point[:date] }).to_not(include("2024-01-03 07:00"))
+    end
+
+    it("returns an empty series when the API reports no bars") do
+      allow(RedisService).to(receive(:safe_get).with("chart:TSLA:1D").and_return(nil))
+      allow(RedisService).to(receive(:safe_setex))
+      stub_polygon({ "resultsCount" => 0 }.to_json)
+
+      expect(MarketService.chartdata(symbol: "TSLA", range: "1D")).to(eq([]))
+    end
+
+    it("raises KeyError on an unknown range") do
+      expect {
+        MarketService.chartdata(symbol: "TSLA", range: "2H")
+      }.to(raise_error(KeyError))
     end
 
     it("raises ApiError on non-200 response") do
-      allow(RedisService).to(receive(:safe_get).with("daily:TSLA").and_return(nil))
+      allow(RedisService).to(receive(:safe_get).with("chart:TSLA:1D").and_return(nil))
 
       response = instance_double(Net::HTTPResponse, code: "500")
       http = instance_double(Net::HTTP)

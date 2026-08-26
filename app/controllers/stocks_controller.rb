@@ -53,7 +53,10 @@ class StocksController < ApplicationController
   end
 
   def get_chart_data
-    data = MarketService.chartdata(symbol:params[:symbol])
+    requested = params[:range].to_s.upcase
+    range = MarketService::CHART_RANGES.key?(requested) ? requested : MarketService::DEFAULT_CHART_RANGE
+
+    data = MarketService.chartdata(symbol:params[:symbol], range: range)
     render(json:data)
 
   rescue => e

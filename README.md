@@ -108,7 +108,7 @@ Three surfaces: REST (trading app), WebSocket (live prices via ActionCable), and
 | `GET` | `/portfoliodata` | Current AUM + positions with live prices |
 | `GET` | `/activitydata` | Transaction history |
 | `GET` | `/stocks/:symbol/tickerdata` | Ticker reference info |
-| `GET` | `/stocks/:symbol/chartdata` | 5-month daily price chart |
+| `GET` | `/stocks/:symbol/chartdata` | Price chart for a `range` of 1D, 1W, 1M, 3M, YTD, 1Y or 5Y (default 1D) |
 | `GET` | `/stocks/:symbol/companydata` | Market cap + description |
 | `GET` | `/stocks/:symbol/marketdata` | Intraday OHLV snapshot |
 | `GET` | `/stocks/:symbol/stockprice` | Live price + daily open |

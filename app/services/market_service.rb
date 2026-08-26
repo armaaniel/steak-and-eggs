@@ -3,6 +3,23 @@ class MarketService
   class InsufficientSharesError < StandardError; end
   class ApiError < StandardError; end
 
+  MARKET_ZONE = 'America/New_York'
+  MARKET_OPEN_MINUTE = (9 * 60) + 30
+  MARKET_CLOSE_MINUTE = 16 * 60
+  INTRADAY_TIMESPANS = ['minute', 'hour']
+
+  DEFAULT_CHART_RANGE = '1D'
+
+  CHART_RANGES = {
+    '1D'  => {multiplier: 5,  timespan: 'minute', ttl: 5.minutes,  from: -> { Date.current - 7.days }},
+    '1W'  => {multiplier: 30, timespan: 'minute', ttl: 15.minutes, from: -> { Date.current - 7.days }},
+    '1M'  => {multiplier: 1,  timespan: 'hour',   ttl: 1.hour,     from: -> { Date.current - 1.month }},
+    '3M'  => {multiplier: 1,  timespan: 'day',    ttl: 1.hour,     from: -> { Date.current - 3.months }},
+    'YTD' => {multiplier: 1,  timespan: 'day',    ttl: 1.hour,     from: -> { Date.current.beginning_of_year }},
+    '1Y'  => {multiplier: 1,  timespan: 'day',    ttl: 1.hour,     from: -> { Date.current - 1.year }},
+    '5Y'  => {multiplier: 1,  timespan: 'week',   ttl: 1.hour,     from: -> { Date.current - 5.years }}
+  }
+
   def self.buy(symbol:, quantity:, user_id:)
     stock_string = RedisService.safe_get("price:#{symbol}")
     stock_price = BigDecimal(stock_string || "0")
@@ -158,11 +175,12 @@ class MarketService
     end
   end
 
-  def self.chartdata(symbol:)
-    payload = {symbol: symbol, used_redis: false, used_api: false}
+  def self.chartdata(symbol:, range: DEFAULT_CHART_RANGE)
+    config = CHART_RANGES.fetch(range)
+    payload = {symbol: symbol, range: range, used_redis: false, used_api: false}
 
     ActiveSupport::Notifications.instrument("MarketService.chartdata", payload) do
-      cached = RedisService.safe_get("daily:#{symbol}")
+      cached = RedisService.safe_get("chart:#{symbol}:#{range}")
       if cached
         payload[:used_redis] = true
         return cached
@@ -170,25 +188,56 @@ class MarketService
 
       payload[:used_api] = true
 
-      uri=URI("https://api.polygon.io/v2/aggs/ticker/#{symbol}/range/1/day/#{Date.current-5.months}/#{Date.current}?apiKey=#{ENV['API_KEY']}")
-      
+      from = config[:from].call
+      uri=URI("https://api.polygon.io/v2/aggs/ticker/#{symbol}/range/#{config[:multiplier]}/#{config[:timespan]}/#{from}/#{Date.current}?adjusted=true&sort=asc&limit=50000&apiKey=#{ENV['API_KEY']}")
+
       http = Net::HTTP.new(uri.host, uri.port)
       http.use_ssl = true
       http.open_timeout = 0.5
-      http.read_timeout = 1.5
-      
+      http.read_timeout = 2.5
+
       response = http.request(Net::HTTP::Get.new(uri))
       raise ApiError unless response.code == '200'
 
       body=JSON.parse(response.body)
+      intraday = INTRADAY_TIMESPANS.include?(config[:timespan])
 
-      data = body['results'].map do |result|
-        time = Time.at(result['t']/1000).utc
-        {date:time.strftime("%Y-%m-%d"), value: result['c']}
+      bars = (body['results'] || []).map do |result|
+        {time: Time.at(result['t']/1000).in_time_zone(MARKET_ZONE), open: result['o'], close: result['c']}
       end
 
-      RedisService.safe_setex("daily:#{symbol}", 24.hours.to_i, data.to_json)
+      points = intraday ? session_points(bars) : bars.map { |bar| {time: bar[:time], value: bar[:close], open: bar[:open]} }
+      points = latest_session(points) if range == '1D'
+
+      first = points.first
+      points = [first.merge(value: first[:open])] + points.drop(1) if first
+
+      date_format = intraday ? "%Y-%m-%d %H:%M" : "%Y-%m-%d"
+      data = points.map { |point| {date: point[:time].strftime(date_format), value: point[:value]} }
+
+      RedisService.safe_setex("chart:#{symbol}:#{range}", config[:ttl].to_i, data.to_json)
       data
     end
   end
+
+  def self.session_points(bars)
+    bars.filter_map do |bar|
+      minutes = (bar[:time].hour * 60) + bar[:time].min
+
+      if minutes >= MARKET_OPEN_MINUTE && minutes < MARKET_CLOSE_MINUTE
+        {time: bar[:time], value: bar[:close], open: bar[:open]}
+      elsif minutes == MARKET_CLOSE_MINUTE
+        {time: bar[:time], value: bar[:open], open: bar[:open]}
+      end
+    end
+  end
+  private_class_method :session_points
+
+  def self.latest_session(points)
+    return points if points.empty?
+
+    by_day = points.group_by { |point| point[:time].to_date }
+    by_day[by_day.keys.max]
+  end
+  private_class_method :latest_session
 end
