@@ -46,7 +46,7 @@ class IngesterSample < ApplicationRecord
     )
   SQL
   MIN_RATE_GAP = 10
-  TERMINAL_CAUSES = %w[stale error closed].freeze
+  TERMINAL_CAUSES = %w[stale error closed force_disconnect].freeze
   BASE_LAG_MS = 902_000
 
   # Each sample's worst and mean lag above the feed's baseline, streaming samples only.
