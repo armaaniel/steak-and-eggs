@@ -96,6 +96,7 @@ Rails.application.config.after_initialize do
         source: payload[:source] || 'user',
         run_id: payload[:run_id],
         result: payload[:result],
+        request_id: payload[:request_id],
         breakdown: breakdown.presence
       })
 

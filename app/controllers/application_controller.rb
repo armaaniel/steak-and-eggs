@@ -32,6 +32,7 @@ class ApplicationController < ActionController::API
       payload[:source] = request.headers['Synthetic-Source'].presence_in(SYNTHETIC_SOURCES) || 'unknown'
       payload[:run_id] = request.headers['Synthetic-Run-Id'].presence
       payload[:result] = request.headers['Synthetic-Result'].presence_in(RESULTS)
+      payload[:request_id] = request.headers['X-Load-Request-Id'].presence
     else
       payload[:source] = 'user'
     end
