@@ -1,4 +1,3 @@
-# app/graphql/types/synthetic_run_type.rb
 module Types
   class SyntheticRunType < Types::BaseObject
     field(:run_id, ID, description: 'identifies the run')

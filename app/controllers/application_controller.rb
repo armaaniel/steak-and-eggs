@@ -1,5 +1,6 @@
 class ApplicationController < ActionController::API
   SYNTHETIC_SOURCES = %w[canary load].freeze
+  RESULTS = %w[pass fail].freeze
   def verify_token
     token = request.headers['authToken']
     return render(json: {error: 'No Token'}, status: 401) unless token
