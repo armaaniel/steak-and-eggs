@@ -40,7 +40,7 @@ module Types
     end
     
     field(:synthetic_run_traces, [Types::TraceType]) do
-      argument(:user_id, ID)
+      argument(:run_id, ID)
       description('every request made by one run, in the order it made them')
     end
     
@@ -118,8 +118,8 @@ module Types
       Trace.synthetic_runs(bucket: bucket, range: range)
     end
 
-    def synthetic_run_traces(user_id:)
-      Trace.run_traces(user_id: user_id)
+    def synthetic_run_traces(run_id:)
+      Trace.run_traces(run_id: run_id)
     end
 
     def ingester_spans(hours:)

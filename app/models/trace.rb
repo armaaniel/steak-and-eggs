@@ -36,7 +36,7 @@ class Trace < ApplicationRecord
           1
         ) as cache_hit_rate
       FROM traces
-      WHERE NOT synthetic
+      WHERE source = 'user'
       GROUP BY route
       ORDER BY total_requests DESC
     SQL
@@ -58,11 +58,11 @@ class Trace < ApplicationRecord
 
     if endpoint == 'GET /stocks/symbol'
       where("endpoint ILIKE ? AND endpoint NOT LIKE ?", route, 'GET /stocks/%/%')
-      .where(synthetic: false)
+      .where(source: 'user')
       .order(created_at: :desc)
     else
     where("endpoint ILIKE ?", route)
-    .where(synthetic: false)
+    .where(source: 'user')
     .order(created_at: :desc)
     end
   end
@@ -70,7 +70,7 @@ class Trace < ApplicationRecord
   def self.breakdown(endpoint:)
     route = normalize_endpoint(endpoint)
 
-    query = where("endpoint LIKE ?", route).where.not("breakdown::text = ? OR breakdown IS NULL", '{}').where(synthetic: false)
+    query = where("endpoint LIKE ?", route).where.not("breakdown::text = ? OR breakdown IS NULL", '{}').where(source: 'user')
 
     {
       redis_query: query.where("breakdown::text LIKE ?", '%"used_redis":true%').order(created_at: :desc),
@@ -93,11 +93,11 @@ class Trace < ApplicationRecord
 
     sanitized = if endpoint == 'GET /stocks/symbol'
       sanitize_sql_array(
-        ["#{base_sql} WHERE NOT synthetic AND endpoint ILIKE ? AND endpoint NOT LIKE ?", route, 'GET /stocks/%/%']
+        ["#{base_sql} WHERE source = 'user' AND endpoint ILIKE ? AND endpoint NOT LIKE ?", route, 'GET /stocks/%/%']
       )
     else
       sanitize_sql_array(
-        ["#{base_sql} WHERE NOT synthetic AND endpoint ILIKE ?", route]
+        ["#{base_sql} WHERE source = 'user' AND endpoint ILIKE ?", route]
       )
     end
 
@@ -112,7 +112,7 @@ class Trace < ApplicationRecord
   end
 
   def self.latent
-    where.not(endpoint: ['POST /graphql', 'POST /record']).where(synthetic: false).order(duration: :desc).limit(1000)
+    where.not(endpoint: ['POST /graphql', 'POST /record']).where(source: 'user').order(duration: :desc).limit(1000)
   end
 
   def self.synthetic_buckets(range: '1h')
@@ -121,11 +121,11 @@ class Trace < ApplicationRecord
     sql = <<~SQL
       SELECT
         floor(extract(epoch FROM created_at) / ?) * ? AS bucket,
-        COUNT(*) FILTER (WHERE endpoint = 'POST /signup')           AS started,
-        COUNT(*) FILTER (WHERE endpoint = 'GET /portfoliodata' AND status = 401) AS completed,
-        COUNT(*) FILTER (WHERE status >= 500)                       AS failures
+        count(DISTINCT run_id)                                                 AS started,
+        count(DISTINCT run_id) FILTER (WHERE result = 'pass')                  AS completed,
+        count(DISTINCT run_id) FILTER (WHERE result = 'fail' OR status >= 500) AS failures
       FROM traces
-      WHERE synthetic
+      WHERE source = 'canary'
         AND created_at > ?
       GROUP BY bucket
       ORDER BY bucket
@@ -151,27 +151,26 @@ class Trace < ApplicationRecord
 
   def self.synthetic_runs(bucket:, range: '1h')
     step = RANGES.fetch(range, RANGES['1h'])[:step]
-    where(synthetic: true)
-      .where.not(user_id: nil)
+    where(source: 'canary')
+      .where.not(run_id: nil)
       .where(created_at: bucket...(bucket + step.seconds))
-      .group(:user_id)
+      .group(:run_id)
       .order(Arel.sql('MIN(created_at) ASC'))
       .pluck(
-        :user_id,
+        :run_id,
         Arel.sql('MIN(created_at)'),
         Arel.sql('COUNT(*)'),
         Arel.sql('COUNT(*) FILTER (WHERE status >= 500)'),
-        Arel.sql("bool_or(endpoint = 'DELETE /delete_account')")
+        Arel.sql("bool_or(result = 'pass')")
       )
-      .map { |id, started, count, failures, completed|
-        {user_id: id, started_at: started, request_count: count,
+      .map { |run_id, started, count, failures, completed|
+        {run_id: run_id, started_at: started, request_count: count,
          failures: failures, completed: completed}
       }
   end
 
-  # a run is identified by its ephemeral user, so its requests are just that user's traces
-  def self.run_traces(user_id:)
-    where(synthetic: true, user_id: user_id).order(created_at: :asc)
+  def self.run_traces(run_id:)
+    where(run_id: run_id).order(created_at: :asc)
   end
 
   def self.normalize_endpoint(endpoint)

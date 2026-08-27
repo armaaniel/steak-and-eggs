@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_08_25_014944) do
+ActiveRecord::Schema[8.0].define(version: 2026_08_26_193857) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -83,6 +83,11 @@ ActiveRecord::Schema[8.0].define(version: 2026_08_25_014944) do
     t.json "breakdown"
     t.bigint "user_id"
     t.boolean "synthetic", default: false, null: false
+    t.string "source", default: "user", null: false
+    t.uuid "run_id"
+    t.string "result"
+    t.index ["run_id"], name: "index_traces_on_run_id", where: "(run_id IS NOT NULL)"
+    t.index ["source", "created_at"], name: "index_traces_on_source_and_created_at"
   end
 
   create_table "transactions", force: :cascade do |t|

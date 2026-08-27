@@ -15,7 +15,7 @@ Rails.application.config.after_initialize do
     '/change_password',
     '/delete_account',
     '/demo'
-  ].freeze
+  ].freeze # denylist got too long (eg next if payload[:path] == '/favicon.ico')
 
   current_request = Concurrent::Map.new
   trace_queue = Queue.new
@@ -93,7 +93,9 @@ Rails.application.config.after_initialize do
         controller: payload[:controller],
         action: payload[:action],
         user_id: payload[:user_id],
-        synthetic: payload[:synthetic] || false,
+        source: payload[:source] || 'user',
+        run_id: payload[:run_id],
+        result: payload[:result],
         breakdown: breakdown.presence
       })
 

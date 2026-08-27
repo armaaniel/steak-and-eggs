@@ -1,4 +1,5 @@
 class ApplicationController < ActionController::API
+  SYNTHETIC_SOURCES = %w[canary load].freeze
   def verify_token
     token = request.headers['authToken']
     return render(json: {error: 'No Token'}, status: 401) unless token
@@ -25,9 +26,14 @@ class ApplicationController < ActionController::API
 
   def append_info_to_payload(payload)
     super
-    payload[:user_id] = @current_user&.id || @traced_user_id
-    payload[:synthetic] = synthetic?
-
+    payload[:user_id] = @current_user&.id
+    if synthetic?
+      payload[:source] = request.headers['Synthetic-Source'].presence_in(SYNTHETIC_SOURCES) || 'unknown'
+      payload[:run_id] = request.headers['Synthetic-Run-Id'].presence
+      payload[:result] = request.headers['Synthetic-Result'].presence_in(RESULTS)
+    else
+      payload[:source] = 'user'
+    end
   rescue => e
     Sentry.capture_exception(e)
   end

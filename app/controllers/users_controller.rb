@@ -6,7 +6,7 @@ class UsersController < ApplicationController
 
     if user
       token = JWT.encode({user_id: user.id}, Rails.application.secret_key_base, 'HS256')
-      @traced_user_id = user.id
+      @current_user = user #for traces
       render(json: {token: token, username: user.username })
     else
       render(json: {error: 'Your email or password was incorrect. Please try again' }, status: 401)
@@ -20,7 +20,7 @@ class UsersController < ApplicationController
   def signup
     user = UserService.signup(username:params[:username], password:params[:password])
     
-    @traced_user_id = user.id
+    @current_user = user #for traces
 
     token = JWT.encode({user_id: user.id}, Rails.application.secret_key_base, 'HS256')
     render(json: {token: token, username: user.username})
@@ -83,6 +83,8 @@ class UsersController < ApplicationController
     password = SecureRandom.hex(10)
     
     user = UserService.signup(username:username, password: password)
+    @current_user = user #for traces
+    
     UserService.deposit(amount:100_000, user_id:user.id)
     
     token = JWT.encode({user_id: user.id}, Rails.application.secret_key_base, 'HS256')
