@@ -161,11 +161,11 @@ class Trace < ApplicationRecord
         Arel.sql('MIN(created_at)'),
         Arel.sql('COUNT(*)'),
         Arel.sql('COUNT(*) FILTER (WHERE status >= 500)'),
-        Arel.sql("bool_or(result = 'pass')")
+        Arel.sql('max(result)')
       )
-      .map { |run_id, started, count, failures, completed|
+      .map { |run_id, started, count, failures, result|
         {run_id: run_id, started_at: started, request_count: count,
-         failures: failures, completed: completed}
+         failures: failures, result: result}
       }
   end
 

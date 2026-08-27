@@ -5,6 +5,6 @@ module Types
     field(:started_at, GraphQL::Types::ISO8601DateTime)
     field(:request_count, Integer)
     field(:failures, Integer)
-    field(:completed, Boolean)
+    field(:result, String, description: "pass, fail, or null when the run never reported")
   end
 end
