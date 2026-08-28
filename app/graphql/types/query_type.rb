@@ -77,6 +77,18 @@ module Types
       argument :hours, Integer, required: false, default_value: 24
       description('boot, spawn and teardown events, with their detail payload')
     end
+
+    field(:load_runs, [Types::LoadRunType], null: false) do
+      argument(:limit, Integer, required: false, default_value: 25)
+      description('load generator runs, newest first, one row per run and route')
+    end
+
+    field(:load_compare, [Types::LoadCompareRowType], null: false) do
+      argument(:run_id, ID)
+      argument(:route, String)
+      argument(:step, Integer, required: false, default_value: 15)
+      description('what the generator sent against what the app traced, per bucket')
+    end
     
     def connections
       ActionCable.server.connections.map do |connection|
@@ -155,6 +167,14 @@ module Types
     def ingester_transitions(hours:)
       from, to = ingester_window(hours)
       IngesterSample.transitions(from: from, to: to)
+    end
+
+    def load_runs(limit:)
+      LoadSample.runs(limit: limit.clamp(1, 200))
+    end
+
+    def load_compare(run_id:, route:, step:)
+      LoadSample.compare(run_id: run_id, route: route, step: step.clamp(1, 300))
     end
 
     private

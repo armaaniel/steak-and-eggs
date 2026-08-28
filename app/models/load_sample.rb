@@ -44,4 +44,15 @@ class LoadSample < ApplicationRecord
       .where(run_id: run_id, route: route)
       .pluck(Arel.sql('load_samples.waiting - t.duration'))
   end
+
+  # One row per run and route, newest first — what the run picker lists.
+  def self.runs(limit: 25)
+    group(:run_id, :route)
+      .order(Arel.sql('MIN(at) DESC'))
+      .limit(limit)
+      .pluck(:run_id, :route, Arel.sql('MIN(at)'), Arel.sql('MAX(at)'), Arel.sql('COUNT(*)'))
+      .map { |run_id, route, started_at, ended_at, samples|
+        {run_id: run_id, route: route, started_at: started_at, ended_at: ended_at, samples: samples}
+      }
+  end
 end
