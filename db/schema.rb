@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_08_26_193857) do
+ActiveRecord::Schema[8.0].define(version: 2026_08_27_221100) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -34,6 +34,17 @@ ActiveRecord::Schema[8.0].define(version: 2026_08_26_193857) do
     t.index ["boot_id", "at"], name: "index_ingester_samples_on_boot_id_and_at"
     t.index ["connection_id", "at"], name: "index_ingester_samples_on_connection_id_and_at"
     t.index ["kind", "at"], name: "index_ingester_samples_on_kind_and_at"
+  end
+
+  create_table "load_samples", force: :cascade do |t|
+    t.uuid "run_id", null: false
+    t.uuid "request_id", null: false
+    t.datetime "at", null: false
+    t.string "route", null: false
+    t.integer "duration", null: false
+    t.integer "waiting"
+    t.integer "status"
+    t.index ["run_id", "at"], name: "index_load_samples_on_run_id_and_at"
   end
 
   create_table "portfolio_records", force: :cascade do |t|
@@ -86,6 +97,8 @@ ActiveRecord::Schema[8.0].define(version: 2026_08_26_193857) do
     t.string "source", default: "user", null: false
     t.uuid "run_id"
     t.string "result"
+    t.uuid "request_id"
+    t.index ["request_id"], name: "index_traces_on_request_id", where: "(request_id IS NOT NULL)"
     t.index ["run_id"], name: "index_traces_on_run_id", where: "(run_id IS NOT NULL)"
     t.index ["source", "created_at"], name: "index_traces_on_source_and_created_at"
   end
