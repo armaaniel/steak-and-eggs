@@ -21,9 +21,15 @@ Rails.application.config.after_initialize do
   trace_queue = Queue.new
 
   Thread.new do
-    while trace = trace_queue.pop
+    loop do
+      batch = [trace_queue.pop]
+
+      while batch.size < 200 && trace_queue.size > 0
+        batch.push(trace_queue.pop(true))
+      end
+
       begin
-        Trace.create!(trace)
+        Trace.insert_all(batch)
       rescue => e
         Sentry.capture_exception(e)
       end
@@ -97,7 +103,9 @@ Rails.application.config.after_initialize do
         run_id: payload[:run_id],
         result: payload[:result],
         request_id: payload[:request_id],
-        breakdown: breakdown.presence
+        breakdown: breakdown.presence,
+        created_at: now,
+        updated_at: now
       })
 
     end
