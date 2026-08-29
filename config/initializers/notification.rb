@@ -89,6 +89,7 @@ Rails.application.config.after_initialize do
       breakdown = current_request.delete(id)  
       next if payload[:action] == 'not_found'
       next unless TRACKED_ROUTES.any? { |route| payload[:path]&.start_with?(route) }
+      now = Time.current
 
       trace_queue.push({
         endpoint: "#{payload[:method]} #{payload[:path]}",
