@@ -350,6 +350,24 @@ resource "aws_iam_role_policy" "ecs_exec" {
   })
 }
 
+resource "aws_iam_role_policy" "cloudwatch_read" {
+  name = "cloudwatch-read"
+  role = aws_iam_role.ecs_task_role.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "cloudwatch:GetMetricData"
+        ]
+        Resource = "*"
+      }
+    ]
+  })
+}
+
 resource "aws_iam_role_policy" "scheduler_ecs" {
   role = aws_iam_role.scheduler_role.id
   policy = jsonencode({
