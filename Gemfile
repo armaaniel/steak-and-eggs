@@ -31,6 +31,8 @@ gem 'rack-cors'
 
 gem 'graphql'
 
+gem "aws-sdk-cloudwatch"
+
 # Reduces boot times through caching; required in config/boot.rb
 gem "bootsnap", require: false
 

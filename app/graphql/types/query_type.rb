@@ -89,6 +89,12 @@ module Types
       argument(:step, Integer, required: false, default_value: 15)
       description('what the generator sent against what the app traced, per bucket')
     end
+
+    field(:run_metrics, [Types::RunMetricType], null: false) do
+      argument(:run_id, ID)
+      argument(:metric, String, required: false, default_value: 'cpu')
+      description('infrastructure metric over the window of one run')
+    end
     
     def connections
       ActionCable.server.connections.map do |connection|
@@ -175,6 +181,10 @@ module Types
 
     def load_compare(run_id:, route:, step:)
       LoadSample.compare(run_id: run_id, route: route, step: step.clamp(1, 300))
+    end
+
+    def run_metrics(run_id:, metric:)
+      MetricService.for_run(run_id: run_id, metric: metric)
     end
 
     private

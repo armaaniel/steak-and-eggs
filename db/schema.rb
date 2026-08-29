@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_08_27_221100) do
+ActiveRecord::Schema[8.0].define(version: 2026_08_29_180334) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -67,6 +67,16 @@ ActiveRecord::Schema[8.0].define(version: 2026_08_27_221100) do
     t.index ["user_id"], name: "index_positions_on_user_id"
     t.check_constraint "average_price > 0::numeric", name: "average_price_positive"
     t.check_constraint "shares > 0", name: "shares_positive"
+  end
+
+  create_table "run_metrics", force: :cascade do |t|
+    t.uuid "run_id", null: false
+    t.string "metric", null: false
+    t.datetime "at", null: false
+    t.float "minimum"
+    t.float "maximum"
+    t.float "average"
+    t.index ["run_id", "metric", "at"], name: "index_run_metrics_on_run_id_and_metric_and_at", unique: true
   end
 
   create_table "tickers", force: :cascade do |t|
