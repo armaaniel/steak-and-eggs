@@ -21,15 +21,9 @@ Rails.application.config.after_initialize do
   trace_queue = Queue.new
 
   Thread.new do
-    loop do
-      batch = [trace_queue.pop]
-
-      while batch.size < 200 && trace_queue.size > 0
-        batch.push(trace_queue.pop(true))
-      end
-
+    while trace = trace_queue.pop
       begin
-        Trace.insert_all(batch)
+        Trace.create!(trace)
       rescue => e
         Sentry.capture_exception(e)
       end
@@ -89,7 +83,6 @@ Rails.application.config.after_initialize do
       breakdown = current_request.delete(id)  
       next if payload[:action] == 'not_found'
       next unless TRACKED_ROUTES.any? { |route| payload[:path]&.start_with?(route) }
-      now = Time.current
 
       trace_queue.push({
         endpoint: "#{payload[:method]} #{payload[:path]}",
@@ -104,9 +97,7 @@ Rails.application.config.after_initialize do
         run_id: payload[:run_id],
         result: payload[:result],
         request_id: payload[:request_id],
-        breakdown: breakdown.presence,
-        created_at: now,
-        updated_at: now
+        breakdown: breakdown.presence
       })
 
     end
