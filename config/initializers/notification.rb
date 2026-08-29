@@ -22,11 +22,6 @@ Rails.application.config.after_initialize do
 
   Thread.new do
     while trace = trace_queue.pop
-      begin
-        Trace.create!(trace)
-      rescue => e
-        Sentry.capture_exception(e)
-      end
     end
   end
 
@@ -83,8 +78,6 @@ Rails.application.config.after_initialize do
       breakdown = current_request.delete(id)  
       next if payload[:action] == 'not_found'
       next unless TRACKED_ROUTES.any? { |route| payload[:path]&.start_with?(route) }
-      
-=begin test to see cost of instrumentation
 
       trace_queue.push({
         endpoint: "#{payload[:method]} #{payload[:path]}",
@@ -101,8 +94,6 @@ Rails.application.config.after_initialize do
         request_id: payload[:request_id],
         breakdown: breakdown.presence
       })
-      
-=end
 
     end
   rescue => e
