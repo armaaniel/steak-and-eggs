@@ -22,6 +22,11 @@ Rails.application.config.after_initialize do
 
   Thread.new do
     while trace = trace_queue.pop
+      begin
+        Trace.create!(trace)
+      rescue => e
+        Sentry.capture_exception(e)
+      end
     end
   end
 
