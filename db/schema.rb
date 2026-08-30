@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_08_29_180334) do
+ActiveRecord::Schema[8.0].define(version: 2026_08_29_201308) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -24,7 +24,6 @@ ActiveRecord::Schema[8.0].define(version: 2026_08_29_180334) do
     t.bigint "frames", default: 0, null: false
     t.bigint "events", default: 0, null: false
     t.integer "symbols"
-    t.integer "max_lag_ms"
     t.datetime "last_message_at"
     t.datetime "first_message_at"
     t.jsonb "detail"

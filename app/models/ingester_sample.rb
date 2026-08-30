@@ -49,12 +49,11 @@ class IngesterSample < ApplicationRecord
   TERMINAL_CAUSES = %w[stale error closed force_disconnect].freeze
   BASE_LAG_MS = 902_000
 
-  # Each sample's worst and mean lag above the feed's baseline, streaming samples only.
+  # Each sample's mean lag above the feed's baseline, streaming samples only.
   def self.lag(from:, to:)
     sql = <<~SQL
       SELECT
         at,
-        max_lag_ms - #{BASE_LAG_MS} AS max_excess_ms,
         CASE WHEN sampled_events > 0
              THEN (sum_lag_ms::float / sampled_events) - #{BASE_LAG_MS}
         END AS mean_excess_ms,
@@ -208,15 +207,12 @@ class IngesterSample < ApplicationRecord
     connection.exec_query(sanitized, 'IngesterSample').to_a
   end
 
-  # Per-sample events and frames per second, with that sample's lag and symbol count.
+  # Per-sample events and frames per second, with that sample's symbol count.
   def self.rate(from:, to:)
     sql = <<~SQL
       WITH deltas AS (
         SELECT
           at,
-          CASE WHEN state = 'streaming' AND sampled_events > 0
-               THEN max_lag_ms - #{BASE_LAG_MS}
-          END AS max_excess_ms,
           symbols,
           CASE WHEN events < lag(events) OVER w THEN events
                ELSE events - lag(events) OVER w END AS d_events,
@@ -229,7 +225,6 @@ class IngesterSample < ApplicationRecord
       )
       SELECT
         at,
-        max_excess_ms,
         symbols,
         d_events / d_seconds AS events_per_sec,
         d_frames / d_seconds AS frames_per_sec
