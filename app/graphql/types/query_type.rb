@@ -1,5 +1,6 @@
 module Types
   class QueryType < Types::BaseObject
+    INGESTER_MAX_WINDOW = 30.days
 
     field(:trace_summary, [Types::TraceSummaryType]) do
       description('fetch trace data by routes')
@@ -45,36 +46,43 @@ module Types
     end
     
     field(:ingester_spans, [Types::IngesterSpanType], null: false) do
-      argument(:hours, Integer, required: false, default_value: 24)
+      argument(:from, GraphQL::Types::ISO8601DateTime)
+      argument(:to, GraphQL::Types::ISO8601DateTime)
       description('ingester state timeline')
     end
 
     field(:ingester_boots, [Types::IngesterBootType], null: false) do
-      argument(:hours, Integer, required: false, default_value: 24)
+      argument(:from, GraphQL::Types::ISO8601DateTime)
+      argument(:to, GraphQL::Types::ISO8601DateTime)
       description('one row per process lifetime')
     end
 
     field(:ingester_connections, [Types::IngesterConnectionType], null: false, connection: false) do
-      argument(:hours, Integer, required: false, default_value: 24)
+      argument(:from, GraphQL::Types::ISO8601DateTime)
+      argument(:to, GraphQL::Types::ISO8601DateTime)
       description('one row per websocket connection')
     end
 
     field(:ingester_rate, [Types::IngesterRatePointType], null: false) do
-      argument(:hours, Integer, required: false, default_value: 24)
+      argument(:from, GraphQL::Types::ISO8601DateTime)
+      argument(:to, GraphQL::Types::ISO8601DateTime)
       description('events and frames per second between consecutive samples')
     end
 
     field(:ingester_uptime, Types::IngesterUptimeType, null: false) do
-      argument(:hours, Integer, required: false, default_value: 24)
+      argument(:from, GraphQL::Types::ISO8601DateTime)
+      argument(:to, GraphQL::Types::ISO8601DateTime)
       description('streaming / idle / down totals for the window')
     end
 
     field :ingester_lag, [Types::IngesterLagPointType], null: false do
-      argument :hours, Integer, required: false, default_value: 24
+      argument :from, GraphQL::Types::ISO8601DateTime
+      argument :to, GraphQL::Types::ISO8601DateTime
     end
     
     field :ingester_transitions, [Types::IngesterTransitionType], null: false do
-      argument :hours, Integer, required: false, default_value: 24
+      argument :from, GraphQL::Types::ISO8601DateTime
+      argument :to, GraphQL::Types::ISO8601DateTime
       description('boot, spawn and teardown events, with their detail payload')
     end
 
@@ -140,38 +148,38 @@ module Types
       Trace.run_traces(run_id: run_id)
     end
 
-    def ingester_spans(hours:)
-      from, to = ingester_window(hours)
+    def ingester_spans(from:, to:)
+      from, to = ingester_window(from, to)
       IngesterSample.spans(from: from, to: to)
     end
 
-    def ingester_boots(hours:)
-      from, to = ingester_window(hours)
+    def ingester_boots(from:, to:)
+      from, to = ingester_window(from, to)
       IngesterSample.boots(from: from, to: to)
     end
 
-    def ingester_connections(hours:)
-      from, to = ingester_window(hours)
+    def ingester_connections(from:, to:)
+      from, to = ingester_window(from, to)
       IngesterSample.connections(from: from, to: to)
     end
 
-    def ingester_rate(hours:)
-      from, to = ingester_window(hours)
+    def ingester_rate(from:, to:)
+      from, to = ingester_window(from, to)
       IngesterSample.rate(from: from, to: to)
     end
 
-    def ingester_uptime(hours:)
-      from, to = ingester_window(hours)
+    def ingester_uptime(from:, to:)
+      from, to = ingester_window(from, to)
       IngesterSample.uptime(from: from, to: to)
     end
 
-    def ingester_lag(hours:)
-      from, to = ingester_window(hours)
+    def ingester_lag(from:, to:)
+      from, to = ingester_window(from, to)
       IngesterSample.lag(from: from, to: to)
     end
 
-    def ingester_transitions(hours:)
-      from, to = ingester_window(hours)
+    def ingester_transitions(from:, to:)
+      from, to = ingester_window(from, to)
       IngesterSample.transitions(from: from, to: to)
     end
 
@@ -189,9 +197,10 @@ module Types
 
     private
     
-    def ingester_window(hours)
-      to = Time.current
-      [to - hours.clamp(1, 720).hours, to]
+    def ingester_window(from, to)
+      raise(GraphQL::ExecutionError, 'from must be earlier than to') if from >= to
+
+      [[from, to - INGESTER_MAX_WINDOW].max, to]
     end
   end
 end
