@@ -214,6 +214,9 @@ class IngesterSample < ApplicationRecord
         SELECT
           at,
           symbols,
+          CASE WHEN state = 'streaming' AND sampled_events > 0
+               THEN (sum_lag_ms::float / sampled_events) - #{BASE_LAG_MS}
+          END AS mean_excess_ms,
           CASE WHEN events < lag(events) OVER w THEN events
                ELSE events - lag(events) OVER w END AS d_events,
           CASE WHEN frames < lag(frames) OVER w THEN frames
@@ -226,6 +229,7 @@ class IngesterSample < ApplicationRecord
       SELECT
         at,
         symbols,
+        mean_excess_ms,
         d_events / d_seconds AS events_per_sec,
         d_frames / d_seconds AS frames_per_sec
       FROM deltas
