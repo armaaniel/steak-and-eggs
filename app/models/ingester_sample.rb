@@ -49,7 +49,9 @@ class IngesterSample < ApplicationRecord
   TERMINAL_CAUSES = %w[stale error closed force_disconnect].freeze
   BASE_LAG_MS = 902_000
 
-  # Each sample's mean lag above the feed's baseline, streaming samples only.
+  # Each sample's mean lag above the feed's baseline. Gated on sampled_events rather
+  # than state: the feed runs ~15 min delayed, so a bucket written after the close
+  # still carries regular-session events, and state would mask them as idle.
   def self.lag(from:, to:)
     sql = <<~SQL
       SELECT
@@ -62,7 +64,6 @@ class IngesterSample < ApplicationRecord
       FROM ingester_samples
       WHERE at >= :from AND at < :to
         AND kind = 'tick'
-        AND state = 'streaming'
         AND sampled_events > 0
       ORDER BY at
     SQL
@@ -176,7 +177,7 @@ class IngesterSample < ApplicationRecord
             percentile_cont(0.99) WITHIN GROUP (
               ORDER BY samples.sum_lag_ms::float / NULLIF(samples.sampled_events, 0)
             ) FILTER (
-              WHERE samples.kind = 'tick' AND samples.state = 'streaming' AND samples.sampled_events > 0
+              WHERE samples.kind = 'tick' AND samples.sampled_events > 0
             )
           )::int - #{BASE_LAG_MS} AS p99_mean_excess_ms
         FROM ingester_samples samples
@@ -214,7 +215,7 @@ class IngesterSample < ApplicationRecord
         SELECT
           at,
           symbols,
-          CASE WHEN state = 'streaming' AND sampled_events > 0
+          CASE WHEN sampled_events > 0
                THEN (sum_lag_ms::float / sampled_events) - #{BASE_LAG_MS}
           END AS mean_excess_ms,
           CASE WHEN events < lag(events) OVER w THEN events
