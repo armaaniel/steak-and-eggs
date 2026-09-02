@@ -1,4 +1,4 @@
-class PriceChannel < ApplicationCable::Channel
+class PriceChannel < ActionCable::Channel::Base
   def subscribed
     stream_from("price_channel:#{params[:symbol]}")
   end
