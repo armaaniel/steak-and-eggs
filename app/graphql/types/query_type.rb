@@ -97,6 +97,16 @@ module Types
       argument(:step, Integer, required: false, default_value: 15)
       description('what the generator sent against what the app traced, per bucket')
     end
+    
+    field(:cable_runs, [Types::CableRunType], null: false) do
+      argument(:limit, Integer, required: false, default_value: 25)
+      description('websocket load runs, newest first')
+    end
+
+    field(:cable_compare, [Types::CableCompareRowType], null: false) do
+      argument(:run_id, ID)
+      description('published against received frames, per bucket')
+    end
 
     field(:run_metrics, [Types::RunMetricType], null: false) do
       argument(:run_id, ID)
@@ -189,6 +199,14 @@ module Types
 
     def load_compare(run_id:, route:, step:)
       LoadSample.compare(run_id: run_id, route: route, step: step.clamp(1, 300))
+    end
+    
+    def cable_runs(limit:)
+      CableSample.runs(limit: limit.clamp(1, 200))
+    end
+
+    def cable_compare(run_id:)
+      CableSample.compare(run_id: run_id)
     end
 
     def run_metrics(run_id:, metric:)

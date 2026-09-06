@@ -709,3 +709,11 @@ output "alb_url" {
 output "db_endpoint" {
   value = aws_db_instance.postgres.endpoint
 }
+
+output "ecs_subnets" {
+  value = [aws_subnet.alb_ecs_public.id, aws_subnet.alb_ecs_public_b.id]
+}
+
+output "ecs_security_group" {
+  value = aws_security_group.ecs.id
+}

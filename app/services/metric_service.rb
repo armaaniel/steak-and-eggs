@@ -10,11 +10,18 @@ class MetricService
   STATS = {'minimum' => 'Minimum', 'maximum' => 'Maximum', 'average' => 'Average'}.freeze
 
   def self.for_run(run_id:, metric: 'cpu')
-    from, to = LoadSample.where(run_id: run_id).pluck(Arel.sql('MIN(at)'), Arel.sql('MAX(at)')).first
+    from, to = window(run_id)
 
     refresh(run_id: run_id, metric: metric, from: from - PAD, to: to + PAD) if from && METRICS.key?(metric)
 
     RunMetric.for_run(run_id: run_id, metric: metric)
+  end
+
+  def self.window(run_id)
+    from, to = LoadSample.where(run_id: run_id).pluck(Arel.sql('MIN(at)'), Arel.sql('MAX(at)')).first
+    return [from, to] if from
+
+    CableSample.where(run_id: run_id).pluck(Arel.sql('MIN(at)'), Arel.sql('MAX(at)')).first
   end
 
   def self.refresh(run_id:, metric:, from:, to:)
