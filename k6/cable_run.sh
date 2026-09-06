@@ -16,7 +16,7 @@ SG=$(terraform -chdir="${REPO_ROOT}" output -raw ecs_security_group)
 
 echo "run_id: ${RUN_ID}"
 
-k6 cloud run -e RUN_ID="${RUN_ID}" "${SCRIPT_DIR}/cable_load.js" &
+k6 cloud run -e RUN_ID="${RUN_ID}" "${SCRIPT_DIR}/cable_run.js" &
 K6_PID=$!
 
 echo "waiting ${CONNECT_GRACE}s for cloud provisioning"

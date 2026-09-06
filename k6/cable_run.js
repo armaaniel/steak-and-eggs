@@ -1,6 +1,6 @@
 import http from 'k6/http'
 import secrets from 'k6/secrets'
-import { WebSocket } from 'k6/experimental/websockets'
+import { WebSocket } from 'k6/websockets'
 
 const BASE = 'https://www.steakneggs.art'
 const WS = 'wss://www.steakneggs.art/cable'
@@ -10,10 +10,10 @@ const SYMBOLS = ['LOAD_01', 'LOAD_02', 'LOAD_03', 'LOAD_04', 'LOAD_05',
 
 const BUCKET = 5000        // ms per cable_samples row
 const RESERVOIR = 10       // raw lag values kept per bucket, for percentiles
-const FLUSH_BASE = 15000   // ms between flushes
+const FLUSH_BASE = 60000   // ms between flushes
 const FLUSH_JITTER = 10000 // spread so 100 VUs don't align on one tick
 const SUSPECT_WINDOW = 500 // ms after a flush returns where timings are unreliable
-const RUN_MS = 105000  // must be under the publisher's total; deadline fires while frames still flow
+const RUN_MS = 1130000  // must be under the publisher's total; deadline fires while frames still flow
 
 export const options = {
 	cloud: {
@@ -24,9 +24,9 @@ export const options = {
 	scenarios: {
 		hold: {
 			executor: 'per-vu-iterations',
-    	vus: 5,
+    	vus: 100,
     	iterations: 1,
-    	maxDuration: '6m',
+    	maxDuration: '30m',
     },
   },
 }
@@ -89,8 +89,10 @@ export default function (data) {
     flushEndedAt = Date.now()
   }
 
-  const ws = new WebSocket(WS)
-
+	const ws = new WebSocket(WS, null, {
+	  headers: { Origin: BASE },
+	})
+	
   ws.onopen = () => {
     for (const symbol of SYMBOLS) {
       ws.send(JSON.stringify({

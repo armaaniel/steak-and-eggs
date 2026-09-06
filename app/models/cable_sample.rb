@@ -13,6 +13,7 @@ class CableSample < ApplicationRecord
         FROM cable_samples
         WHERE run_id = :run_id
         GROUP BY at
+        HAVING count(DISTINCT vu) FILTER (WHERE source = 'client') > 0
       ),
       lags AS (
         SELECT at, unnest(sample_lags) AS lag
