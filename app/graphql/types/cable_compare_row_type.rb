@@ -7,5 +7,6 @@ module Types
     field :expected, Integer, null: true
     field :mean_lag_ms, Float, null: true
     field :p99_lag_ms, Float, null: true
+    field :peak_clients, Integer, null: true
   end
 end

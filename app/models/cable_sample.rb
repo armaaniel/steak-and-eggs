@@ -5,11 +5,11 @@ class CableSample < ApplicationRecord
       WITH buckets AS (
         SELECT
           at,
-          sum(frames) FILTER (WHERE source = 'publisher')            AS published,
-          sum(frames) FILTER (WHERE source = 'client')               AS received,
-          count(DISTINCT vu) FILTER (WHERE source = 'client')        AS clients,
-          sum(sum_lag_ms) FILTER (WHERE source = 'client' AND suspect = false) AS sum_lag_ms,
-          sum(frames) FILTER (WHERE source = 'client' AND suspect = false) AS clean_frames
+          sum(frames) FILTER (WHERE source = 'publisher')     AS published,
+          sum(frames) FILTER (WHERE source = 'client')        AS received,
+          count(DISTINCT vu) FILTER (WHERE source = 'client') AS clients,
+          sum(sum_lag_ms) FILTER (WHERE source = 'client')    AS sum_lag_ms,
+          sum(clean_frames) FILTER (WHERE source = 'client')  AS clean_frames
         FROM cable_samples
         WHERE run_id = :run_id
         GROUP BY at
@@ -18,18 +18,19 @@ class CableSample < ApplicationRecord
       lags AS (
         SELECT at, unnest(sample_lags) AS lag
         FROM cable_samples
-        WHERE run_id = :run_id AND source = 'client' AND suspect = false
+        WHERE run_id = :run_id AND source = 'client'
       )
       SELECT
         buckets.at,
         buckets.published,
         buckets.received,
         buckets.clients,
-        buckets.published * buckets.clients AS expected,
+        max(buckets.clients) OVER ()                            AS peak_clients,
+        buckets.published * max(buckets.clients) OVER ()        AS expected,
         CASE WHEN buckets.clean_frames > 0
              THEN buckets.sum_lag_ms::float / buckets.clean_frames
         END AS mean_lag_ms,
-        percentile_cont(0.99) WITHIN GROUP (ORDER BY lags.lag) AS p99_lag_ms
+        percentile_cont(0.99) WITHIN GROUP (ORDER BY lags.lag)  AS p99_lag_ms
       FROM buckets
       LEFT JOIN lags ON lags.at = buckets.at
       GROUP BY buckets.at, buckets.published, buckets.received,

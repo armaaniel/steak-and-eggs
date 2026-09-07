@@ -15,7 +15,7 @@ class CableSamplesController < ApplicationController
         frames:      sample[:frames],
         sum_lag_ms:  sample[:sum_lag_ms],
         sample_lags: sample[:sample_lags],
-        suspect:     sample[:suspect]
+        clean_frames: sample[:clean_frames]
       }
     end
 

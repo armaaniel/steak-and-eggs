@@ -8,13 +8,11 @@ CABLE_STAGESS = [
 ]
 
 CABLE_STAGES = [
-  [4000, 120],
-  [2000, 120],
-  [1000, 180],
-  [500,  180],
-  [333,  180],
-  [250,  180],
-  [167,  180]
+  [500, 90],
+  [333, 120],
+  [286, 180],
+  [250, 180],
+  [200, 120]
 ]
 
 CABLE_PLAN = CABLE_STAGES.each_with_object([]) do |(interval_ms, hold_seconds), plan|

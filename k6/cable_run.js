@@ -8,25 +8,23 @@ const WS = 'wss://www.steakneggs.art/cable'
 const SYMBOLS = ['LOAD_01', 'LOAD_02', 'LOAD_03', 'LOAD_04', 'LOAD_05',
                  'LOAD_06', 'LOAD_07', 'LOAD_08', 'LOAD_09', 'LOAD_10']
 
-const BUCKET = 5000        // ms per cable_samples row
-const RESERVOIR = 10       // raw lag values kept per bucket, for percentiles
-const FLUSH_BASE = 60000   // ms between flushes
-const FLUSH_JITTER = 10000 // spread so 100 VUs don't align on one tick
-const SUSPECT_WINDOW = 500 // ms after a flush returns where timings are unreliable
-const RUN_MS = 1130000  // must be under the publisher's total; deadline fires while frames still flow
+const BUCKET = 5000
+const RESERVOIR = 10
+const FLUSH_BASE = 60000
+const FLUSH_JITTER = 10000
+const SUSPECT_WINDOW = 100
+const RUN_MS = 1130000
 
 export const options = {
-	cloud: {
-		distribution: {
-			west: { loadZone: 'amazon:us:palo alto', percent: 100 },
-		},
-	},
-	scenarios: {
-		hold: {
-			executor: 'per-vu-iterations',
-    	vus: 100,
-    	iterations: 1,
-    	maxDuration: '30m',
+  cloud: {
+    distribution: { west: { loadZone: 'amazon:us:palo alto', percent: 100 } },
+  },
+  scenarios: {
+    hold: {
+      executor: 'per-vu-iterations',
+      vus: 100,
+      iterations: 1,
+      maxDuration: '30m',
     },
   },
 }
@@ -42,57 +40,87 @@ export default function (data) {
   const vu = __VU
   const buckets = new Map()
   const startedAt = Date.now()
-	let firstFrameAt = 0
 
+  let firstFrameAt = 0
   let flushEndedAt = 0
+  let inFlight = false
   let nextFlush = startedAt + FLUSH_BASE + Math.random() * FLUSH_JITTER
 
-  const bucketFor = (now) => {
-    const key = Math.floor(now / BUCKET) * BUCKET
+  const bucketFor = (ts) => {
+    const key = Math.floor(ts / BUCKET) * BUCKET
     if (!buckets.has(key)) {
-      buckets.set(key, { at: key, frames: 0, sumLag: 0, seen: 0, lags: [], suspect: false })
+      buckets.set(key, { at: key, frames: 0, cleanFrames: 0, sumLag: 0, seen: 0, lags: [] })
     }
     return buckets.get(key)
   }
 
-  const flush = (closing) => {
-    const now = Date.now()
-    const done = []
+  const restore = (rows) => {
+    for (const row of rows) {
+      const b = bucketFor(row.at)
+      b.frames += row.frames
+      b.cleanFrames += row.clean_frames
+      b.sumLag += row.sum_lag_ms
+      b.seen += row.frames
+      for (const lag of row.sample_lags) {
+        if (b.lags.length < RESERVOIR) b.lags.push(lag)
+      }
+    }
+  }
+
+  const drain = (closing) => {
+    const cutoff = Math.floor(Date.now() / BUCKET) * BUCKET
+    const rows = []
 
     for (const [key, b] of buckets) {
-      // keep the in-progress bucket unless we're shutting down
-      if (!closing && key >= Math.floor(now / BUCKET) * BUCKET) continue
-      done.push({
+      if (!closing && key >= cutoff) continue
+      rows.push({
         at: b.at,
         vu: vu,
         frames: b.frames,
+        clean_frames: b.cleanFrames,
         sum_lag_ms: b.sumLag,
         sample_lags: b.lags,
-        suspect: b.suspect,
       })
       buckets.delete(key)
     }
 
-    if (!done.length) return
-
-    // Synchronous — blocks this VU's event loop, so frames arriving during the POST
-    // queue and stamp late on delivery. That's what flushEndedAt marks.
-    http.post(
-      `${BASE}/cable_samples`,
-      JSON.stringify({ run_id: data.runId, samples: done }),
-      {
-        headers: { 'Content-Type': 'application/json', 'Synthetic-Key': data.key },
-        timeout: '30s',
-      }
-    )
-
-    flushEndedAt = Date.now()
+    return rows
   }
 
-	const ws = new WebSocket(WS, null, {
-	  headers: { Origin: BASE },
-	})
-	
+  const params = () => ({
+    headers: { 'Content-Type': 'application/json', 'Synthetic-Key': data.key },
+    timeout: '30s',
+  })
+
+  const settle = (ok, rows) => {
+    inFlight = false
+    flushEndedAt = Date.now()
+    if (!ok) restore(rows)
+  }
+
+  const flush = () => {
+    if (inFlight) return
+    const rows = drain(false)
+    if (!rows.length) return
+
+    inFlight = true
+    const body = JSON.stringify({ run_id: data.runId, samples: rows })
+
+    http.asyncRequest('POST', `${BASE}/cable_samples`, body, params()).then(
+      (res) => settle(res.status === 201, rows),
+      () => settle(false, rows)
+    )
+  }
+
+  const flushFinal = () => {
+    const rows = drain(true)
+    if (!rows.length) return
+    const body = JSON.stringify({ run_id: data.runId, samples: rows })
+    http.post(`${BASE}/cable_samples`, body, params())
+  }
+
+  const ws = new WebSocket(WS, null, { headers: { Origin: BASE } })
+
   ws.onopen = () => {
     for (const symbol of SYMBOLS) {
       ws.send(JSON.stringify({
@@ -106,41 +134,41 @@ export default function (data) {
     const now = Date.now()
     const frame = JSON.parse(e.data)
 
-    // welcome, confirm_subscription, and a ping every 3s all arrive on this socket.
-    // Only frames carrying an identifier and a message are broadcasts.
     if (!frame.identifier || frame.message === undefined) return
-		if (!firstFrameAt) firstFrameAt = now
+    if (!firstFrameAt) firstFrameAt = now
 
     const payload = typeof frame.message === 'string' ? JSON.parse(frame.message) : frame.message
     const lag = now - payload.t
-
     const b = bucketFor(payload.t)
+
     b.frames += 1
-    b.sumLag += lag
-    b.seen += 1
 
-    if (now - flushEndedAt < SUSPECT_WINDOW) b.suspect = true
+    if (now - flushEndedAt >= SUSPECT_WINDOW) {
+      b.cleanFrames += 1
+      b.sumLag += lag
+      b.seen += 1
 
-    if (b.lags.length < RESERVOIR) {
-      b.lags.push(lag)
-    } else {
-      const j = Math.floor(Math.random() * b.seen)
-      if (j < RESERVOIR) b.lags[j] = lag
+      if (b.lags.length < RESERVOIR) {
+        b.lags.push(lag)
+      } else {
+        const j = Math.floor(Math.random() * b.seen)
+        if (j < RESERVOIR) b.lags[j] = lag
+      }
     }
 
     if (now >= nextFlush) {
-      flush(false)
+      flush()
       nextFlush = Date.now() + FLUSH_BASE + Math.random() * FLUSH_JITTER
     }
 
-		if (now - firstFrameAt >= RUN_MS) {
-		  flush(true)
-		  ws.close()
-		}
+    if (now - firstFrameAt >= RUN_MS) {
+      flushFinal()
+      ws.close()
+    }
   }
 
   ws.onclose = () => {
-    flush(true)
+    flushFinal()
   }
 
   ws.onerror = (e) => {
