@@ -8,7 +8,7 @@ class CableSample < ApplicationRecord
           sum(frames) FILTER (WHERE source = 'publisher')            AS published,
           sum(frames) FILTER (WHERE source = 'client')               AS received,
           count(DISTINCT vu) FILTER (WHERE source = 'client')        AS clients,
-          sum(sum_lag_ms) FILTER (WHERE source = 'client')           AS sum_lag_ms,
+          sum(sum_lag_ms) FILTER (WHERE source = 'client' AND suspect = false) AS sum_lag_ms,
           sum(frames) FILTER (WHERE source = 'client' AND suspect = false) AS clean_frames
         FROM cable_samples
         WHERE run_id = :run_id

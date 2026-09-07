@@ -114,7 +114,7 @@ export default function (data) {
     const payload = typeof frame.message === 'string' ? JSON.parse(frame.message) : frame.message
     const lag = now - payload.t
 
-    const b = bucketFor(now)
+    const b = bucketFor(payload.t)
     b.frames += 1
     b.sumLag += lag
     b.seen += 1

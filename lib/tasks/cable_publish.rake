@@ -89,11 +89,12 @@ task cable_publish: :environment do
           elapsed < plan[:ends_at]
         end
         break unless stage
-
-        payload = JSON.generate(t: (Time.now.to_f * 1000).round)
+        
+        at = Time.now
+        payload = JSON.generate(t: (at.to_f * 1000).round)
         redis.publish("price_channel:#{symbol}", payload)
         
-        bucket = bucket_of.call(Time.now.utc)
+        bucket = bucket_of.call(at.utc)
         lock.synchronize do 
           counts[bucket] += 1
         end
