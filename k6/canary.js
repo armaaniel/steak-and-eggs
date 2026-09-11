@@ -1,11 +1,12 @@
 import http from 'k6/http'
 import { group } from 'k6'
 import secrets from 'k6/secrets'
-import { expect } from 'https://jslib.k6.io/k6-testing/0.6.1/index.js'
+import { expect as baseExpect } from 'https://jslib.k6.io/k6-testing/0.6.1/index.js'
 
 const BASE = 'https://www.steakneggs.art'
 const SYMBOL = 'AAPL'
 const DEPOSIT = 10000
+const expect = baseExpect.configure({ soft: true, softMode: 'throw' })
 
 // Rotates daily. search:<term> is cached in Redis for 3 days, so a fixed term
 // would be a permanent cache hit and never exercise the ILIKE query. A 7-symbol
@@ -175,10 +176,8 @@ export default async function () {
     failed = true
     throw e
   } finally {
-    if (token) {
-      http.del(`${BASE}/delete_account`, null, {
-        headers: { ...auth(), 'Synthetic-Result': failed ? 'fail' : 'pass' },
-      })
-    }
-  }
+	  const headers = { ...base, 'Synthetic-Result': failed ? 'fail' : 'pass' }
+		if (token) headers.authToken = token
+		http.del(`${BASE}/delete_account`, null, { headers })
+	}
 }
