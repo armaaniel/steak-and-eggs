@@ -24,8 +24,8 @@ Rails.application.routes.draw do
     post('stocks/:symbol/sell', to: 'stocks#sell')
   end
 
-  post('load_samples', to: 'load_samples#create')
-  post('cable_samples', to: 'cable_samples#create')
+  post('load_samples', to: 'samples#load_samples')
+  post('cable_samples', to: 'samples#cable_samples')
 
   get('/', to: 'system#health')
   mount ActionCable.server => '/cable'
