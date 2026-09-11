@@ -49,8 +49,8 @@ RSpec.describe(Types::QueryType) do
       summary = result.dig("data", "traceSummary")
       routes = summary.map { |s| s["route"] }
 
-      expect(routes).to(include("GET /stocks/:symbol/marketdata"))
-      expect(routes).to(include("GET /stocks/:symbol/companydata"))
+      expect(routes).to(include("GET /stocks/symbol/marketdata"))
+      expect(routes).to(include("GET /stocks/symbol/companydata"))
       expect(routes).not_to(include("GET /stocks/TSLA/marketdata"))
     end
 
@@ -60,7 +60,7 @@ RSpec.describe(Types::QueryType) do
 
       result = execute_query
       summary = result.dig("data", "traceSummary")
-      marketdata = summary.find { |s| s["route"] == "GET /stocks/:symbol/marketdata" }
+      marketdata = summary.find { |s| s["route"] == "GET /stocks/symbol/marketdata" }
 
       expect(marketdata["totalRequests"]).to(eq(5))
     end
@@ -150,17 +150,6 @@ RSpec.describe(Types::QueryType) do
 
       expect(traces[0]["id"].to_i).to(eq(recent.id))
       expect(traces[1]["id"].to_i).to(eq(old.id))
-    end
-
-    it("handles GET /stocks/symbol without matching sub-routes") do
-      Trace.create!(endpoint: "GET /stocks/TSLA", duration: 30.0, status: 200)
-      Trace.create!(endpoint: "GET /stocks/TSLA/marketdata", duration: 40.0, status: 200)
-
-      result = execute_query(endpoint: "GET /stocks/symbol")
-      traces = result.dig("data", "traceList")
-
-      expect(traces.length).to(eq(1))
-      expect(traces[0]["endpoint"]).to(eq("GET /stocks/TSLA"))
     end
 
     it("returns an empty array when no traces match") do

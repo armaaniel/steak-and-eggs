@@ -12,22 +12,32 @@ class Trace < ApplicationRecord
     '30d' => {step: 86400, count: 30}   # 30 × 1 day
   }
 
+  ROUTE_PATTERNS = {
+    'GET /stocks/symbol/marketdata'  => 'GET /stocks/%/marketdata',
+    'GET /stocks/symbol/companydata' => 'GET /stocks/%/companydata',
+    'GET /stocks/symbol/chartdata'   => 'GET /stocks/%/chartdata%',
+    'GET /stocks/symbol/tickerdata'  => 'GET /stocks/%/tickerdata',
+    'GET /stocks/symbol/userdata'    => 'GET /stocks/%/userdata',
+    'GET /stocks/symbol/stockprice'  => 'GET /stocks/%/stockprice',
+    'POST /stocks/symbol/buy'        => 'POST /stocks/%/buy',
+    'POST /stocks/symbol/sell'       => 'POST /stocks/%/sell',
+    'GET /search'                    => 'GET /search%'
+  }.freeze
+
+  def self.normalize_endpoint(endpoint)
+    ROUTE_PATTERNS.fetch(endpoint, endpoint)
+  end
+
+  def self.route_case
+    whens = ROUTE_PATTERNS.map do |label, pattern|
+      sanitize_sql_array(['WHEN endpoint LIKE ? THEN ?', pattern, label])
+    end
+    "CASE #{whens.join("\n")} ELSE endpoint END"
+  end
+
   def self.summary
     sql = <<~SQL
-      SELECT
-        CASE
-          WHEN endpoint LIKE 'GET /stocks/%/marketdata' THEN 'GET /stocks/:symbol/marketdata'
-          WHEN endpoint LIKE 'GET /stocks/%/companydata' THEN 'GET /stocks/:symbol/companydata'
-          WHEN endpoint LIKE 'GET /stocks/%/chartdata%' THEN 'GET /stocks/:symbol/chartdata'
-          WHEN endpoint LIKE 'GET /positions/%' THEN 'GET /positions/:symbol'
-          WHEN endpoint LIKE 'GET /search%' THEN 'GET /search'
-          WHEN endpoint LIKE 'GET /stocks/%/tickerdata' THEN 'GET /stocks/:symbol/tickerdata'
-          WHEN endpoint LIKE 'GET /stocks/%/userdata' THEN 'GET /stocks/:symbol/userdata'
-          WHEN endpoint LIKE 'GET /stocks/%/stockprice' THEN 'GET /stocks/:symbol/stockprice'
-          WHEN endpoint LIKE 'POST /stocks/%/buy' THEN 'POST /stocks/:symbol/buy'
-          WHEN endpoint LIKE 'POST /stocks/%/sell' THEN 'POST /stocks/:symbol/sell'
-          ELSE endpoint
-        END as route,
+      SELECT #{route_case} as route,
         COUNT(*) as total_requests,
         PERCENTILE_CONT(0.99) WITHIN GROUP (ORDER BY duration) as p99,
         ROUND(
@@ -45,7 +55,7 @@ class Trace < ApplicationRecord
     results.map do |row|
       {
         route: row['route'],
-        clean_route: row['route'].downcase.gsub(' ', '').gsub(':', ''),
+        clean_route: row['route'].downcase.delete(' '),
         total_requests: row['total_requests'].to_i,
         p99: row['p99']&.to_f || 0.0,
         cache_hit_rate: row['route'].start_with?('POST') ? nil : row['cache_hit_rate']&.to_f
@@ -56,15 +66,9 @@ class Trace < ApplicationRecord
   def self.list(endpoint:)
     route = normalize_endpoint(endpoint)
 
-    if endpoint == 'GET /stocks/symbol'
-      where("endpoint ILIKE ? AND endpoint NOT LIKE ?", route, 'GET /stocks/%/%')
+    where("endpoint ILIKE ?", route)
       .where(source: 'user')
       .order(created_at: :desc)
-    else
-    where("endpoint ILIKE ?", route)
-    .where(source: 'user')
-    .order(created_at: :desc)
-    end
   end
 
   def self.breakdown(endpoint:)
@@ -91,15 +95,9 @@ class Trace < ApplicationRecord
       FROM traces
     SQL
 
-    sanitized = if endpoint == 'GET /stocks/symbol'
-      sanitize_sql_array(
-        ["#{base_sql} WHERE source = 'user' AND endpoint ILIKE ? AND endpoint NOT LIKE ?", route, 'GET /stocks/%/%']
-      )
-    else
-      sanitize_sql_array(
-        ["#{base_sql} WHERE source = 'user' AND endpoint ILIKE ?", route]
-      )
-    end
+    sanitized = sanitize_sql_array(
+      ["#{base_sql} WHERE source = 'user' AND endpoint ILIKE ?", route]
+    )
 
     result = connection.execute(sanitized).first
 
@@ -173,31 +171,5 @@ class Trace < ApplicationRecord
     where(run_id: run_id).order(created_at: :asc)
   end
 
-  def self.normalize_endpoint(endpoint)
-    case endpoint
-    when 'GET /stocks/symbol/marketdata'
-      'GET /stocks/%/marketdata'
-    when 'GET /stocks/symbol/companydata'
-      'GET /stocks/%/companydata'
-    when 'GET /stocks/symbol/chartdata'
-      'GET /stocks/%/chartdata%'
-    when 'GET /stocks/symbol'
-      'GET /stocks/%'
-    when 'GET /search'
-      'GET /search%'
-    when 'GET /stocks/symbol/tickerdata'
-      'GET /stocks/%/tickerdata'
-    when 'GET /stocks/symbol/userdata'
-      'GET /stocks/%/userdata'
-    when 'GET /stocks/symbol/stockprice'
-      'GET /stocks/%/stockprice'
-    when 'POST /stocks/symbol/buy'
-      'POST /stocks/%/buy'
-    when 'POST /stocks/symbol/sell'
-      'POST /stocks/%/sell'
-    else
-      endpoint
-    end
-  end
   private_class_method :normalize_endpoint
 end
