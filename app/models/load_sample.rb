@@ -39,14 +39,28 @@ class LoadSample < ApplicationRecord
     end
   end
 
-  # One row per run and route, newest first — what the run picker lists.
   def self.runs(limit: 25)
-    group(:run_id, :route)
-      .order(Arel.sql('MIN(at) DESC'))
-      .limit(limit)
-      .pluck(:run_id, :route, Arel.sql('MIN(at)'), Arel.sql('MAX(at)'), Arel.sql('COUNT(*)'))
-      .map { |run_id, route, started_at, ended_at, samples|
-        {run_id: run_id, route: route, started_at: started_at, ended_at: ended_at, samples: samples}
-      }
+    sql = <<~SQL
+      SELECT run_id,
+             route,
+             MIN(at)  AS started_at,
+             MAX(at)  AS ended_at,
+             COUNT(*) AS samples
+      FROM load_samples
+      GROUP BY run_id, route
+      ORDER BY started_at DESC
+      LIMIT ?
+    SQL
+
+    query  = sanitize_sql_array([sql, limit])
+    result = connection.select_all(query)
+
+    result.map do |row|
+      { run_id:     row['run_id'],
+        route:      row['route'],
+        started_at: row['started_at'],
+        ended_at:   row['ended_at'],
+        samples:    row['samples'] }
+    end
   end
 end
