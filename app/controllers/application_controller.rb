@@ -6,10 +6,10 @@ class ApplicationController < ActionController::API
     return render(json: {error: 'No Token'}, status: 401) unless token
 
     decoded = JWT.decode(token, Rails.application.secret_key_base, true, algorithm: 'HS256')
-    user_id = decoded[0]['user_id']
+    id = decoded[0]['user_id']
 
-    @current_user = Rails.cache.fetch("user_#{user_id}", expires_in: 24.hours) do
-      User.find(user_id)
+    @current_user = Rails.cache.fetch("user_#{id}", {expires_in: 24.hours}) do
+      User.find(id)
     end
 
   rescue => e
