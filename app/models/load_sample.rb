@@ -39,12 +39,6 @@ class LoadSample < ApplicationRecord
     end
   end
 
-  def self.queue_delay(run_id:, route:)
-    joins("JOIN traces t ON t.request_id = load_samples.request_id")
-      .where(run_id: run_id, route: route)
-      .pluck(Arel.sql('load_samples.waiting - t.duration'))
-  end
-
   # One row per run and route, newest first — what the run picker lists.
   def self.runs(limit: 25)
     group(:run_id, :route)
