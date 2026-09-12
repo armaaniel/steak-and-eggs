@@ -2,7 +2,7 @@ module Types
   class IngesterConnectionType < Types::BaseObject
     field :connection_id, String, null: false
     field :boot_id, String, null: false
-    field :spawned_at, GraphQL::Types::ISO8601DateTime, null: false
+    field :spawned_at, GraphQL::Types::ISO8601DateTime, null: true
     field :first_message_at, GraphQL::Types::ISO8601DateTime, null: true
     field :last_seen_at, GraphQL::Types::ISO8601DateTime, null: false
     field :ended_at, GraphQL::Types::ISO8601DateTime, null: true

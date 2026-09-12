@@ -1,22 +1,22 @@
 class SamplesController < ApplicationController
   MAX_SAMPLES = 1000
 
-  before_action :validate_request
+  before_action(:validate_request)
 
-  rescue_from ActiveRecord::StatementInvalid do |e|
+  rescue_from(ActiveRecord::StatementInvalid) do |e|
     Sentry.capture_exception(e)
     head(:unprocessable_entity)
   end
 
   def load_samples
-    rows = params[:samples].map do |s|
+    rows = params[:samples].map do |row|
       { run_id:     params[:run_id],
-        request_id: s[:request_id],
-        at:         Time.at(s[:at].to_f / 1000).utc,
-        route:      s[:route],
-        duration:   s[:duration],
-        waiting:    s[:waiting],
-        status:     s[:status] }
+        request_id: row[:request_id],
+        at:         Time.at(row[:at].to_f / 1000).utc,
+        route:      row[:route],
+        duration:   row[:duration], # unused but free
+        waiting:    row[:waiting],
+        status:     row[:status] }
     end
 
     LoadSample.insert_all(rows)

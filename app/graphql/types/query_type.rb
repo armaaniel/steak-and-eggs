@@ -119,8 +119,12 @@ module Types
         {
           started_at: connection.instance_variable_get(:@started_at),
           connection_state: connection.instance_variable_get(:@websocket)&.alive?,
-          subscriptions: connection.subscriptions.identifiers.map do |identifier|
-            JSON.parse(identifier, symbolize_names: true)
+          subscriptions: connection.subscriptions.identifiers.filter_map do |identifier|
+            parsed = JSON.parse(identifier, symbolize_names: true)
+            next unless parsed[:channel] && parsed[:symbol]
+            parsed
+          rescue JSON::ParserError
+            nil
           end
         }
       end

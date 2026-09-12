@@ -13,7 +13,7 @@ class GraphqlController < ApplicationController
     end
   rescue StandardError => e
     Sentry.capture_exception(e)
-    render(json: { errors: [{ message: "Something went wrong"  }] })
+    render(json: { errors: [{ message: "Something went wrong"  }] }, status: 500)
   end
 
   private
@@ -30,7 +30,7 @@ class GraphqlController < ApplicationController
     when Hash
       variables_param
     when ActionController::Parameters
-      variables_param.to_unsafe_hash # GraphQL-Ruby will validate name and type of incoming variables.
+      variables_param.to_unsafe_hash
     when nil
       {}
     else
