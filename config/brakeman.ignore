@@ -1,0 +1,47 @@
+{
+  "ignored_warnings": [
+    {
+      "warning_type": "Unmaintained Dependency",
+      "warning_code": 122,
+      "fingerprint": "21ab0fe00fdd5899ffc405cff75aadb91b805ee996a614f7e27b08a287e9062d",
+      "check_name": "EOLRails",
+      "message": "Support for Rails 8.0.5.1 ends on 2026-11-07",
+      "file": "Gemfile.lock",
+      "line": 287,
+      "link": "https://brakemanscanner.org/docs/warning_types/unmaintained_dependency/",
+      "code": null,
+      "render_path": null,
+      "location": null,
+      "user_input": null,
+      "confidence": "Weak",
+      "cwe_id": [
+        1104
+      ],
+      "note": ""
+    },
+    {
+      "warning_type": "SQL Injection",
+      "warning_code": 0,
+      "fingerprint": "90129a0b8b56d91dd00069427e29d50022a9981ecc6f631e5fc4357b8346e357",
+      "check_name": "SQL",
+      "message": "Possible SQL injection",
+      "file": "app/models/trace.rb",
+      "line": 54,
+      "link": "https://brakemanscanner.org/docs/warning_types/sql_injection/",
+      "code": "connection.execute(\"SELECT #{route_case} as route,\\n  COUNT(*) as total_requests,\\n  PERCENTILE_CONT(0.99) WITHIN GROUP (ORDER BY duration) as p99,\\n  ROUND(\\n    COUNT(*) FILTER (WHERE breakdown::text LIKE '%\\\"used_redis\\\":true%') * 100.0\\n    / NULLIF(COUNT(*) FILTER (WHERE breakdown IS NOT NULL AND breakdown::text != '{}'), 0),\\n    1\\n  ) as cache_hit_rate\\nFROM traces\\nWHERE source = 'user'\\nGROUP BY route\\nORDER BY total_requests DESC\\n\")",
+      "render_path": null,
+      "location": {
+        "type": "method",
+        "class": "Trace",
+        "method": "Trace.summary"
+      },
+      "user_input": "route_case",
+      "confidence": "Medium",
+      "cwe_id": [
+        89
+      ],
+      "note": "its safe it comes from a constant route patterns"
+    }
+  ],
+  "brakeman_version": "8.0.6"
+}

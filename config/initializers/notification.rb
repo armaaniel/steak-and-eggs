@@ -39,7 +39,7 @@ Rails.application.config.after_initialize do
       next unless TRACKED_ROUTES.any? { |route| payload[:path]&.start_with?(route) }
 
       trace_queue.push({
-        endpoint: "#{payload[:method]} #{payload[:path]}",
+        endpoint: "#{payload[:method]} #{payload[:path].split('?').first}",
         duration: duration,
         db_runtime: payload[:db_runtime],
         view_runtime: payload[:view_runtime] || 0,

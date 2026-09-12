@@ -25,7 +25,8 @@ class Trace < ApplicationRecord
   }.freeze
 
   def self.normalize_endpoint(endpoint)
-    ROUTE_PATTERNS.fetch(endpoint, endpoint)
+    endpoint = endpoint.to_s
+    ROUTE_PATTERNS[endpoint] || sanitize_sql_like(endpoint)
   end
 
   def self.route_case
