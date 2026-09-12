@@ -59,6 +59,6 @@ Rails.application.config.after_initialize do
     end
   rescue => e
     Sentry.capture_exception(e)
-    current_request.delete(id) if id
+    current_request.delete(id)
   end
 end
