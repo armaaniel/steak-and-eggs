@@ -29,7 +29,7 @@ Rails.application.config.after_initialize do
   end
 
   ActiveSupport::Notifications.monotonic_subscribe(
-    /\A(PositionService|Ticker|Transaction|MarketService|UserService|GraphQL)\.|\Aprocess_action\.action_controller\z/
+    /\.datacat\z|\Aprocess_action\.action_controller\z/
   ) do |name, start, finish, id, payload|
     duration = (finish - start) * 1000
 
@@ -55,7 +55,7 @@ Rails.application.config.after_initialize do
       })
     else
       current_request[id] ||= {}
-      current_request[id][name] = payload.except(:exception_object).merge(duration: duration)
+      current_request[id][name.delete_suffix('.datacat')] = payload.except(:exception_object).merge(duration: duration)
     end
   rescue => e
     Sentry.capture_exception(e)

@@ -6,7 +6,7 @@ class GraphqlController < ApplicationController
     query = params[:query]
     operation_name = params[:operationName]
 
-    ActiveSupport::Notifications.instrument("GraphQL.execute", operation: operation_name) do
+    ActiveSupport::Notifications.instrument("GraphQL.execute.datacat", operation: operation_name) do
       context = {}
       result = SteakAndEggsSchema.execute(query, variables: variables, context: context, operation_name: operation_name)
       render(json: result)

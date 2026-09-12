@@ -1,6 +1,6 @@
 class PositionService
   def self.find_position(symbol:, user_id:)
-    ActiveSupport::Notifications.instrument("PositionService.find_position", used_db: true) do
+    ActiveSupport::Notifications.instrument("PositionService.find_position.datacat", used_db: true) do
       position = Position.find_by(user_id: user_id, symbol: symbol)
 
       if position
@@ -12,7 +12,7 @@ class PositionService
   def self.get_aum(user_id:, balance:)
     payload = {used_redis: false}
     
-    ActiveSupport::Notifications.instrument("PositionService.get_aum", payload) do
+    ActiveSupport::Notifications.instrument("PositionService.get_aum.datacat", payload) do
       positions = PositionService.find_positions(user_id:user_id)
       return {aum:balance, balance:balance} if positions.empty?
       
@@ -46,7 +46,7 @@ class PositionService
   def self.portfolio_records(user_id:)
     payload = {used_redis: false, used_db: false}
 
-    ActiveSupport::Notifications.instrument("PositionService.portfolio_records", payload) do
+    ActiveSupport::Notifications.instrument("PositionService.portfolio_records.datacat", payload) do
       cached = RedisService.safe_get("portfolio:#{user_id}")
 
       if cached
@@ -77,7 +77,7 @@ class PositionService
   def self.find_positions(user_id:)
     payload = {used_redis: false, used_db:false}
     
-    ActiveSupport::Notifications.instrument("PositionService.find_positions", payload) do
+    ActiveSupport::Notifications.instrument("PositionService.find_positions.datacat", payload) do
       cached = RedisService.safe_get("positions:#{user_id}")
       
       if cached

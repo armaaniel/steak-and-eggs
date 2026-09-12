@@ -25,7 +25,7 @@ class MarketService
     stock_price = BigDecimal(stock_string || "0")
     raise(StandardError) if stock_price <=0
 
-    ActiveSupport::Notifications.instrument("MarketService.buy") do
+    ActiveSupport::Notifications.instrument("MarketService.buy.datacat") do
       trade_value = quantity*stock_price
       transaction = nil
 
@@ -65,7 +65,7 @@ class MarketService
     stock_price = BigDecimal(stock_string || "0")
     raise(StandardError, "Unable to fetch Stock Price for #{symbol}") if stock_price <=0
 
-    ActiveSupport::Notifications.instrument("MarketService.sell") do
+    ActiveSupport::Notifications.instrument("MarketService.sell.datacat") do
       trade_value = quantity*stock_price
       transaction = nil
 
@@ -99,7 +99,7 @@ class MarketService
     end
 
   def self.marketprice(symbol:)
-    ActiveSupport::Notifications.instrument("MarketService.marketprice") do
+    ActiveSupport::Notifications.instrument("MarketService.marketprice.datacat") do
       cached_price = RedisService.safe_get("price:#{symbol}")
       cached_open = RedisService.safe_get("open:#{symbol}")
 
@@ -114,7 +114,7 @@ class MarketService
   def self.marketdata(symbol:)
     payload = {symbol: symbol, used_redis:false, used_api:false}
 
-    ActiveSupport::Notifications.instrument('MarketService.marketdata', payload) do
+    ActiveSupport::Notifications.instrument('MarketService.marketdata.datacat', payload) do
       cached = RedisService.safe_get("market:#{symbol}")
 
       if cached
@@ -147,7 +147,7 @@ class MarketService
   def self.companydata(symbol:)
     payload = {symbol: symbol, used_redis: false, used_api: false}
 
-    ActiveSupport::Notifications.instrument("MarketService.companydata", payload) do
+    ActiveSupport::Notifications.instrument("MarketService.companydata.datacat", payload) do
       cached = RedisService.safe_get("company:#{symbol}")
 
       if cached
@@ -179,7 +179,7 @@ class MarketService
     config = CHART_RANGES.fetch(range)
     payload = {symbol: symbol, range: range, used_redis: false, used_api: false}
 
-    ActiveSupport::Notifications.instrument("MarketService.chartdata", payload) do
+    ActiveSupport::Notifications.instrument("MarketService.chartdata.datacat", payload) do
       cached = RedisService.safe_get("chart:#{symbol}:#{range}")
       if cached
         payload[:used_redis] = true

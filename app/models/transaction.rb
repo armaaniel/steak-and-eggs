@@ -16,7 +16,7 @@ class Transaction < ApplicationRecord
   def self.get(user_id:)
     payload = {used_redis:false, used_db:false}
 
-    ActiveSupport::Notifications.instrument("Transaction.get", payload) do
+    ActiveSupport::Notifications.instrument("Transaction.get.datacat", payload) do
       cached = RedisService.safe_get("activity:#{user_id}")
 
       if cached

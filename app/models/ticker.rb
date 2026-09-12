@@ -5,7 +5,7 @@ class Ticker < ApplicationRecord
     term_sanny = ActiveRecord::Base.sanitize_sql_like(term)
     
     payload = {term: term_sanny, used_redis: false, used_db: false}
-    ActiveSupport::Notifications.instrument('Ticker.search', payload) do
+    ActiveSupport::Notifications.instrument('Ticker.search.datacat', payload) do
       cached = RedisService.safe_get("search:#{term_sanny}")
 
       if cached
@@ -26,7 +26,7 @@ class Ticker < ApplicationRecord
 
     payload = {term: symbol, used_redis: false, used_db: false}
 
-    ActiveSupport::Notifications.instrument("Ticker.query", payload) do
+    ActiveSupport::Notifications.instrument("Ticker.query.datacat", payload) do
       cached = RedisService.safe_get("ticker:#{symbol}")
       if cached
         payload[:used_redis] = true
