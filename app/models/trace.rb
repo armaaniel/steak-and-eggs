@@ -134,9 +134,8 @@ class Trace < ApplicationRecord
       ORDER BY bucket
     SQL
     cutoff = Time.now.utc - (step * (config[:count] + 1))
-    rows = connection.execute(
-      sanitize_sql_array([sql, step, step, cutoff])
-    )
+    rows = connection.execute(sanitize_sql_array([sql, step, step, cutoff]))
+    
     by_bucket = rows.index_by { |r| r['bucket'].to_i }
     current = Time.at((Time.now.to_i / step) * step).utc
     config[:count].downto(1).map do |a|
@@ -152,24 +151,34 @@ class Trace < ApplicationRecord
     end
   end
 
-  def self.synthetic_runs(bucket:, range: '1h')
-    step = RANGES.fetch(range, RANGES['1h'])[:step]
-    where(source: 'canary')
-      .where.not(run_id: nil)
-      .where(created_at: bucket...(bucket + step.seconds))
-      .group(:run_id)
-      .order(Arel.sql('MIN(created_at) ASC'))
-      .pluck(
-        :run_id,
-        Arel.sql('MIN(created_at)'),
-        Arel.sql('COUNT(*)'),
-        Arel.sql('COUNT(*) FILTER (WHERE status >= 500)'),
-        Arel.sql('max(result)')
-      )
-      .map { |run_id, started, count, failures, result|
-        {run_id: run_id, started_at: started, request_count: count,
-         failures: failures, result: result}
-      }
+  def self.synthetic_runs(bucket:, range:)
+    step       = RANGES.fetch(range, RANGES['1h'])[:step]
+    bucket_end = bucket + step.seconds
+
+    sql = <<~SQL
+      SELECT run_id,
+             MIN(created_at)                        AS started_at,
+             COUNT(*)                               AS request_count,
+             COUNT(*) FILTER (WHERE status >= 500)  AS failures,
+             MAX(result)                            AS result
+      FROM traces
+      WHERE source = 'canary'
+        AND run_id IS NOT NULL
+        AND created_at >= ?
+        AND created_at <  ?
+      GROUP BY run_id
+      ORDER BY started_at ASC
+    SQL
+
+    runs = connection.select_all(sanitize_sql_array([sql, bucket, bucket_end]))
+
+    runs.map do |run|
+      { run_id:        run['run_id'],
+        started_at:    run['started_at'],
+        request_count: run['request_count'],
+        failures:      run['failures'],
+        result:        run['result'] }
+    end
   end
 
   def self.run_traces(run_id:)

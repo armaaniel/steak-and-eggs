@@ -8,18 +8,13 @@ const SYMBOL = 'AAPL'
 const DEPOSIT = 10000
 const expect = baseExpect.configure({ soft: true, softMode: 'throw' })
 
-// Rotates daily. search:<term> is cached in Redis for 3 days, so a fixed term
-// would be a permanent cache hit and never exercise the ILIKE query. A 7-symbol
-// basket means each term is cold when it comes back around.
 const BASKET = ['AAPL', 'MSFT', 'NVDA', 'AMZN', 'GOOG', 'META', 'TSLA']
 const searchTerm = BASKET[Math.floor(Date.now() / 86400000) % BASKET.length]
 
-// canary_ + 12 hex = 19 chars, under 20-char username limit
 const username = `canary_${crypto.randomUUID().replace(/-/g, '').slice(0, 12)}`
 const password = 'pr0be-pass-a1'
 const newPassword = 'pr0be-pass-b2'
 
-// aum and balance are BigDecimal server-side; recomputing in JS floats needs slack
 const CENT = 0.01
 
 export default async function () {
@@ -64,24 +59,20 @@ export default async function () {
     group('search', () => {
       const res = http.get(`${BASE}/search?q=${searchTerm}`, { headers: auth() })
       expect(res.status).toBe(200)
-      // the 503 fallback returns [], which Array.isArray() happily accepts
       expect(res.json().length).toBeGreaterThan(0)
     })
 
     group('stock price', () => {
       const res = http.get(`${BASE}/stocks/${SYMBOL}/stockprice`, { headers: auth() })
       expect(res.status).toBe(200)
-      // catches a stale/absent ingester feeding 'N/A' through the fallback
       expect(Number(res.json().price)).toBeGreaterThan(0)
     })
 
     group('market data', () => {
-      // the only Polygon-backed endpoint in reach. market:<symbol> has a 5min TTL,
-      // so this reaches the live API regularly. Specs stub the HTTP call, so an
-      // expired API key is invisible to them and visible here.
       const res = http.get(`${BASE}/stocks/${SYMBOL}/marketdata`, { headers: auth() })
       expect(res.status).toBe(200)
       expect(Number(res.json().open)).toBeGreaterThan(0)
+      // Specs stub the HTTP call to polygon, an expired API key is invisible there and visible here.
     })
 
     group('buy', () => {
@@ -101,17 +92,12 @@ export default async function () {
       expect(res.status).toBe(200)
       const body = res.json()
 
-      // get_aum omits `positions` entirely when the list is empty, so guard
-      // before indexing or this fails as a TypeError instead of an assertion
       expect(body.positions).toBeDefined()
       expect(body.positions.length).toBe(1) // the buy created exactly one position
       expect(body.positions[0].symbol).toBe(SYMBOL)
 
-      // Position.average_price and Transaction.market_price both come from the same
-      // Redis read inside MarketService.buy, so this is exact, not approximate
       expect(Number(body.positions[0].average_price)).toBe(buyPrice)
 
-      // deposit and buy composed, with a real price and real decimals
       expect(Math.abs(Number(body.balance) - (DEPOSIT - buyPrice))).toBeLessThan(CENT)
 
       // internal arithmetic of this one response: aum = balance + sum(price * shares)
@@ -131,16 +117,13 @@ export default async function () {
     group('activity', () => {
       const res = http.get(`${BASE}/activitydata`, { headers: auth() })
       expect(res.status).toBe(200)
-      // exactly deposit, buy, sell — a 4th row means something double-wrote the ledger
-      expect(res.json().length).toBe(3)
+      expect(res.json().length).toBe(3) // exactly deposit, buy, sell
     })
 
     group('portfolio chart', () => {
       const res = http.get(`${BASE}/portfoliochart`, { headers: auth() })
       expect(res.status).toBe(200)
       const chart = res.json()
-      // portfolio_records pads to exactly 2 entries, so asserting length >= 2 is a
-      // tautology. The final value is real: it proves deposit wrote a PortfolioRecord.
       expect(Number(chart[chart.length - 1].value)).toBeGreaterThan(0)
     })
 
@@ -166,11 +149,9 @@ export default async function () {
     })
 
     group('deleted token rejected', () => {
-      // JWTs have no exp claim, so this only 401s if the user_<id> entry was actually
-      // evicted. Rails.cache is a null/memory store under RSpec, so specs structurally
-      // cannot fail this — it's only testable against the real cache.
       const res = http.get(`${BASE}/portfoliodata`, { headers: auth() })
       expect(res.status).toBe(401)
+      // Rails.cache is a null store under RSpec, this tests the cache entry is actually evicted
     })
   } catch (e) {
     failed = true
