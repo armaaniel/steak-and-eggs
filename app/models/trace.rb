@@ -1,15 +1,13 @@
 class Trace < ApplicationRecord
   PROBE_INTERVAL = 300  # seconds between synthetic probe runs (5 min)
 
-  # step  = width of one bucket, in seconds
-  # count = how many buckets to render (the bars on the chart)
   RANGES = {
-    '1h'  => {step: 300,   count: 12},  # 12 × 5 min
-    '12h' => {step: 3600,  count: 12},  # 12 × 1 hr
-    '24h' => {step: 3600,  count: 24},  # 24 × 1 hr
-    '7d'  => {step: 21600, count: 28},  # 28 × 6 hr
-    '14d' => {step: 43200, count: 28},  # 28 × 12 hr
-    '30d' => {step: 86400, count: 30}   # 30 × 1 day
+    '1h'  => {seconds_per_bucket: 300,   buckets: 12},  # 12 × 5 min
+    '12h' => {seconds_per_bucket: 3600,  buckets: 12},  # 12 × 1 hr
+    '24h' => {seconds_per_bucket: 3600,  buckets: 24},  # 24 × 1 hr
+    '7d'  => {seconds_per_bucket: 21600, buckets: 28},  # 28 × 6 hr
+    '14d' => {seconds_per_bucket: 43200, buckets: 28},  # 28 × 12 hr
+    '30d' => {seconds_per_bucket: 86400, buckets: 30}   # 30 × 1 day
   }
 
   ROUTE_PATTERNS = {
@@ -75,7 +73,9 @@ class Trace < ApplicationRecord
   def self.breakdown(endpoint:)
     route = normalize_endpoint(endpoint)
 
-    query = where("endpoint ILIKE ?", route).where.not("breakdown::text = ? OR breakdown IS NULL", '{}').where(source: 'user')
+    query = where("endpoint ILIKE ?", route)
+    .where.not("breakdown::text = ? OR breakdown IS NULL", '{}')
+    .where(source: 'user')
 
     {
       redis_query: query.where("breakdown::text LIKE ?", '%"used_redis":true%').order(created_at: :desc),
@@ -86,74 +86,79 @@ class Trace < ApplicationRecord
   def self.stats(endpoint:)
     route = normalize_endpoint(endpoint)
 
-    base_sql = <<~SQL
+    sql = <<~SQL
       SELECT
-        COUNT(*) as total_requests,
-        PERCENTILE_CONT(0.50) WITHIN GROUP (ORDER BY duration) as p50,
-        PERCENTILE_CONT(0.95) WITHIN GROUP (ORDER BY duration) as p95,
-        PERCENTILE_CONT(0.99) WITHIN GROUP (ORDER BY duration) as p99,
-        COUNT(*) FILTER (WHERE status >= 500) as error_count,
-        bool_or(breakdown::text LIKE '%"used_redis"%') as uses_redis,
-        bool_or(breakdown::text LIKE '%"used_api"%') as uses_api
+        COUNT(*) AS total_requests,
+        PERCENTILE_CONT(0.50) WITHIN GROUP (ORDER BY duration) AS p50,
+        PERCENTILE_CONT(0.95) WITHIN GROUP (ORDER BY duration) AS p95,
+        PERCENTILE_CONT(0.99) WITHIN GROUP (ORDER BY duration) AS p99,
+        COUNT(*) FILTER (WHERE status >= 500) AS error_count,
+        bool_or(breakdown::text LIKE '%"used_redis"%') AS uses_redis,
+        bool_or(breakdown::text LIKE '%"used_api"%')   AS uses_api
       FROM traces
+      WHERE source = 'user'
+        AND endpoint ILIKE ?
     SQL
 
-    sanitized = sanitize_sql_array(
-      ["#{base_sql} WHERE source = 'user' AND endpoint ILIKE ?", route]
-    )
+    result = connection.select_all(sanitize_sql_array([sql, route])).first
+      
+    total  = result['total_requests'].to_i
+    errors = result['error_count'].to_f
 
-    result = connection.execute(sanitized).first
-
-    {total_requests: result['total_requests'].to_i,
-      p50: result['p50']&.to_f || 0.0,
-      p95: result['p95']&.to_f || 0.0,
-      p99: result['p99']&.to_f || 0.0,
-      error_rate: result['total_requests'].to_i > 0 ? (result['error_count'].to_f / result['total_requests'].to_f * 100).round(2) : 0.0,
-      uses_redis: ActiveRecord::Type::Boolean.new.cast(result['uses_redis']) || false,
-      uses_api: ActiveRecord::Type::Boolean.new.cast(result['uses_api']) || false
-    }
+    {total_requests: total,
+      p50: result['p50'].to_f,
+      p95: result['p95'].to_f,
+      p99: result['p99'].to_f,
+      error_rate: total.zero? ? 0.0 : (errors / total * 100).round(2),
+      uses_redis: result['uses_redis'] || false,
+      uses_api: result['uses_api'] || false}
   end
 
   def self.latent
     where.not(endpoint: ['POST /graphql', 'POST /record']).where(source: 'user').order(duration: :desc).limit(1000)
   end
 
-  def self.synthetic_buckets(range: '1h')
-    config = RANGES.fetch(range, RANGES['1h'])
-    step   = config[:step]
+  def self.synthetic_buckets(range:)
+    spec = RANGES.fetch(range, RANGES['1h'])
+    
+    seconds_per_bucket = spec[:seconds_per_bucket]
+    buckets = spec[:buckets]
+    
     sql = <<~SQL
       SELECT
         floor(extract(epoch FROM created_at) / ?) * ? AS bucket,
-        count(DISTINCT run_id)                                                 AS started,
-        count(DISTINCT run_id) FILTER (WHERE result = 'pass')                  AS completed,
-        count(DISTINCT run_id) FILTER (WHERE result = 'fail' OR status >= 500) AS failures
+        COUNT(DISTINCT run_id)                                                 AS started,
+        COUNT(DISTINCT run_id) FILTER (WHERE result = 'pass')                  AS completed,
+        COUNT(DISTINCT run_id) FILTER (WHERE result = 'fail' OR status >= 500) AS failures
       FROM traces
       WHERE source = 'canary'
         AND created_at > ?
       GROUP BY bucket
       ORDER BY bucket
     SQL
-    cutoff = Time.now.utc - (step * (config[:count] + 1))
-    rows = connection.execute(sanitize_sql_array([sql, step, step, cutoff]))
+    current_bucket = Time.at((Time.now.to_i / seconds_per_bucket) * seconds_per_bucket).utc
+    cutoff  = current_bucket - (seconds_per_bucket * buckets)
     
-    by_bucket = rows.index_by { |r| r['bucket'].to_i }
-    current = Time.at((Time.now.to_i / step) * step).utc
-    config[:count].downto(1).map do |a|
-      bucket = current - (a * step)
-      row    = by_bucket[bucket.to_i]
-      {
-        bucket: bucket,
-        started:   row ? row['started'].to_i   : 0,
-        completed: row ? row['completed'].to_i : 0,
-        failures:  row ? row['failures'].to_i  : 0,
-        expected:  step / PROBE_INTERVAL
-      }
+    rows = connection.execute(sanitize_sql_array([sql, seconds_per_bucket, seconds_per_bucket, cutoff]))
+    
+    by_bucket = rows.index_by do |row| 
+      row['bucket'].to_i 
+    end
+    
+    buckets.downto(1).map do |buckets_back|
+      bucket = current_bucket - (buckets_back * seconds_per_bucket)
+      row    = by_bucket[bucket.to_i] || {}
+      { bucket: bucket,
+        started:   row['started'].to_i,
+        completed: row['completed'].to_i,
+        failures:  row['failures'].to_i,
+        expected:  seconds_per_bucket / PROBE_INTERVAL }
     end
   end
 
   def self.synthetic_runs(bucket:, range:)
-    step       = RANGES.fetch(range, RANGES['1h'])[:step]
-    bucket_end = bucket + step.seconds
+    seconds_per_bucket = RANGES.fetch(range, RANGES['1h'])[:seconds_per_bucket]
+    bucket_end = bucket + seconds_per_bucket
 
     sql = <<~SQL
       SELECT run_id,
