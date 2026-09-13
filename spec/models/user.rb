@@ -33,7 +33,7 @@ RSpec.describe(User, type: :model) do
     it "rejects special characters in username" do
       %w[test@user test.user test!user test user test-user].each do |bad_name|
         user.username = bad_name
-        expect(user).not_to(be_valid), "expected '#{bad_name}' to be invalid"
+        expect(user).not_to(be_valid, "expected '#{bad_name}' to be invalid")
       end
     end
 
