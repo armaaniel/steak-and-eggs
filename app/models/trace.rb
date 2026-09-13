@@ -117,7 +117,7 @@ class Trace < ApplicationRecord
   end
 
   def self.latent
-    where.not(endpoint: ['POST /graphql', 'POST /record']).where(source: 'user').order(duration: :desc).limit(1000)
+    where.not(endpoint: ['POST /graphql']).where(source: 'user').order(duration: :desc).limit(1000)
   end
 
   def self.synthetic_buckets(range:)

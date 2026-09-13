@@ -394,16 +394,17 @@ RSpec.describe(Types::QueryType) do
       expect(traces[2]["id"].to_i).to(eq(fast.id))
     end
 
-    it("excludes POST /graphql and POST /record endpoints") do
+    it("excludes POST /graphql endpoints") do
       Trace.create!(endpoint: "POST /graphql", duration: 500.0, status: 200)
-      Trace.create!(endpoint: "POST /record", duration: 400.0, status: 200)
+      recorded = Trace.create!(endpoint: "POST /record", duration: 400.0, status: 200)
       kept = Trace.create!(endpoint: "GET /users", duration: 100.0, status: 200)
 
       result = execute_query
       traces = result.dig("data", "latentTraces")
 
-      expect(traces.length).to(eq(1))
-      expect(traces[0]["id"].to_i).to(eq(kept.id))
+      expect(traces.length).to(eq(2))
+      expect(traces[0]["id"].to_i).to(eq(recorded.id))
+      expect(traces[1]["id"].to_i).to(eq(kept.id))
     end
 
     it("limits results to 1000") do
