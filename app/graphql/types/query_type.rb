@@ -11,9 +11,9 @@ module Types
       description('fetch trace list by route')
     end
 
-    field(:trace_breakdown, Types::TraceBreakdownType) do
+    field(:cache_split, Types::CacheSplitType) do
       argument(:endpoint, String)
-      description('fetch trace list breakdown')
+      description('fetch a route\'s traces split by cache hit')
     end
 
     field(:latent_traces, [Types::TraceType]) do
@@ -129,8 +129,8 @@ module Types
       end
     end
 
-    def trace_breakdown(endpoint:)
-      Trace.breakdown(endpoint: endpoint)
+    def cache_split(endpoint:)
+      Trace.cache_split(endpoint: endpoint)
     end
 
     def trace_list(endpoint:)

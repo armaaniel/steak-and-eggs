@@ -70,7 +70,7 @@ class Trace < ApplicationRecord
       .order(created_at: :desc)
   end
 
-  def self.breakdown(endpoint:)
+  def self.cache_split(endpoint:)
     route = normalize_endpoint(endpoint)
 
     query = where("endpoint ILIKE ?", route)
@@ -78,8 +78,8 @@ class Trace < ApplicationRecord
     .where(source: 'user')
 
     {
-      redis_query: query.where("breakdown::text LIKE ?", '%"used_redis":true%').order(created_at: :desc),
-      db_api_query: query.where("breakdown::text LIKE ? OR breakdown::text LIKE ?", '%"used_api":true%', '%"used_db":true%').order(created_at: :desc),
+      cached: query.where("breakdown::text LIKE ?", '%"used_redis":true%').order(created_at: :desc),
+      uncached: query.where("breakdown::text LIKE ? OR breakdown::text LIKE ?", '%"used_api":true%', '%"used_db":true%').order(created_at: :desc),
     }
   end
 

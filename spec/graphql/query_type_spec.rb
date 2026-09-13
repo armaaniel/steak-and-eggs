@@ -160,17 +160,17 @@ RSpec.describe(Types::QueryType) do
     end
   end
 
-  describe("trace_breakdown") do
+  describe("cache_split") do
     let(:query) do
       <<~GQL
         query($endpoint: String!) {
-          traceBreakdown(endpoint: $endpoint) {
-            redisQuery {
+          cacheSplit(endpoint: $endpoint) {
+            cached {
               id
               endpoint
               breakdown
             }
-            dbApiQuery {
+            uncached {
               id
               endpoint
               breakdown
@@ -184,19 +184,19 @@ RSpec.describe(Types::QueryType) do
       SteakAndEggsSchema.execute(query, variables: { endpoint: endpoint }).to_h
     end
 
-    it("returns redis traces in redisQuery") do
+    it("returns cache hits in cached") do
       Trace.create!(endpoint: "GET /users", duration: 50.0, status: 200,
         breakdown: { used_redis: true })
       Trace.create!(endpoint: "GET /users", duration: 60.0, status: 200,
         breakdown: { used_redis: false, used_db: true })
 
       result = execute_query(endpoint: "GET /users")
-      redis = result.dig("data", "traceBreakdown", "redisQuery")
+      redis = result.dig("data", "cacheSplit", "cached")
 
       expect(redis.length).to(eq(1))
     end
 
-    it("returns db/api traces in dbApiQuery") do
+    it("returns cache misses in uncached") do
       Trace.create!(endpoint: "GET /users", duration: 50.0, status: 200,
         breakdown: { used_db: true })
       Trace.create!(endpoint: "GET /users", duration: 60.0, status: 200,
@@ -205,7 +205,7 @@ RSpec.describe(Types::QueryType) do
         breakdown: { used_redis: true })
 
       result = execute_query(endpoint: "GET /users")
-      db_api = result.dig("data", "traceBreakdown", "dbApiQuery")
+      db_api = result.dig("data", "cacheSplit", "uncached")
 
       expect(db_api.length).to(eq(2))
     end
@@ -217,8 +217,8 @@ RSpec.describe(Types::QueryType) do
         breakdown: { used_redis: true })
 
       result = execute_query(endpoint: "GET /users")
-      redis = result.dig("data", "traceBreakdown", "redisQuery")
-      db_api = result.dig("data", "traceBreakdown", "dbApiQuery")
+      redis = result.dig("data", "cacheSplit", "cached")
+      db_api = result.dig("data", "cacheSplit", "uncached")
 
       expect(redis.length).to(eq(1))
       expect(db_api).to(eq([]))
@@ -229,7 +229,7 @@ RSpec.describe(Types::QueryType) do
         breakdown: { used_redis: true })
 
       result = execute_query(endpoint: "GET /stocks/symbol/marketdata")
-      redis = result.dig("data", "traceBreakdown", "redisQuery")
+      redis = result.dig("data", "cacheSplit", "cached")
 
       expect(redis.length).to(eq(1))
     end
