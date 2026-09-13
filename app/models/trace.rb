@@ -75,7 +75,7 @@ class Trace < ApplicationRecord
   def self.breakdown(endpoint:)
     route = normalize_endpoint(endpoint)
 
-    query = where("endpoint LIKE ?", route).where.not("breakdown::text = ? OR breakdown IS NULL", '{}').where(source: 'user')
+    query = where("endpoint ILIKE ?", route).where.not("breakdown::text = ? OR breakdown IS NULL", '{}').where(source: 'user')
 
     {
       redis_query: query.where("breakdown::text LIKE ?", '%"used_redis":true%').order(created_at: :desc),
