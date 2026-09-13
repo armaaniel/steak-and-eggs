@@ -1,5 +1,6 @@
 class LoadSample < ApplicationRecord
-  def self.compare(run_id:, route:, step: 15)
+  def self.compare(run_id:, route:, step:)
+    
     sql = <<~SQL
       SELECT
         floor(extract(epoch FROM ls.at) / ?) * ? AS bucket,
@@ -18,28 +19,26 @@ class LoadSample < ApplicationRecord
       ORDER BY bucket
     SQL
 
-    rows = connection.execute(sanitize_sql_array([sql, step, step, run_id, route]))
+    buckets = connection.execute(sanitize_sql_array([sql, step, step, run_id, route]))
 
-    rows.map do |r|
-      client_p99 = r['client_p99']&.to_f || 0.0
-      server_p99 = r['server_p99']&.to_f || 0.0
+    buckets.map do |bucket|
       {
-        bucket:     Time.at(r['bucket'].to_i).utc,
-        rps:        (r['sent'].to_i / step.to_f).round(1),
-        sent:       r['sent'].to_i,
-        traced:     r['traced'].to_i,
-        gap:        r['gap'].to_i,
-        errors:     r['errors'].to_i,
-        client_p50: r['client_p50']&.to_f || 0.0,
-        client_p99: client_p99,
-        server_p50: r['server_p50']&.to_f || 0.0,
-        server_p99: server_p99,
-        queue_p99:  (client_p99 - server_p99).round(2)
+        bucket:     Time.at(bucket['bucket'].to_i).utc,
+        rps:        (bucket['sent'].to_f / step).round(1),
+        sent:       bucket['sent'].to_i,
+        traced:     bucket['traced'].to_i,
+        gap:        bucket['gap'].to_i,
+        errors:     bucket['errors'].to_i,
+        client_p50: bucket['client_p50'].to_f
+        client_p99: bucket['client_p99'].to_f
+        server_p50: bucket['server_p50'].to_f
+        server_p99: bucket['server_p99'].to_f
+        queue_p99:  (bucket['client_p99'].to_f - bucket['server_p99'].to_f).round(2),
       }
     end
   end
 
-  def self.runs(limit: 25)
+  def self.runs
     sql = <<~SQL
       SELECT run_id,
              route,
@@ -49,18 +48,16 @@ class LoadSample < ApplicationRecord
       FROM load_samples
       GROUP BY run_id, route
       ORDER BY started_at DESC
-      LIMIT ?
     SQL
 
-    query  = sanitize_sql_array([sql, limit])
-    result = connection.select_all(query)
+    result = connection.select_all(sql)
 
-    result.map do |row|
-      { run_id:     row['run_id'],
-        route:      row['route'],
-        started_at: row['started_at'],
-        ended_at:   row['ended_at'],
-        samples:    row['samples'] }
+    result.map do |run|
+      { run_id:     run['run_id'],
+        route:      run['route'],
+        started_at: run['started_at'],
+        ended_at:   run['ended_at'],
+        samples:    run['samples'] }
     end
   end
 end

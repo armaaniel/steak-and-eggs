@@ -87,7 +87,6 @@ module Types
     end
 
     field(:load_runs, [Types::LoadRunType], null: false) do
-      argument(:limit, Integer, required: false, default_value: 25)
       description('load generator runs, newest first, one row per run and route')
     end
 
@@ -197,8 +196,8 @@ module Types
       IngesterSample.transitions(from: from, to: to)
     end
 
-    def load_runs(limit:)
-      LoadSample.runs(limit: limit.clamp(1, 200))
+    def load_runs
+      LoadSample.runs
     end
 
     def load_compare(run_id:, route:, step:)
