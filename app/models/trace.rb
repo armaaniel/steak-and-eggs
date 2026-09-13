@@ -1,5 +1,5 @@
 class Trace < ApplicationRecord
-  PROBE_INTERVAL = 300  # seconds between synthetic probe runs (5 min)
+  PROBE_INTERVAL = 300  # seconds between synthetic probe runs
 
   RANGES = {
     '1h'  => {seconds_per_bucket: 300,   buckets: 12},  # 12 × 5 min
@@ -39,11 +39,8 @@ class Trace < ApplicationRecord
       SELECT #{route_case} as route,
         COUNT(*) as total_requests,
         PERCENTILE_CONT(0.99) WITHIN GROUP (ORDER BY duration) as p99,
-        ROUND(
-          COUNT(*) FILTER (WHERE breakdown::text LIKE '%"used_redis":true%') * 100.0
-          / NULLIF(COUNT(*) FILTER (WHERE breakdown IS NOT NULL AND breakdown::text != '{}'), 0),
-          1
-        ) as cache_hit_rate
+        COUNT(*) FILTER (WHERE breakdown::text LIKE '%"used_redis":true%') as cache_hits,
+        COUNT(*) FILTER (WHERE breakdown IS NOT NULL AND breakdown::text != '{}') as with_breakdown
       FROM traces
       WHERE source = 'user'
       GROUP BY route
@@ -52,12 +49,16 @@ class Trace < ApplicationRecord
 
     results = connection.execute(sql)
     results.map do |row|
+      route = row['route']
+      with_breakdown = row['with_breakdown'].to_i
+      rate = (row['cache_hits'].to_f / with_breakdown * 100).round(1) unless with_breakdown.zero?
+      
       {
-        route: row['route'],
-        clean_route: row['route'].downcase.delete(' '),
+        route: route,
+        clean_route: route.downcase.delete(' '),
         total_requests: row['total_requests'].to_i,
-        p99: row['p99']&.to_f || 0.0,
-        cache_hit_rate: row['route'].start_with?('POST') ? nil : row['cache_hit_rate']&.to_f
+        p99: row['p99'].to_f,
+        cache_hit_rate: route.start_with?('POST') ? nil : rate
       }
     end
   end
@@ -76,10 +77,11 @@ class Trace < ApplicationRecord
     query = where("endpoint ILIKE ?", route)
     .where.not("breakdown::text = ? OR breakdown IS NULL", '{}')
     .where(source: 'user')
+    .order(created_at: :desc)
 
     {
-      cached: query.where("breakdown::text LIKE ?", '%"used_redis":true%').order(created_at: :desc),
-      uncached: query.where("breakdown::text LIKE ? OR breakdown::text LIKE ?", '%"used_api":true%', '%"used_db":true%').order(created_at: :desc),
+      cached: query.where("breakdown::text LIKE ?", '%"used_redis":true%'),
+      uncached: query.where("breakdown::text LIKE ? OR breakdown::text LIKE ?", '%"used_api":true%', '%"used_db":true%'),
     }
   end
 
@@ -136,6 +138,7 @@ class Trace < ApplicationRecord
       GROUP BY bucket
       ORDER BY bucket
     SQL
+    
     current_bucket = Time.at((Time.now.to_i / seconds_per_bucket) * seconds_per_bucket).utc
     cutoff  = current_bucket - (seconds_per_bucket * buckets)
     
