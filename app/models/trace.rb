@@ -92,7 +92,9 @@ class Trace < ApplicationRecord
         PERCENTILE_CONT(0.50) WITHIN GROUP (ORDER BY duration) as p50,
         PERCENTILE_CONT(0.95) WITHIN GROUP (ORDER BY duration) as p95,
         PERCENTILE_CONT(0.99) WITHIN GROUP (ORDER BY duration) as p99,
-        COUNT(*) FILTER (WHERE status >= 500) as error_count
+        COUNT(*) FILTER (WHERE status >= 500) as error_count,
+        bool_or(breakdown::text LIKE '%"used_redis"%') as uses_redis,
+        bool_or(breakdown::text LIKE '%"used_api"%') as uses_api
       FROM traces
     SQL
 
@@ -106,7 +108,9 @@ class Trace < ApplicationRecord
       p50: result['p50']&.to_f || 0.0,
       p95: result['p95']&.to_f || 0.0,
       p99: result['p99']&.to_f || 0.0,
-      error_rate: result['total_requests'].to_i > 0 ? (result['error_count'].to_f / result['total_requests'].to_f * 100).round(2) : 0.0
+      error_rate: result['total_requests'].to_i > 0 ? (result['error_count'].to_f / result['total_requests'].to_f * 100).round(2) : 0.0,
+      uses_redis: ActiveRecord::Type::Boolean.new.cast(result['uses_redis']) || false,
+      uses_api: ActiveRecord::Type::Boolean.new.cast(result['uses_api']) || false
     }
   end
 
