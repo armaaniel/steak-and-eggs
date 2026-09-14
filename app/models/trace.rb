@@ -189,7 +189,7 @@ class Trace < ApplicationRecord
     end
   end
 
-  def self.run_traces(run_id:)
+  def self.synthetic_run_traces(run_id:)
     where(run_id: run_id).order(created_at: :asc)
   end
 

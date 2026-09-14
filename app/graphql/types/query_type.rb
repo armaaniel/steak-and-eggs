@@ -158,7 +158,7 @@ module Types
     end
 
     def synthetic_run_traces(run_id:)
-      Trace.run_traces(run_id: run_id)
+      Trace.synthetic_run_traces(run_id: run_id)
     end
 
     def ingester_spans(from:, to:)
