@@ -245,8 +245,8 @@ RSpec.describe(Types::QueryType) do
             p95
             p99
             errorRate
-            usesRedis
-            usesApi
+            usedRedis
+            usedApi
           }
         }
       GQL
@@ -310,40 +310,40 @@ RSpec.describe(Types::QueryType) do
       expect(stats["totalRequests"]).to(eq(2))
     end
 
-    it("flags uses_redis when a nested breakdown records the key") do
+    it("flags used_redis when a nested breakdown records the key") do
       Trace.create!(endpoint: "GET /users", duration: 50.0, status: 200,
         breakdown: { "PositionService#find_positions" => { used_redis: false, used_db: true } })
 
       result = execute_query(endpoint: "GET /users")
       stats = result.dig("data", "traceStats")
 
-      expect(stats["usesRedis"]).to(be(true))
-      expect(stats["usesApi"]).to(be(false))
+      expect(stats["usedRedis"]).to(be(true))
+      expect(stats["usedApi"]).to(be(false))
     end
 
-    it("flags uses_api when a nested breakdown records the key") do
+    it("flags used_api when a nested breakdown records the key") do
       Trace.create!(endpoint: "GET /stocks/TSLA/marketdata", duration: 30.0, status: 200,
         breakdown: { "MarketService#quote" => { used_redis: true, used_api: false } })
 
       result = execute_query(endpoint: "GET /stocks/symbol/marketdata")
       stats = result.dig("data", "traceStats")
 
-      expect(stats["usesRedis"]).to(be(true))
-      expect(stats["usesApi"]).to(be(true))
+      expect(stats["usedRedis"]).to(be(true))
+      expect(stats["usedApi"]).to(be(true))
     end
 
-    it("does not flag uses_redis for a route with no cache instrumentation") do
+    it("does not flag used_redis for a route with no cache instrumentation") do
       Trace.create!(endpoint: "GET /users", duration: 50.0, status: 200,
         breakdown: { "UserService#index" => { used_db: true } })
 
       result = execute_query(endpoint: "GET /users")
       stats = result.dig("data", "traceStats")
 
-      expect(stats["usesRedis"]).to(be(false))
-      expect(stats["usesApi"]).to(be(false))
+      expect(stats["usedRedis"]).to(be(false))
+      expect(stats["usedApi"]).to(be(false))
     end
 
-    it("flags uses_redis when any trace on the route records the key") do
+    it("flags used_redis when any trace on the route records the key") do
       Trace.create!(endpoint: "GET /users", duration: 50.0, status: 200)
       Trace.create!(endpoint: "GET /users", duration: 60.0, status: 200,
         breakdown: { "PositionService#find_positions" => { used_redis: true } })
@@ -351,15 +351,15 @@ RSpec.describe(Types::QueryType) do
       result = execute_query(endpoint: "GET /users")
       stats = result.dig("data", "traceStats")
 
-      expect(stats["usesRedis"]).to(be(true))
+      expect(stats["usedRedis"]).to(be(true))
     end
 
     it("returns false flags when no traces match") do
       result = execute_query(endpoint: "GET /nonexistent")
       stats = result.dig("data", "traceStats")
 
-      expect(stats["usesRedis"]).to(be(false))
-      expect(stats["usesApi"]).to(be(false))
+      expect(stats["usedRedis"]).to(be(false))
+      expect(stats["usedApi"]).to(be(false))
     end
   end
 

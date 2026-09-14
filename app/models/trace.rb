@@ -95,8 +95,8 @@ class Trace < ApplicationRecord
         PERCENTILE_CONT(0.95) WITHIN GROUP (ORDER BY duration) AS p95,
         PERCENTILE_CONT(0.99) WITHIN GROUP (ORDER BY duration) AS p99,
         COUNT(*) FILTER (WHERE status >= 500) AS error_count,
-        bool_or(breakdown::text LIKE '%"used_redis"%') AS uses_redis,
-        bool_or(breakdown::text LIKE '%"used_api"%')   AS uses_api
+        bool_or(breakdown::text LIKE '%"used_redis"%') AS used_redis,
+        bool_or(breakdown::text LIKE '%"used_api"%')   AS used_api
       FROM traces
       WHERE source = 'user'
         AND endpoint ILIKE ?
@@ -112,8 +112,8 @@ class Trace < ApplicationRecord
       p95: result['p95'].to_f,
       p99: result['p99'].to_f,
       error_rate: total.zero? ? 0.0 : (errors / total * 100).round(2),
-      uses_redis: result['uses_redis'] || false,
-      uses_api: result['uses_api'] || false}
+      used_redis: result['used_redis'] || false,
+      used_api: result['used_api'] || false}
   end
 
   def self.latent
