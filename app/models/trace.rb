@@ -1,5 +1,5 @@
 class Trace < ApplicationRecord
-  PROBE_INTERVAL = 300  # seconds between synthetic probe runs
+  PROBE_INTERVAL = 300
 
   RANGES = {
     '1h'  => {seconds_per_bucket: 300,   buckets: 12},  # 12 × 5 min
@@ -81,7 +81,7 @@ class Trace < ApplicationRecord
 
     {
       cached: query.where("breakdown::text LIKE ?", '%"used_redis":true%'),
-      uncached: query.where("breakdown::text LIKE ? OR breakdown::text LIKE ?", '%"used_api":true%', '%"used_db":true%'),
+      uncached: query.where("breakdown::text LIKE ? OR breakdown::text LIKE ?", '%"used_api":true%', '%"used_db":true%')
     }
   end
 
@@ -117,14 +117,14 @@ class Trace < ApplicationRecord
   end
 
   def self.latent
-    where.not(endpoint: ['POST /graphql']).where(source: 'user').order(duration: :desc).limit(1000)
+    where.not(endpoint: 'POST /graphql').where(source: 'user').order(duration: :desc).limit(1000)
   end
 
   def self.synthetic_buckets(range:)
-    spec = RANGES.fetch(range, RANGES['1h'])
+    window = RANGES.fetch(range, RANGES['1h'])
     
-    seconds_per_bucket = spec[:seconds_per_bucket]
-    buckets = spec[:buckets]
+    seconds_per_bucket = window[:seconds_per_bucket]
+    buckets = window[:buckets]
     
     sql = <<~SQL
       SELECT
@@ -144,25 +144,22 @@ class Trace < ApplicationRecord
     
     rows = connection.execute(sanitize_sql_array([sql, seconds_per_bucket, seconds_per_bucket, cutoff]))
     
-    by_bucket = rows.index_by do |row| 
-      row['bucket'].to_i 
-    end
+    by_bucket = rows.index_by { |row| row ['bucket'].to_i }
     
     buckets.downto(1).map do |buckets_back|
-      bucket = current_bucket - (buckets_back * seconds_per_bucket)
-      row    = by_bucket[bucket.to_i] || {}
-      { bucket: bucket,
-        started:   row['started'].to_i,
-        completed: row['completed'].to_i,
-        failures:  row['failures'].to_i,
-        expected:  seconds_per_bucket / PROBE_INTERVAL }
+      bucket     = current_bucket - (buckets_back * seconds_per_bucket)
+      bucket_end = bucket + seconds_per_bucket
+      row        = by_bucket[bucket.to_i] || {}
+      { bucket:     bucket,
+        bucket_end: bucket_end,
+        started:    row['started'].to_i,
+        completed:  row['completed'].to_i,
+        failures:   row['failures'].to_i,
+        expected:   seconds_per_bucket / PROBE_INTERVAL }
     end
   end
 
-  def self.synthetic_runs(bucket:, range:)
-    seconds_per_bucket = RANGES.fetch(range, RANGES['1h'])[:seconds_per_bucket]
-    bucket_end = bucket + seconds_per_bucket
-
+  def self.synthetic_runs(bucket:, bucket_end:)
     sql = <<~SQL
       SELECT run_id,
              MIN(created_at)                        AS started_at,
@@ -193,5 +190,5 @@ class Trace < ApplicationRecord
     where(run_id: run_id).order(created_at: :asc)
   end
 
-  private_class_method :normalize_endpoint
+  private_class_method(:normalize_endpoint)
 end

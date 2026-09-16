@@ -2,6 +2,7 @@
 module Types
   class SyntheticBucketType < Types::BaseObject
     field(:bucket, GraphQL::Types::ISO8601DateTime, null: false)
+    field(:bucket_end, GraphQL::Types::ISO8601DateTime, description: 'exclusive upper bound of this bucket', null: false)
     field(:started, Integer, description: 'probe runs that began in this bucket', null: false)
     field(:completed, Integer, description: 'probe runs that reached teardown', null: false)
     field(:failures, Integer, description: '5xx responses in this bucket', null: false)

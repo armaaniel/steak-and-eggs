@@ -35,8 +35,8 @@ module Types
     end
     
     field(:synthetic_runs, [Types::SyntheticRunType]) do
-      argument(:range, String, required: false, default_value: '1h')
       argument(:bucket, GraphQL::Types::ISO8601DateTime)
+      argument(:bucket_end, GraphQL::Types::ISO8601DateTime)
       description('get individual runs by time bucket')
     end
     
@@ -153,8 +153,8 @@ module Types
       Trace.synthetic_buckets(range: range)
     end
 
-    def synthetic_runs(bucket:, range: '1h')
-      Trace.synthetic_runs(bucket: bucket, range: range)
+    def synthetic_runs(bucket:, bucket_end:)
+      Trace.synthetic_runs(bucket: bucket, bucket_end: bucket_end)
     end
 
     def synthetic_run_traces(run_id:)

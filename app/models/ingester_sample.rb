@@ -2,7 +2,6 @@ class IngesterSample < ApplicationRecord
   SPAN_CAP_SECONDS = 90
   TRANSITION_LIMIT = 200
 
-  # Attributes wall-clock seconds to each state; shared by .spans and .uptime, and not partitioned by boot_id so the pair straddling a restart survives.
   SPAN_SQL = <<~SQL.freeze
     WITH ordered AS (
       SELECT
