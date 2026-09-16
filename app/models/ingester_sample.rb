@@ -2,6 +2,7 @@ class IngesterSample < ApplicationRecord
   SPAN_CAP_SECONDS = 90
   TRANSITION_LIMIT = 200
 
+  # ordered gets us timestamps + anchor row, measured converts those into raw seconds, spans union all clips downtime
   SPAN_SQL = <<~SQL.freeze
     WITH ordered AS (
       SELECT
@@ -12,15 +13,16 @@ class IngesterSample < ApplicationRecord
         state,
         lead(at) OVER (ORDER BY at, id) AS next_at
       FROM ingester_samples
-      WHERE at >= :from AND at < :to
+      WHERE at >= COALESCE((SELECT max(at) FROM ingester_samples WHERE at < :from), :from)
+        AND at < :to
     ),
     measured AS (
       SELECT
-        at,
+        GREATEST(at, :from) AS at,
         boot_id,
         connection_id,
         state,
-        EXTRACT(epoch FROM COALESCE(next_at, :to) - at) AS raw_seconds
+        EXTRACT(epoch FROM COALESCE(next_at, :to) - GREATEST(at, :from)) AS raw_seconds
       FROM ordered
     ),
     spans AS (
@@ -47,30 +49,6 @@ class IngesterSample < ApplicationRecord
   MIN_RATE_GAP = 10
   TERMINAL_CAUSES = %w[stale error closed force_disconnect].freeze
   BASE_LAG_MS = 902_000
-
-  # Each sample's mean lag above the feed's baseline. Gated on sampled_events rather
-  # than state: the feed runs ~15 min delayed, so a bucket written after the close
-  # still carries regular-session events, and state would mask them as idle.
-  def self.lag(from:, to:)
-    sql = <<~SQL
-      SELECT
-        at,
-        CASE WHEN sampled_events > 0
-             THEN (sum_lag_ms::float / sampled_events) - #{BASE_LAG_MS}
-        END AS mean_excess_ms,
-        sampled_events,
-        symbols
-      FROM ingester_samples
-      WHERE at >= :from AND at < :to
-        AND kind = 'tick'
-        AND sampled_events > 0
-      ORDER BY at
-    SQL
-
-    sanitized = sanitize_sql_array([sql, { from: from, to: to }])
-
-    connection.exec_query(sanitized, 'IngesterSample').to_a
-  end
   
   # One row per stretch the ingester spent in a state, with how long it lasted.
   def self.spans(from:, to:)
@@ -98,10 +76,7 @@ class IngesterSample < ApplicationRecord
       SELECT
         COALESCE(sum(seconds) FILTER (WHERE state = 'streaming'), 0) AS streaming_seconds,
         COALESCE(sum(seconds) FILTER (WHERE state = 'idle'), 0) AS idle_seconds,
-        COALESCE(sum(seconds) FILTER (WHERE state NOT IN ('streaming', 'idle')), 0) AS down_seconds,
-        EXTRACT(epoch FROM (
-          :to::timestamptz - GREATEST(:from::timestamptz, (SELECT min(at) FROM ingester_samples)::timestamptz)
-        )) AS window_seconds
+        COALESCE(sum(seconds) FILTER (WHERE state NOT IN ('streaming', 'idle')), 0) AS down_seconds
       FROM spans
     SQL
 
@@ -112,17 +87,37 @@ class IngesterSample < ApplicationRecord
     streaming = row['streaming_seconds'].to_f
     idle      = row['idle_seconds'].to_f
     down      = row['down_seconds'].to_f
-    window    = row['window_seconds'].to_f
-
-    denominator = window - idle
 
     {
       streaming_seconds: streaming,
       idle_seconds: idle,
       down_seconds: down,
-      window_seconds: window,
-      pct: denominator.positive? ? ((streaming / denominator) * 100).round(3) : 0.0
+      pct: (streaming + down).positive? ? (streaming / (streaming + down) * 100).round(3) : 0.0
     }
+  end
+  
+  # Each sample's mean lag above the feed's baseline. Gated on sampled_events rather
+  # than state: the feed runs ~15 min delayed, so a bucket written after the close
+  # still carries regular-session events, and state would mask them as idle.
+  def self.lag(from:, to:)
+    sql = <<~SQL
+      SELECT
+        at,
+        CASE WHEN sampled_events > 0
+             THEN (sum_lag_ms::float / sampled_events) - #{BASE_LAG_MS}
+        END AS mean_excess_ms,
+        sampled_events,
+        symbols
+      FROM ingester_samples
+      WHERE at >= :from AND at < :to
+        AND kind = 'tick'
+        AND sampled_events > 0
+      ORDER BY at
+    SQL
+
+    sanitized = sanitize_sql_array([sql, { from: from, to: to }])
+
+    connection.exec_query(sanitized, 'IngesterSample').to_a
   end
 
   # One row per ingester process, with its connection count and how it exited.
