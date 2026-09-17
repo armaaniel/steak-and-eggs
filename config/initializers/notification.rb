@@ -1,3 +1,4 @@
+=begin
 Rails.application.config.after_initialize do
   TRACKED_ROUTES = [
     '/stocks/',
@@ -76,3 +77,4 @@ Rails.application.config.after_initialize do
     current_request.delete(id)
   end
 end
+=end
