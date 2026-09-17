@@ -19,9 +19,19 @@ Rails.application.config.after_initialize do
   trace_queue = Queue.new
 
   Thread.new do
-    while trace = trace_queue.pop
+    loop do
+      sleep 5
+      
+      batch = []
       begin
-        Trace.create!(trace)
+        loop { batch.push(trace_queue.pop(true)) }
+      rescue ThreadError
+      end
+      
+      next if batch.empty?
+      
+      begin
+        Trace.insert_all(batch)
       rescue => e
         Sentry.capture_exception(e)
       end
@@ -37,6 +47,7 @@ Rails.application.config.after_initialize do
       breakdown = current_request.delete(id)
       next if payload[:action] == 'not_found'
       next unless TRACKED_ROUTES.any? { |route| payload[:path]&.start_with?(route) }
+      now = Time.current
 
       trace_queue.push({
         endpoint: "#{payload[:method]} #{payload[:path].split('?').first}",
@@ -51,8 +62,11 @@ Rails.application.config.after_initialize do
         run_id: payload[:run_id],
         result: payload[:result],
         request_id: payload[:request_id],
-        breakdown: breakdown.presence
+        breakdown: breakdown.presence,
+        created_at: now,
+        updated_at: now
       })
+      
     else
       current_request[id] ||= {}
       current_request[id][name.delete_suffix('.datacat')] = payload.except(:exception_object).merge(duration: duration)
