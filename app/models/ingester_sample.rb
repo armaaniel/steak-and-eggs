@@ -1,8 +1,10 @@
 class IngesterSample < ApplicationRecord
   SPAN_CAP_SECONDS = 90
-  TRANSITION_LIMIT = 200
+  MIN_RATE_GAP = 10
+  TERMINAL_CAUSES = %w[stale error closed force_disconnect].freeze
+  BASE_LAG_MS = 902_000 #15m delay + 2s polygonio holdback
 
-  # ordered gets us timestamps + anchor row, measured converts those into raw seconds, spans union all clips downtime
+  # ordered gets us timestamps + anchor row, measured converts those into raw seconds, spans union all clips downtime + gives us downtime row
   SPAN_SQL = <<~SQL.freeze
     WITH ordered AS (
       SELECT
@@ -46,11 +48,7 @@ class IngesterSample < ApplicationRecord
       WHERE raw_seconds > #{SPAN_CAP_SECONDS}
     )
   SQL
-  MIN_RATE_GAP = 10
-  TERMINAL_CAUSES = %w[stale error closed force_disconnect].freeze
-  BASE_LAG_MS = 902_000
-  
-  # One row per stretch the ingester spent in a state, with how long it lasted.
+
   def self.spans(from:, to:)
     sql = <<~SQL
       #{SPAN_SQL}
@@ -69,7 +67,6 @@ class IngesterSample < ApplicationRecord
     connection.exec_query(sanitized, 'IngesterSample').to_a
   end
 
-  # Streaming, idle and down seconds for the window, plus streaming as a percentage.
   def self.uptime(from:, to:)
     sql = <<~SQL
       #{SPAN_SQL}
@@ -95,10 +92,7 @@ class IngesterSample < ApplicationRecord
       pct: (streaming + down).positive? ? (streaming / (streaming + down) * 100).round(3) : 0.0
     }
   end
-  
-  # Each sample's mean lag above the feed's baseline. Gated on sampled_events rather
-  # than state: the feed runs ~15 min delayed, so a bucket written after the close
-  # still carries regular-session events, and state would mask them as idle.
+
   def self.lag(from:, to:)
     sql = <<~SQL
       SELECT
@@ -123,22 +117,43 @@ class IngesterSample < ApplicationRecord
   # One row per ingester process, with its connection count and how it exited.
   def self.boots(from:, to:)
     sql = <<~SQL
+      WITH boots_in_window AS (
+        SELECT DISTINCT boot_id
+        FROM ingester_samples
+        WHERE at >= :from AND at < :to
+      ),
+      lifetimes AS (
+        SELECT
+          boot_id,
+          min(at) AS started_at,
+          max(at) AS last_seen_at
+        FROM ingester_samples
+        WHERE boot_id IN (SELECT boot_id FROM boots_in_window)
+        GROUP BY boot_id
+      )
       SELECT
-        boot_id::text AS boot_id,
-        min(at) AS started_at,
-        max(at) AS last_seen_at,
-        EXTRACT(epoch FROM max(at) - min(at)) AS duration_seconds,
-        count(DISTINCT connection_id) AS connections,
-        greatest(count(DISTINCT connection_id) - 1, 0) AS reconnects,
+        samples.boot_id::text AS boot_id,
+        lifetimes.started_at,
+        lifetimes.last_seen_at,
+        EXTRACT(epoch FROM
+          CASE
+            WHEN lifetimes.last_seen_at >= :to - INTERVAL '#{SPAN_CAP_SECONDS} seconds'
+              THEN :to - lifetimes.started_at
+            ELSE lifetimes.last_seen_at - lifetimes.started_at
+          END
+        ) AS duration_seconds,
+        count(DISTINCT samples.connection_id) AS connections,
+        greatest(count(DISTINCT samples.connection_id) - 1, 0) AS reconnects,
         CASE
-          WHEN bool_or(cause = 'sigterm') THEN 'sigterm'
-          WHEN max(at)::timestamptz >= :to::timestamptz - (#{SPAN_CAP_SECONDS} * INTERVAL '1 second') THEN 'running'
+          WHEN bool_or(samples.cause = 'sigterm') THEN 'sigterm'
+          WHEN lifetimes.last_seen_at >= :to - INTERVAL '#{SPAN_CAP_SECONDS} seconds' THEN 'running'
           ELSE 'none'
         END AS exit_state
-      FROM ingester_samples
-      WHERE at >= :from AND at < :to
-      GROUP BY boot_id
-      ORDER BY min(at) DESC
+      FROM ingester_samples samples
+      JOIN lifetimes ON lifetimes.boot_id = samples.boot_id
+      WHERE samples.at >= :from AND samples.at < :to
+      GROUP BY samples.boot_id, lifetimes.started_at, lifetimes.last_seen_at
+      ORDER BY lifetimes.started_at DESC
     SQL
 
     sanitized = sanitize_sql_array([sql, { from: from, to: to }])
@@ -243,6 +258,6 @@ class IngesterSample < ApplicationRecord
     where(kind: 'transition')
       .where(at: from...to)
       .order(at: :desc)
-      .limit(TRANSITION_LIMIT)
+      .limit(100)
   end
 end

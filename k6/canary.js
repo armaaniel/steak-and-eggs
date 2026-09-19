@@ -21,17 +21,16 @@ export default async function () {
   const SYNTHETIC_KEY = await secrets.get('synthetic-key')
   const runId = crypto.randomUUID()
 
-
-  const base = { 'Content-Type': 'application/json', 'Synthetic-Key': SYNTHETIC_KEY, 'Synthetic-Run-Id': runId, 'Synthetic-Source': 'canary' }
+  const baseHeaders = { 'Content-Type': 'application/json', 'Synthetic-Key': SYNTHETIC_KEY, 'Synthetic-Run-Id': runId, 'Synthetic-Source': 'canary' }
   let token = ''
   let failed = false
   let buyPrice = 0
-  const auth = () => ({ ...base, authToken: token })
+  const auth = () => ({ ...baseHeaders, authToken: token })
 
   try {
     group('signup', () => {
       const res = http.post(`${BASE}/signup`, JSON.stringify({ username, password }), {
-        headers: base,
+        headers: baseHeaders,
       })
       expect(res.status).toBe(200)
       const body = res.json()
@@ -42,7 +41,7 @@ export default async function () {
 
     group('login', () => {
       const res = http.post(`${BASE}/login`, JSON.stringify({ username, password }), {
-        headers: base,
+        headers: baseHeaders,
       })
       expect(res.status).toBe(200)
       token = res.json().token
@@ -89,6 +88,7 @@ export default async function () {
 
     group('portfolio data', () => {
       const res = http.get(`${BASE}/portfoliodata`, { headers: auth() })
+
       expect(res.status).toBe(200)
       const body = res.json()
 
@@ -98,11 +98,10 @@ export default async function () {
 
       expect(Number(body.positions[0].average_price)).toBe(buyPrice)
 
-      expect(Math.abs(Number(body.balance) - (DEPOSIT - buyPrice))).toBeLessThan(CENT)
+      expect(Math.abs(Number(body.balance) - (DEPOSIT - buyPrice))).toBeLessThan(CENT) // we return bigdecimal and render on display
 
-      // internal arithmetic of this one response: aum = balance + sum(price * shares)
-      const held = Number(body.positions[0].price) * Number(body.positions[0].shares)
-      expect(Math.abs(Number(body.aum) - (Number(body.balance) + held))).toBeLessThan(CENT)
+      const positionValue = Number(body.positions[0].price) * Number(body.positions[0].shares)
+      expect(Math.abs(Number(body.aum) - (Number(body.balance) + positionValue))).toBeLessThan(CENT)
     })
 
     group('sell', () => {
@@ -110,7 +109,7 @@ export default async function () {
         headers: auth(),
       })
       expect(res.status).toBe(201)
-      // toBeDefined() passes on null; realized_pnl must be an actual number (may be 0 or negative)
+
       expect(Number.isFinite(Number(res.json().realized_pnl))).toBe(true)
     })
 
@@ -157,7 +156,7 @@ export default async function () {
     failed = true
     throw e
   } finally {
-	  const headers = { ...base, 'Synthetic-Result': failed ? 'fail' : 'pass' }
+	  const headers = { ...baseHeaders, 'Synthetic-Result': failed ? 'fail' : 'pass' }
 		if (token) headers.authToken = token
 		http.del(`${BASE}/delete_account`, null, { headers })
 	}
