@@ -126,13 +126,17 @@ class IngesterSample < ApplicationRecord
         SELECT
           boot_id,
           min(at) AS started_at,
-          max(at) AS last_seen_at
+          max(at) AS last_seen_at,
+          count(DISTINCT connection_id) AS connections,
+          greatest(count(DISTINCT connection_id) - 1, 0) AS reconnects,
+          bool_or(cause = 'sigterm') AS got_sigterm
         FROM ingester_samples
         WHERE boot_id IN (SELECT boot_id FROM boots_in_window)
+          AND at < :to
         GROUP BY boot_id
       )
       SELECT
-        samples.boot_id::text AS boot_id,
+        lifetimes.boot_id::text AS boot_id,
         lifetimes.started_at,
         lifetimes.last_seen_at,
         EXTRACT(epoch FROM
@@ -142,17 +146,14 @@ class IngesterSample < ApplicationRecord
             ELSE lifetimes.last_seen_at - lifetimes.started_at
           END
         ) AS duration_seconds,
-        count(DISTINCT samples.connection_id) AS connections,
-        greatest(count(DISTINCT samples.connection_id) - 1, 0) AS reconnects,
+        lifetimes.connections,
+        lifetimes.reconnects,
         CASE
-          WHEN bool_or(samples.cause = 'sigterm') THEN 'sigterm'
+          WHEN lifetimes.got_sigterm THEN 'sigterm'
           WHEN lifetimes.last_seen_at >= :to::timestamp - INTERVAL '#{SPAN_CAP_SECONDS} seconds' THEN 'running'
           ELSE 'none'
         END AS exit_state
-      FROM ingester_samples samples
-      JOIN lifetimes ON lifetimes.boot_id = samples.boot_id
-      WHERE samples.at >= :from AND samples.at < :to
-      GROUP BY samples.boot_id, lifetimes.started_at, lifetimes.last_seen_at
+      FROM lifetimes
       ORDER BY lifetimes.started_at DESC
     SQL
 
