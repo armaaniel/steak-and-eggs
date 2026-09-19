@@ -137,8 +137,8 @@ class IngesterSample < ApplicationRecord
         lifetimes.last_seen_at,
         EXTRACT(epoch FROM
           CASE
-            WHEN lifetimes.last_seen_at >= :to - INTERVAL '#{SPAN_CAP_SECONDS} seconds'
-              THEN :to - lifetimes.started_at
+            WHEN lifetimes.last_seen_at >= :to::timestamp - INTERVAL '#{SPAN_CAP_SECONDS} seconds'
+              THEN :to::timestamp - lifetimes.started_at
             ELSE lifetimes.last_seen_at - lifetimes.started_at
           END
         ) AS duration_seconds,
@@ -146,7 +146,7 @@ class IngesterSample < ApplicationRecord
         greatest(count(DISTINCT samples.connection_id) - 1, 0) AS reconnects,
         CASE
           WHEN bool_or(samples.cause = 'sigterm') THEN 'sigterm'
-          WHEN lifetimes.last_seen_at >= :to - INTERVAL '#{SPAN_CAP_SECONDS} seconds' THEN 'running'
+          WHEN lifetimes.last_seen_at >= :to::timestamp - INTERVAL '#{SPAN_CAP_SECONDS} seconds' THEN 'running'
           ELSE 'none'
         END AS exit_state
       FROM ingester_samples samples
