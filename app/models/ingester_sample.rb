@@ -175,6 +175,7 @@ class IngesterSample < ApplicationRecord
           min(samples.boot_id::text) AS boot_id,
           min(samples.at) FILTER (WHERE samples.cause = 'subscriber_spawned') AS spawned_at,
           min(samples.first_message_at) AS first_message_at,
+          max(samples.last_message_at) AS last_message_at,
           max(samples.at) AS last_seen_at,
           min(samples.at) FILTER (WHERE samples.cause IN (#{terminal})) AS ended_at,
           min(samples.cause) FILTER (WHERE samples.cause IN (#{terminal})) AS ended_by,
@@ -195,6 +196,7 @@ class IngesterSample < ApplicationRecord
         boot_id,
         spawned_at,
         first_message_at,
+        last_message_at,
         last_seen_at,
         ended_at,
         CASE
