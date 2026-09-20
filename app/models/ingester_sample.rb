@@ -1,7 +1,6 @@
 class IngesterSample < ApplicationRecord
   SPAN_CAP_SECONDS = 90
   MIN_RATE_GAP = 10
-  TERMINAL_CAUSES = %w[stale error closed force_disconnect].freeze
   BASE_LAG_MS = 902_000 #15m delay + 2s polygonio holdback
 
   # ordered gets us timestamps + anchor row, measured converts those into raw seconds, spans union all clips downtime + gives us downtime row
@@ -114,7 +113,6 @@ class IngesterSample < ApplicationRecord
     connection.exec_query(sanitized, 'IngesterSample').to_a
   end
 
-  # One row per ingester process, with its connection count and how it exited.
   def self.boots(from:, to:)
     sql = <<~SQL
       WITH boots_in_window AS (
@@ -162,9 +160,8 @@ class IngesterSample < ApplicationRecord
     connection.exec_query(sanitized, 'IngesterSample').to_a
   end
 
-  # One row per websocket connection, with its events, lag and how it ended.
   def self.connections(from:, to:)
-    terminal = TERMINAL_CAUSES.map { |cause| "'#{cause}'" }.join(', ')
+    terminal = "'stale', 'error', 'closed', 'force_disconnect', 'sigterm'"
 
     sql = <<~SQL
       WITH in_window AS (
@@ -180,12 +177,11 @@ class IngesterSample < ApplicationRecord
           min(samples.first_message_at) AS first_message_at,
           max(samples.at) AS last_seen_at,
           min(samples.at) FILTER (WHERE samples.cause IN (#{terminal})) AS ended_at,
-          (array_agg(samples.cause ORDER BY samples.at)
-            FILTER (WHERE samples.cause IN (#{terminal})))[1] AS ended_by,
+          min(samples.cause) FILTER (WHERE samples.cause IN (#{terminal})) AS ended_by,
           max(samples.events) AS events,
           round(
             percentile_cont(0.99) WITHIN GROUP (
-              ORDER BY samples.sum_lag_ms::float / NULLIF(samples.sampled_events, 0)
+              ORDER BY samples.sum_lag_ms::float / samples.sampled_events
             ) FILTER (
               WHERE samples.kind = 'tick' AND samples.sampled_events > 0
             )
@@ -253,8 +249,6 @@ class IngesterSample < ApplicationRecord
     connection.exec_query(sanitized, 'IngesterSample').to_a
   end
 
-  # How many connections ended for each terminal cause.
-  # The most recent transition rows, newest first, carrying cause and detail.
   def self.transitions(from:, to:)
     where(kind: 'transition')
       .where(at: from...to)
