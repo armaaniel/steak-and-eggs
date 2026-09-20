@@ -177,6 +177,7 @@ class IngesterSample < ApplicationRecord
           min(samples.first_message_at) AS first_message_at,
           max(samples.last_message_at) AS last_message_at,
           max(samples.at) AS last_seen_at,
+          (array_agg(samples.state ORDER BY samples.at DESC, samples.id DESC))[1] AS state,
           min(samples.at) FILTER (WHERE samples.cause IN (#{terminal})) AS ended_at,
           min(samples.cause) FILTER (WHERE samples.cause IN (#{terminal})) AS ended_by,
           max(samples.events) AS events,
@@ -198,6 +199,7 @@ class IngesterSample < ApplicationRecord
         first_message_at,
         last_message_at,
         last_seen_at,
+        state,
         ended_at,
         CASE
           WHEN ended_by IS NOT NULL THEN ended_by
