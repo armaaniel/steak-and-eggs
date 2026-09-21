@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_09_07_062907) do
+ActiveRecord::Schema[8.0].define(version: 2026_09_20_205500) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -42,6 +42,8 @@ ActiveRecord::Schema[8.0].define(version: 2026_09_07_062907) do
     t.jsonb "detail"
     t.bigint "sum_lag_ms"
     t.integer "sampled_events"
+    t.bigint "sum_process_ms"
+    t.bigint "sum_idle_ms"
     t.index ["at"], name: "index_ingester_samples_on_at"
     t.index ["boot_id", "at"], name: "index_ingester_samples_on_boot_id_and_at"
     t.index ["connection_id", "at"], name: "index_ingester_samples_on_connection_id_and_at"

@@ -232,6 +232,10 @@ class IngesterSample < ApplicationRecord
                ELSE events - lag(events) OVER w END AS d_events,
           CASE WHEN frames < lag(frames) OVER w THEN frames
                ELSE frames - lag(frames) OVER w END AS d_frames,
+          CASE WHEN sum_process_ms < lag(sum_process_ms) OVER w THEN sum_process_ms
+               ELSE sum_process_ms - lag(sum_process_ms) OVER w END AS d_process_ms,
+          CASE WHEN sum_idle_ms < lag(sum_idle_ms) OVER w THEN sum_idle_ms
+               ELSE sum_idle_ms - lag(sum_idle_ms) OVER w END AS d_idle_ms,
           EXTRACT(epoch FROM at - lag(at) OVER w) AS d_seconds
         FROM ingester_samples
         WHERE at >= :from AND at < :to AND kind = 'tick'
@@ -242,14 +246,15 @@ class IngesterSample < ApplicationRecord
         symbols,
         mean_excess_ms,
         d_events / d_seconds AS events_per_sec,
-        d_frames / d_seconds AS frames_per_sec
+        d_frames / d_seconds AS frames_per_sec,
+        CASE WHEN d_frames > 0 THEN d_process_ms::float / d_frames END AS mean_process_ms,
+        CASE WHEN d_frames > 0 THEN d_idle_ms::float / d_frames    END AS mean_idle_ms
       FROM deltas
       WHERE d_seconds >= #{MIN_RATE_GAP} AND d_events >= 0
       ORDER BY at
     SQL
 
     sanitized = sanitize_sql_array([sql, { from: from, to: to }])
-
     connection.exec_query(sanitized, 'IngesterSample').to_a
   end
 
