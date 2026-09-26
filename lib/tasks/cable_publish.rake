@@ -1,76 +1,77 @@
-CABLE_SYMBOLS = %w[LOAD_01 LOAD_02 LOAD_03 LOAD_04 LOAD_05 LOAD_06 LOAD_07 LOAD_08 LOAD_09 LOAD_10]
+module CableLoad
+  SYMBOLS = %w[LOAD_01 LOAD_02 LOAD_03 LOAD_04 LOAD_05 LOAD_06 LOAD_07 LOAD_08 LOAD_09 LOAD_10]
+  BUCKET_SECONDS = 5
 
-CABLE_BUCKET = 5
+  STAGES = [
+    [500, 60],
+    [286, 120],
+    [250, 120],
+    [235, 120],
+    [222, 120],
+    [211, 120],
+    [200, 120]
+  ]
 
-CABLE_STAGESS = [
-  [2000, 60],
-  [1000, 60]
-]
+  plan = []
+  starts_at = 0
 
-CABLE_STAGES = [
-  [500, 90],
-  [333, 120],
-  [286, 180],
-  [250, 180],
-  [200, 120]
-]
+  STAGES.each do |interval_ms, hold_seconds|
+    plan << { interval: interval_ms / 1000.0, starts_at: starts_at, ends_at: starts_at + hold_seconds }
+    starts_at += hold_seconds
+  end
 
-CABLE_PLAN = CABLE_STAGES.each_with_object([]) do |(interval_ms, hold_seconds), plan|
-  starts_at = plan.empty? ? 0 : plan.last[:ends_at]
-  plan.push(
-    interval: interval_ms / 1000.0,
-    starts_at: starts_at,
-    ends_at: starts_at + hold_seconds
-  )
-end.freeze
+  PLAN = plan.freeze
 
-CABLE_TOTAL = CABLE_PLAN.last[:ends_at]
-CABLE_SHORTEST_INTERVAL = CABLE_PLAN.map { |s| s[:interval] }.min
+  SHORTEST_INTERVAL = PLAN.map { |stage| stage[:interval] }.min
+  
+  def self.bucket_start(time)
+    seconds = time.to_i
+    Time.at((seconds / BUCKET_SECONDS) * BUCKET_SECONDS).utc
+  end
+end
 
 task cable_publish: :environment do
+  
   redis_url = ENV.fetch('REDIS_URL')
   run_id = ENV.fetch('RUN_ID') { SecureRandom.uuid }
-  counts = Hash.new(0)
+  published = Hash.new(0)
   lock   = Mutex.new
   done   = false
-
-  bucket_of = lambda do |time|
-    epoch = time.to_i
-    Time.at(epoch - (epoch % CABLE_BUCKET)).utc
-  end
-  
-  puts JSON.generate(event: 'start', run_id: run_id, symbols: CABLE_SYMBOLS.size, 
-  stages: CABLE_STAGES.size, seconds: CABLE_TOTAL)
   
   flusher = Thread.new do
-    until done
-      closed = {}
-      begin
-        sleep CABLE_BUCKET
-        cutoff = bucket_of.call(Time.now.utc)
+    loop do
+      break if done
+      
+      finished = {}
+      sleep CableLoad::BUCKET_SECONDS
+      current_bucket = CableLoad.bucket_start(Time.now)
 
-        closed = lock.synchronize do
-          counts.select { |at, _frames| at < cutoff }
-                .each_key { |at| counts.delete(at) }
-        end
-        next if closed.empty?
-
-        CableSample.insert_all(
-          closed.map { |at, frames| { run_id: run_id, at: at, source: 'publisher', frames: frames } }
-        )
-      rescue => e
-        lock.synchronize do
-          closed.each { |at, frames| counts[at] += frames }
-        end
-        Sentry.capture_exception(e)
+      finished = lock.synchronize do
+        finished_buckets = published.keys.select { |bucket| bucket < current_bucket }
+        published.extract!(*finished_buckets)
       end
+      next if finished.empty?
+
+      rows = finished.map do |bucket, frames|
+        { run_id: run_id, at: bucket, source: 'publisher', frames: frames }
+      end
+
+      CableSample.insert_all(rows)
+    rescue => e
+      lock.synchronize do
+        finished.each { |at, frames| published[at] += frames }
+      end
+      Sentry.capture_exception(e)
     end
   end
 
   started = Process.clock_gettime(Process::CLOCK_MONOTONIC)
 
-  threads = CABLE_SYMBOLS.each_with_index.map do |symbol, index|
-    Thread.new do
+  threads = [] 
+  
+  CableLoad::SYMBOLS.each_with_index do |symbol, index|
+    thread = Thread.new do
+      
       redis = Redis.new(
         url: redis_url,
         ssl: true,
@@ -79,29 +80,27 @@ task cable_publish: :environment do
         write_timeout: 2
       )
 
-      sleep(index * (CABLE_SHORTEST_INTERVAL / CABLE_SYMBOLS.size))
-
+      sleep(index * (CableLoad::SHORTEST_INTERVAL / CableLoad::SYMBOLS.size))
+      
       loop do
         elapsed = Process.clock_gettime(Process::CLOCK_MONOTONIC) - started
-        stage = CABLE_PLAN.find do |plan| 
-          elapsed < plan[:ends_at]
-        end
-        break unless stage
+                
+        stage = CableLoad::PLAN.find { |plan| elapsed < plan[:ends_at] }
         
+        break if not stage
+                
         at = Time.now
         payload = JSON.generate(t: (at.to_f * 1000).round)
         redis.publish("price_channel:#{symbol}", payload)
         
-        bucket = bucket_of.call(at.utc)
-        lock.synchronize do 
-          counts[bucket] += 1
-        end
+        current_bucket = CableLoad.bucket_start(at)
+        
+        lock.synchronize { published[current_bucket] += 1 }
 
         sleep(stage[:interval])
       end
     rescue => e
       Sentry.capture_exception(e)
-      warn("publisher #{symbol} died: #{e.class}: #{e.message}")
     ensure
       begin
         redis&.close
@@ -109,17 +108,13 @@ task cable_publish: :environment do
         nil
       end
     end
+    threads << thread
   end
-
-  threads.each { |thread| thread.join }
+  
+  threads.each(&:join)
   done = true
   flusher.join
 
-  remaining = lock.synchronize do
-    counts.map { |at, frames| { run_id: run_id, at: at, source: 'publisher', frames: frames } }
-  end
+  remaining = published.map { |at, frames| { run_id: run_id, at: at, source: 'publisher', frames: frames } }
   CableSample.insert_all(remaining) if remaining.any?
-
-  total = CableSample.where(run_id: run_id, source: 'publisher').sum(:frames)
-  puts JSON.generate(event: 'done', run_id: run_id, final_rows: remaining.size, published: total)
 end
