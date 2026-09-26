@@ -163,8 +163,7 @@ RSpec.describe(MarketService) do
   
   describe("marketprice") do
     it("returns price and open from cache") do
-      allow(RedisService).to(receive(:safe_get).with("price:TSLA").and_return("100"))
-      allow(RedisService).to(receive(:safe_get).with("open:TSLA").and_return("95"))
+      allow(RedisService).to(receive(:safe_mget).with("price:TSLA", "open:TSLA").and_return(["100", "95"]))
 
       result = MarketService.marketprice(symbol: "TSLA")
 
@@ -173,8 +172,7 @@ RSpec.describe(MarketService) do
     end
 
     it("raises ApiError when price is not cached") do
-      allow(RedisService).to(receive(:safe_get).with("price:TSLA").and_return(nil))
-      allow(RedisService).to(receive(:safe_get).with("open:TSLA").and_return(nil))
+      allow(RedisService).to(receive(:safe_mget).with("price:TSLA", "open:TSLA").and_return([nil, nil]))
 
       expect {
         MarketService.marketprice(symbol: "TSLA")

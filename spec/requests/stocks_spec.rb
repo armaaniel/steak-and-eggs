@@ -253,8 +253,7 @@ RSpec.describe("Stocks", type: :request) do
 
   describe "GET /stocks/:symbol/stockprice" do
     it "returns price and open from cache" do
-      allow(RedisService).to(receive(:safe_get).with("price:TSLA").and_return("100"))
-      allow(RedisService).to(receive(:safe_get).with("open:TSLA").and_return("95"))
+      allow(RedisService).to(receive(:safe_mget).with("price:TSLA", "open:TSLA").and_return(["100", "95"]))
 
       get "/stocks/TSLA/stockprice", headers: headers
 
@@ -266,7 +265,7 @@ RSpec.describe("Stocks", type: :request) do
     end
 
     it "returns fallback data when price not cached" do
-      allow(RedisService).to(receive(:safe_get).and_return(nil))
+      allow(RedisService).to(receive(:safe_mget).with("price:TSLA", "open:TSLA").and_return([nil, nil]))
       allow(Sentry).to(receive(:capture_exception))
 
       get "/stocks/TSLA/stockprice", headers: headers
