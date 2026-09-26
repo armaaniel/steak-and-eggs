@@ -9,14 +9,14 @@ class SamplesController < ApplicationController
   end
 
   def load_samples
-    rows = params[:samples].map do |row|
+    rows = params[:samples].map do |sample|
       { run_id:     params[:run_id],
-        request_id: row[:request_id],
-        at:         Time.at(row[:at].to_f / 1000).utc,
-        route:      row[:route],
-        duration:   row[:duration], # unused but free
-        waiting:    row[:waiting],
-        status:     row[:status] }
+        request_id: sample[:request_id],
+        at:         Time.at(sample[:at].to_f / 1000).utc,
+        route:      sample[:route],
+        duration:   sample[:duration], # unused but free
+        waiting:    sample[:waiting],
+        status:     sample[:status] }
     end
 
     LoadSample.insert_all(rows)
@@ -24,15 +24,13 @@ class SamplesController < ApplicationController
   end
 
   def cable_samples
-    rows = params[:samples].map do |s|
+    rows = params[:samples].map do |sample|
       { run_id:       params[:run_id],
-        at:           Time.at(s[:at].to_f / 1000).utc,
+        at:           Time.at(sample[:at].to_f / 1000).utc,
         source:       'client',
-        vu:           s[:vu],
-        frames:       s[:frames],
-        sum_lag_ms:   s[:sum_lag_ms],
-        sample_lags:  s[:sample_lags],
-        clean_frames: s[:clean_frames] }
+        vu:           sample[:vu],
+        frames:       sample[:frames],
+        lags:         sample[:lags] }
     end
 
     CableSample.insert_all(rows)

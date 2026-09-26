@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_09_20_205500) do
+ActiveRecord::Schema[8.0].define(version: 2026_09_26_165716) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -20,9 +20,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_09_20_205500) do
     t.string "source", null: false
     t.integer "vu"
     t.integer "frames", default: 0, null: false
-    t.bigint "sum_lag_ms"
-    t.integer "sample_lags", array: true
-    t.integer "clean_frames", default: 0, null: false
+    t.integer "lags", array: true
     t.index ["run_id", "at"], name: "index_cable_samples_on_run_id_and_at"
     t.check_constraint "source::text = ANY (ARRAY['publisher'::character varying, 'client'::character varying]::text[])", name: "valid_cable_source"
   end
