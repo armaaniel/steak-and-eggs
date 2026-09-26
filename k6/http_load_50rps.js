@@ -2,7 +2,7 @@ import http from 'k6/http'
 import { check } from 'k6'
 import secrets from 'k6/secrets'
 
-//   Flushes cost 4% CPU, APM costs 34%. 45% No trace_queue, 49% No trace_queue with flushes
+//   Flushes cost 4% CPU, APM costs 31% or 10% after refactor
 
 const BASE = 'https://www.steakneggs.art'
 const ROUTE = 'stockprice'
