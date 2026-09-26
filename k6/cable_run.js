@@ -11,7 +11,7 @@ const SYMBOLS = ['LOAD_01', 'LOAD_02', 'LOAD_03', 'LOAD_04', 'LOAD_05',
 const BUCKET = 5000
 const FLUSH_BASE = 60000
 const FLUSH_JITTER = 10000
-const RUN_MS = 1130000
+const RUN_MS = 360000
 
 export const options = {
   cloud: {

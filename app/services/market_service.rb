@@ -100,8 +100,7 @@ class MarketService
 
   def self.marketprice(symbol:)
     ActiveSupport::Notifications.instrument("MarketService.marketprice.datacat") do
-      cached_price = RedisService.safe_get("price:#{symbol}")
-      cached_open = RedisService.safe_get("open:#{symbol}")
+      cached_price, cached_open = RedisService.safe_mget("price:#{symbol}", "open:#{symbol}")
 
       if cached_price
         return {price: cached_price, open: cached_open}
