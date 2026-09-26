@@ -3,6 +3,8 @@ module CableLoad
   BUCKET_SECONDS = 5
 
   STAGES = [
+    [2000, 60],
+    [1000, 60],
     [500, 120],
     [333, 180],
     [286, 180],
