@@ -2,20 +2,11 @@ module CableLoad
   SYMBOLS = %w[LOAD_01 LOAD_02 LOAD_03 LOAD_04 LOAD_05 LOAD_06 LOAD_07 LOAD_08 LOAD_09 LOAD_10]
   BUCKET_SECONDS = 5
 
-  STAGESS = [
-    [500, 60],
-    [286, 120],
-    [250, 120],
-    [235, 120],
-    [222, 120],
-    [211, 120],
-    [200, 120]
-  ]
-  
   STAGES = [
-    [2000, 60],   #   500 fps
-    [1000, 60],   # 1,000 fps
-    [500, 120]    # 2,000 fps, held longer to check that lag stays flat
+    [500, 120],
+    [333, 180],
+    [286, 180],
+    [250, 180],
   ]
 
   plan = []
