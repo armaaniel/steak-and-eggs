@@ -38,7 +38,7 @@ class Trace < ApplicationRecord
     sql = <<~SQL
       SELECT #{route_case} as route,
         COUNT(*) as total_requests,
-        PERCENTILE_CONT(0.99) WITHIN GROUP (ORDER BY duration) as p99,
+        PERCENTILE_DISC(0.99) WITHIN GROUP (ORDER BY duration) as p99,
         COUNT(*) FILTER (WHERE breakdown::text LIKE '%"used_redis":true%') as cache_hits,
         COUNT(*) FILTER (WHERE breakdown IS NOT NULL AND breakdown::text != '{}') as with_breakdown
       FROM traces
@@ -91,9 +91,9 @@ class Trace < ApplicationRecord
     sql = <<~SQL
       SELECT
         COUNT(*) AS total_requests,
-        PERCENTILE_CONT(0.50) WITHIN GROUP (ORDER BY duration) AS p50,
-        PERCENTILE_CONT(0.95) WITHIN GROUP (ORDER BY duration) AS p95,
-        PERCENTILE_CONT(0.99) WITHIN GROUP (ORDER BY duration) AS p99,
+        PERCENTILE_DISC(0.50) WITHIN GROUP (ORDER BY duration) AS p50,
+        PERCENTILE_DISC(0.95) WITHIN GROUP (ORDER BY duration) AS p95,
+        PERCENTILE_DISC(0.99) WITHIN GROUP (ORDER BY duration) AS p99,
         COUNT(*) FILTER (WHERE status >= 500) AS error_count,
         bool_or(breakdown::text LIKE '%"used_redis"%') AS used_redis,
         bool_or(breakdown::text LIKE '%"used_api"%')   AS used_api

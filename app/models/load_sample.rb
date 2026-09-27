@@ -7,10 +7,10 @@ class LoadSample < ApplicationRecord
         count(*)                                                          AS sent,
         count(t.id)                                                       AS traced,
         count(*) - count(t.id)                                            AS gap,
-        percentile_cont(0.50) WITHIN GROUP (ORDER BY ls.waiting)           AS client_p50,
-        percentile_cont(0.99) WITHIN GROUP (ORDER BY ls.waiting)           AS client_p99,
-        percentile_cont(0.50) WITHIN GROUP (ORDER BY t.duration)           AS server_p50,
-        percentile_cont(0.99) WITHIN GROUP (ORDER BY t.duration)           AS server_p99,
+        percentile_disc(0.50) WITHIN GROUP (ORDER BY ls.waiting)           AS client_p50,
+        percentile_disc(0.99) WITHIN GROUP (ORDER BY ls.waiting)           AS client_p99,
+        percentile_disc(0.50) WITHIN GROUP (ORDER BY t.duration)           AS server_p50,
+        percentile_disc(0.99) WITHIN GROUP (ORDER BY t.duration)           AS server_p99,
         count(*) FILTER (WHERE ls.status >= 500 OR ls.status = 0)          AS errors
       FROM load_samples ls
       LEFT JOIN traces t ON t.request_id = ls.request_id

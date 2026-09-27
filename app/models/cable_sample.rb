@@ -16,8 +16,8 @@ class CableSample < ApplicationRecord
       lag_stats AS (
         SELECT
           at,
-          percentile_cont(0.50) WITHIN GROUP (ORDER BY lag)   AS p50_lag_ms,
-          percentile_cont(0.99) WITHIN GROUP (ORDER BY lag)   AS p99_lag_ms
+          percentile_disc(0.50) WITHIN GROUP (ORDER BY lag)   AS p50_lag_ms,
+          percentile_disc(0.99) WITHIN GROUP (ORDER BY lag)   AS p99_lag_ms
         FROM cable_samples, unnest(lags) AS lag
         WHERE run_id = :run_id AND source = 'client'
         GROUP BY at
