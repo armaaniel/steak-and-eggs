@@ -10,6 +10,5 @@ module Types
     field(:client_p99, Float, null: false)
     field(:server_p50, Float, null: false)
     field(:server_p99, Float, null: false)
-    field(:queue_p99, Float, null: false, description: 'client p99 minus server p99')
   end
 end

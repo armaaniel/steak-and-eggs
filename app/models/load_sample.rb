@@ -33,7 +33,6 @@ class LoadSample < ApplicationRecord
         client_p99: bucket['client_p99'].to_f,
         server_p50: bucket['server_p50'].to_f,
         server_p99: bucket['server_p99'].to_f,
-        queue_p99:  (bucket['client_p99'].to_f - bucket['server_p99'].to_f).round(2),
       }
     end
   end
