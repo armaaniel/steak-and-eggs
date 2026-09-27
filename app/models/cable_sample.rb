@@ -16,7 +16,7 @@ class CableSample < ApplicationRecord
       lag_stats AS (
         SELECT
           at,
-          avg(lag)::float                                     AS mean_lag_ms,
+          percentile_cont(0.50) WITHIN GROUP (ORDER BY lag)   AS p50_lag_ms,
           percentile_cont(0.99) WITHIN GROUP (ORDER BY lag)   AS p99_lag_ms
         FROM cable_samples, unnest(lags) AS lag
         WHERE run_id = :run_id AND source = 'client'
@@ -29,7 +29,7 @@ class CableSample < ApplicationRecord
         buckets.clients,
         max(buckets.clients) OVER ()                      AS peak_clients,
         buckets.published * max(buckets.clients) OVER ()  AS expected,
-        lag_stats.mean_lag_ms,
+        lag_stats.p50_lag_ms,
         lag_stats.p99_lag_ms
       FROM buckets
       LEFT JOIN lag_stats ON lag_stats.at = buckets.at
