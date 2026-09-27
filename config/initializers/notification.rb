@@ -20,7 +20,7 @@ Rails.application.config.after_initialize do
 
   Thread.new do
     loop do
-      sleep 5
+      sleep 1
       
       batch = []
       begin
