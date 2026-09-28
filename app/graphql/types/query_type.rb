@@ -109,6 +109,7 @@ module Types
 
     field(:run_metrics, [Types::RunMetricType], null: false) do
       argument(:run_id, ID)
+      argument(:kind, String)
       argument(:metric, String, required: false, default_value: 'cpu')
       description('infrastructure metric over the window of one run')
     end
@@ -212,8 +213,8 @@ module Types
       CableSample.compare(run_id: run_id)
     end
 
-    def run_metrics(run_id:, metric:)
-      MetricService.for_run(run_id: run_id, metric: metric)
+    def run_metrics(run_id:, kind:, metric:)
+      MetricService.for_run(run_id: run_id, kind: kind, metric: metric)
     end
 
     private
