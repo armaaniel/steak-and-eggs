@@ -1,6 +1,9 @@
 class LoadSample < ApplicationRecord
   def self.compare(run_id:, route:, step:)
-    
+    key = "load_compare:#{run_id}:#{route}:#{step}"
+    cached = RedisService.safe_get(key)
+    return JSON.parse(cached) if cached
+
     sql = <<~SQL
       SELECT
         floor(extract(epoch FROM ls.at) / ?) * ? AS bucket,
@@ -21,7 +24,7 @@ class LoadSample < ApplicationRecord
 
     buckets = connection.execute(sanitize_sql_array([sql, step, step, run_id, route]))
 
-    buckets.map do |bucket|
+    rows = buckets.map do |bucket|
       {
         bucket:     Time.at(bucket['bucket'].to_i).utc,
         rps:        (bucket['sent'].to_f / step).round(1),
@@ -35,6 +38,11 @@ class LoadSample < ApplicationRecord
         server_p99: bucket['server_p99'].to_f,
       }
     end
+
+    finished = rows.any? && rows.last[:bucket] < 5.minutes.ago
+    RedisService.safe_setex(key, 1.month.to_i, rows.to_json) if finished
+
+    rows
   end
 
   def self.runs
