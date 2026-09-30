@@ -44,7 +44,7 @@ class Trace < ApplicationRecord
         COUNT(*) FILTER (WHERE breakdown::text LIKE '%"used_redis":true%') as cache_hits,
         COUNT(*) FILTER (WHERE breakdown IS NOT NULL AND breakdown::text != '{}') as with_breakdown
       FROM traces
-      WHERE source = 'user'
+      WHERE source IN ('user', 'canary')
       GROUP BY route
       ORDER BY total_requests DESC
     SQL
@@ -69,7 +69,7 @@ class Trace < ApplicationRecord
     route = normalize_endpoint(endpoint)
 
     where("endpoint ILIKE ?", route)
-      .where(source: 'user')
+      .where(source: %w[user canary])
       .order(created_at: :desc)
   end
 
@@ -78,7 +78,7 @@ class Trace < ApplicationRecord
 
     query = where("endpoint ILIKE ?", route)
     .where.not("breakdown::text = ? OR breakdown IS NULL", '{}')
-    .where(source: 'user')
+    .where(source: %w[user canary])
     .order(created_at: :desc)
 
     {
@@ -100,7 +100,7 @@ class Trace < ApplicationRecord
         bool_or(breakdown::text LIKE '%"used_redis"%') AS used_redis,
         bool_or(breakdown::text LIKE '%"used_api"%')   AS used_api
       FROM traces
-      WHERE source = 'user'
+      WHERE source IN ('user', 'canary')
         AND endpoint ILIKE ?
     SQL
 
@@ -119,7 +119,7 @@ class Trace < ApplicationRecord
   end
 
   def self.latent
-    where.not(endpoint: 'POST /graphql').where(source: 'user').order(duration: :desc).limit(1000)
+    where.not(endpoint: 'POST /graphql').where(source: %w[user canary]).order(duration: :desc).limit(1000)
   end
 
   def self.synthetic_buckets(range:)

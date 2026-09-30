@@ -22,13 +22,13 @@
     {
       "warning_type": "SQL Injection",
       "warning_code": 0,
-      "fingerprint": "851e6c756bc2db3a235e32510f3d1196043e8e48bca1c06d683840829dc516a7",
+      "fingerprint": "c9a938447494a10e7a627064a2db8d6b959b015de3868fff3408987a956cacb9",
       "check_name": "SQL",
       "message": "Possible SQL injection",
       "file": "app/models/trace.rb",
-      "line": 50,
+      "line": 52,
       "link": "https://brakemanscanner.org/docs/warning_types/sql_injection/",
-      "code": "connection.execute(\"SELECT #{route_case} as route,\\n  COUNT(*) as total_requests,\\n  PERCENTILE_DISC(0.99) WITHIN GROUP (ORDER BY duration) as p99,\\n  COUNT(*) FILTER (WHERE breakdown::text LIKE '%\\\"used_redis\\\":true%') as cache_hits,\\n  COUNT(*) FILTER (WHERE breakdown IS NOT NULL AND breakdown::text != '{}') as with_breakdown\\nFROM traces\\nWHERE source = 'user'\\nGROUP BY route\\nORDER BY total_requests DESC\\n\")",
+      "code": "connection.execute(\"SELECT #{route_case} as route,\\n  COUNT(*) as total_requests,\\n  PERCENTILE_DISC(0.99) WITHIN GROUP (ORDER BY duration) as p99,\\n  COUNT(*) FILTER (WHERE breakdown::text LIKE '%\\\"used_redis\\\":true%') as cache_hits,\\n  COUNT(*) FILTER (WHERE breakdown IS NOT NULL AND breakdown::text != '{}') as with_breakdown\\nFROM traces\\nWHERE source IN ('user', 'canary')\\nGROUP BY route\\nORDER BY total_requests DESC\\n\")",
       "render_path": null,
       "location": {
         "type": "method",

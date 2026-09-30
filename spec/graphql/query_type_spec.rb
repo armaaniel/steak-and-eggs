@@ -40,6 +40,18 @@ RSpec.describe(Types::QueryType) do
       expect(summary[0]["p99"]).to(be_a(Float))
     end
 
+    it("counts user and canary traffic but not load tests") do
+      Trace.create!(endpoint: "GET /users", duration: 50.0, status: 200, source: "user")
+      Trace.create!(endpoint: "GET /users", duration: 60.0, status: 200, source: "canary")
+      Trace.create!(endpoint: "GET /users", duration: 70.0, status: 200, source: "load")
+      Trace.create!(endpoint: "GET /users", duration: 80.0, status: 200, source: "unknown")
+
+      result = execute_query
+      summary = result.dig("data", "traceSummary")
+
+      expect(summary[0]["totalRequests"]).to(eq(2))
+    end
+
     it("normalizes parameterized stock endpoints into grouped routes") do
       Trace.create!(endpoint: "GET /stocks/TSLA/marketdata", duration: 30.0, status: 200)
       Trace.create!(endpoint: "GET /stocks/AAPL/marketdata", duration: 40.0, status: 200)
@@ -129,6 +141,17 @@ RSpec.describe(Types::QueryType) do
 
       expect(traces.length).to(eq(2))
       expect(traces.map { |t| t["endpoint"] }.uniq).to(eq(["GET /users"]))
+    end
+
+    it("includes user and canary traffic but not load tests") do
+      Trace.create!(endpoint: "GET /users", duration: 50.0, status: 200, source: "user")
+      Trace.create!(endpoint: "GET /users", duration: 60.0, status: 200, source: "canary")
+      Trace.create!(endpoint: "GET /users", duration: 70.0, status: 200, source: "load")
+
+      result = execute_query(endpoint: "GET /users")
+      traces = result.dig("data", "traceList")
+
+      expect(traces.map { |t| t["duration"] }).to(contain_exactly(50.0, 60.0))
     end
 
     it("normalizes parameterized stock endpoints") do
