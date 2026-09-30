@@ -219,10 +219,11 @@ class Trace < ApplicationRecord
       WHERE source IN ('user', 'canary')
         AND endpoint <> 'POST /graphql'
         AND created_at >= ?
+        AND created_at < ?
       GROUP BY bucket
     SQL
 
-    rows = connection.select_all(sanitize_sql_array([sql, step, step, window[:start]]))
+    rows = connection.select_all(sanitize_sql_array([sql, step, step, window[:start], window[:finish]]))
     by_bucket = rows.index_by { |row| row['bucket'].to_i }
 
     window[:buckets].times.map do |index|
@@ -278,9 +279,9 @@ class Trace < ApplicationRecord
   def self.overview_window(range)
     window = RANGES.fetch(range, RANGES['24h'])
     step = window[:seconds_per_bucket]
-    current = Time.at((Time.now.to_i / step) * step).utc
+    finish = Time.at((Time.now.to_i / step) * step).utc
 
-    {start: current - (step * (window[:buckets] - 1)), step: step, buckets: window[:buckets]}
+    {start: finish - (step * window[:buckets]), finish: finish, step: step, buckets: window[:buckets]}
   end
 
   def self.canary_slo(range:)

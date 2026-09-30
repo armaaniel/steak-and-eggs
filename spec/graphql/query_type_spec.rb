@@ -679,33 +679,46 @@ RSpec.describe(Types::QueryType) do
       GQL
     end
 
+    include ActiveSupport::Testing::TimeHelpers
+
+    before { travel_to(Time.utc(2026, 9, 30, 12, 7, 30)) }
+    after { travel_back }
+
     def execute_query
       SteakAndEggsSchema.execute(query).to_h.dig("data", "serviceTimeseries")
     end
 
-    it("returns one bucket per step across the range, with no percentiles for empty ones") do
+    it("returns one bucket per step up to the last finished one, with no percentiles for empty ones") do
       buckets = execute_query
 
       expect(buckets.length).to(eq(12))
+      expect(buckets.first["bucket"]).to(eq("2026-09-30T11:05:00Z"))
+      expect(buckets.last["bucket"]).to(eq("2026-09-30T12:00:00Z"))
       expect(buckets.map { |b| b["requests"] }.uniq).to(eq([0]))
       expect(buckets.map { |b| b["p99"] }.uniq).to(eq([nil]))
     end
 
     it("counts requests and errors in the bucket they happened in") do
-      Trace.create!(endpoint: "GET /users", duration: 10.0, status: 200, created_at: Time.current)
-      Trace.create!(endpoint: "GET /users", duration: 30.0, status: 500, created_at: Time.current)
+      Trace.create!(endpoint: "GET /users", duration: 10.0, status: 200, created_at: Time.utc(2026, 9, 30, 12, 2))
+      Trace.create!(endpoint: "GET /users", duration: 30.0, status: 500, created_at: Time.utc(2026, 9, 30, 12, 4))
 
-      current = execute_query.last
+      last = execute_query.last
 
-      expect(current["requests"]).to(eq(2))
-      expect(current["errors"]).to(eq(1))
-      expect(current["p50"]).to(eq(10.0))
-      expect(current["p99"]).to(eq(30.0))
+      expect(last["requests"]).to(eq(2))
+      expect(last["errors"]).to(eq(1))
+      expect(last["p50"]).to(eq(10.0))
+      expect(last["p99"]).to(eq(30.0))
+    end
+
+    it("leaves out the bucket still in progress so it never reads as a drop") do
+      Trace.create!(endpoint: "GET /users", duration: 10.0, status: 200, created_at: Time.utc(2026, 9, 30, 12, 6))
+
+      expect(execute_query.sum { |b| b["requests"] }).to(eq(0))
     end
 
     it("leaves out DataCat's own queries and load tests") do
-      Trace.create!(endpoint: "POST /graphql", duration: 10.0, status: 200, created_at: Time.current)
-      Trace.create!(endpoint: "GET /users", duration: 10.0, status: 200, source: "load", created_at: Time.current)
+      Trace.create!(endpoint: "POST /graphql", duration: 10.0, status: 200, created_at: Time.utc(2026, 9, 30, 12, 2))
+      Trace.create!(endpoint: "GET /users", duration: 10.0, status: 200, source: "load", created_at: Time.utc(2026, 9, 30, 12, 2))
 
       expect(execute_query.sum { |b| b["requests"] }).to(eq(0))
     end
