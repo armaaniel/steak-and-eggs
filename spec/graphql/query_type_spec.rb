@@ -148,6 +148,15 @@ RSpec.describe(Types::QueryType) do
       SteakAndEggsSchema.execute(query, variables: { endpoint: endpoint }).to_h
     end
 
+    it("only returns traces inside the range when one is given") do
+      Trace.create!(endpoint: "GET /users", duration: 50.0, status: 200, created_at: 3.hours.ago)
+      Trace.create!(endpoint: "GET /users", duration: 60.0, status: 200)
+
+      result = SteakAndEggsSchema.execute('{ traceList(endpoint: "GET /users", range: "1h") { duration } }').to_h
+
+      expect(result.dig("data", "traceList").map { |t| t["duration"] }).to(eq([60.0]))
+    end
+
     it("returns traces matching the endpoint") do
       Trace.create!(endpoint: "GET /users", duration: 50.0, status: 200)
       Trace.create!(endpoint: "GET /users", duration: 60.0, status: 200)
@@ -224,6 +233,15 @@ RSpec.describe(Types::QueryType) do
       SteakAndEggsSchema.execute(query, variables: { endpoint: endpoint }).to_h
     end
 
+    it("only splits traces inside the range when one is given") do
+      Trace.create!(endpoint: "GET /users", duration: 50.0, status: 200, breakdown: { "Ticker.query" => { "used_redis" => true } }, created_at: 3.hours.ago)
+      Trace.create!(endpoint: "GET /users", duration: 60.0, status: 200, breakdown: { "Ticker.query" => { "used_redis" => true } })
+
+      result = SteakAndEggsSchema.execute('{ cacheSplit(endpoint: "GET /users", range: "1h") { cached { duration } } }').to_h
+
+      expect(result.dig("data", "cacheSplit", "cached").map { |t| t["duration"] }).to(eq([60.0]))
+    end
+
     it("returns cache hits in cached") do
       Trace.create!(endpoint: "GET /users", duration: 50.0, status: 200,
         breakdown: { used_redis: true })
@@ -294,6 +312,16 @@ RSpec.describe(Types::QueryType) do
 
     def execute_query(endpoint:)
       SteakAndEggsSchema.execute(query, variables: { endpoint: endpoint }).to_h
+    end
+
+    it("only counts traces inside the range when one is given") do
+      Trace.create!(endpoint: "GET /users", duration: 50.0, status: 200, created_at: 3.hours.ago)
+      Trace.create!(endpoint: "GET /users", duration: 60.0, status: 200)
+
+      result = SteakAndEggsSchema.execute('{ traceStats(endpoint: "GET /users", range: "1h") { totalRequests p99 } }').to_h
+
+      expect(result.dig("data", "traceStats", "totalRequests")).to(eq(1))
+      expect(result.dig("data", "traceStats", "p99")).to(eq(60.0))
     end
 
     it("returns stats for a given endpoint") do

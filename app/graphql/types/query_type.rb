@@ -14,11 +14,13 @@ module Types
 
     field(:trace_list, [Types::TraceType]) do
       argument(:endpoint, String)
+      argument(:range, String, required: false)
       description('fetch trace list by route')
     end
 
     field(:cache_split, Types::CacheSplitType) do
       argument(:endpoint, String)
+      argument(:range, String, required: false)
       description('fetch a route\'s traces split by cache hit')
     end
 
@@ -32,6 +34,7 @@ module Types
 
     field(:trace_stats, Types::TraceStatsType) do
       argument(:endpoint, String)
+      argument(:range, String, required: false)
       description('fetch trace statistics')
     end
     
@@ -141,16 +144,16 @@ module Types
       end
     end
 
-    def cache_split(endpoint:)
-      Trace.cache_split(endpoint: endpoint)
+    def cache_split(endpoint:, range: nil)
+      Trace.cache_split(endpoint: endpoint, range: range)
     end
 
-    def trace_list(endpoint:)
-      Trace.list(endpoint: endpoint)
+    def trace_list(endpoint:, range: nil)
+      Trace.list(endpoint: endpoint, range: range)
     end
 
-    def trace_stats(endpoint:)
-      Trace.stats(endpoint: endpoint)
+    def trace_stats(endpoint:, range: nil)
+      Trace.stats(endpoint: endpoint, range: range)
     end
 
     def latent_traces

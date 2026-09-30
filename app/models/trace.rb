@@ -37,7 +37,7 @@ class Trace < ApplicationRecord
   end
 
   def self.summary(range: nil)
-    start = range ? overview_window(range)[:start] : Time.at(0)
+    start = window_start(range)
 
     sql = <<~SQL
       SELECT #{route_case} as route,
@@ -69,20 +69,22 @@ class Trace < ApplicationRecord
     end
   end
 
-  def self.list(endpoint:)
+  def self.list(endpoint:, range: nil)
     route = normalize_endpoint(endpoint)
 
     where("endpoint ILIKE ?", route)
       .where(source: %w[user canary])
+      .where(created_at: window_start(range)..)
       .order(created_at: :desc)
   end
 
-  def self.cache_split(endpoint:)
+  def self.cache_split(endpoint:, range: nil)
     route = normalize_endpoint(endpoint)
 
     query = where("endpoint ILIKE ?", route)
     .where.not("breakdown::text = ? OR breakdown IS NULL", '{}')
     .where(source: %w[user canary])
+    .where(created_at: window_start(range)..)
     .order(created_at: :desc)
 
     {
@@ -91,7 +93,7 @@ class Trace < ApplicationRecord
     }
   end
 
-  def self.stats(endpoint:)
+  def self.stats(endpoint:, range: nil)
     route = normalize_endpoint(endpoint)
 
     sql = <<~SQL
@@ -106,9 +108,10 @@ class Trace < ApplicationRecord
       FROM traces
       WHERE source IN ('user', 'canary')
         AND endpoint ILIKE ?
+        AND created_at >= ?
     SQL
 
-    result = connection.select_all(sanitize_sql_array([sql, route])).first
+    result = connection.select_all(sanitize_sql_array([sql, route, window_start(range)])).first
       
     total  = result['total_requests'].to_i
     errors = result['error_count'].to_f
@@ -230,6 +233,10 @@ class Trace < ApplicationRecord
     end
   end
 
+  def self.window_start(range)
+    range ? overview_window(range)[:start] : Time.at(0)
+  end
+
   def self.overview_window(range)
     window = RANGES.fetch(range, RANGES['24h'])
     step = window[:seconds_per_bucket]
@@ -276,5 +283,5 @@ class Trace < ApplicationRecord
     {good: [good, expected].min, expected: expected}
   end
 
-  private_class_method(:normalize_endpoint, :canary_counts, :overview_window)
+  private_class_method(:normalize_endpoint, :canary_counts, :overview_window, :window_start)
 end
