@@ -227,6 +227,26 @@ RSpec.describe(MarketService) do
         MarketService.marketdata(symbol: "TSLA")
       }.to(raise_error(MarketService::ApiError))
     end
+
+    it("leaves the failure in the datacat payload for the trace breakdown") do
+      allow(RedisService).to(receive(:safe_get).with("market:TSLA").and_return(nil))
+
+      http = instance_double(Net::HTTP)
+      allow(http).to(receive(:use_ssl=))
+      allow(http).to(receive(:open_timeout=))
+      allow(http).to(receive(:read_timeout=))
+      allow(http).to(receive(:request).and_raise(Net::ReadTimeout))
+      allow(Net::HTTP).to(receive(:new).and_return(http))
+
+      payloads = []
+      record = ->(*, payload) { payloads << payload.except(:exception_object) }
+
+      ActiveSupport::Notifications.subscribed(record, "MarketService.marketdata.datacat") do
+        expect { MarketService.marketdata(symbol: "TSLA") }.to(raise_error(Net::ReadTimeout))
+      end
+
+      expect(payloads.last).to(include(used_api: true, exception: ["Net::ReadTimeout", anything]))
+    end
   end
 
   describe("companydata") do

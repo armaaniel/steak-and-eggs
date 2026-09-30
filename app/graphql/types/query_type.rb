@@ -48,6 +48,11 @@ module Types
       description('cloudwatch health for the alb, ecs services, rds and redis over the last hour, cached for a minute')
     end
 
+    field(:polygon_calls, Types::PolygonCallsType, null: false) do
+      argument(:range, String, required: false, default_value: '1h')
+      description('polygon rest calls from rails, read from the api spans in trace breakdowns, including load tests')
+    end
+
     field(:canary_slo, Types::CanarySloType, null: false) do
       argument(:range, String, required: false, default_value: '1h')
       description('canary availability against the SLO: the SLI over the range, the error budget over 30 days')
@@ -179,6 +184,10 @@ module Types
 
     def dependency_health
       DependencyHealthService.current
+    end
+
+    def polygon_calls(range: '1h')
+      Trace.polygon_calls(range: range)
     end
 
     def canary_slo(range: '1h')

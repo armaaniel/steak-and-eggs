@@ -2,6 +2,7 @@ class Trace < ApplicationRecord
   PROBE_INTERVAL = 300
   SLO_TARGET = 0.995
   SLO_PERIOD = 30.days
+  POLYGON_LOOKBACK = 1.day
 
   RANGES = {
     '1h'  => {seconds_per_bucket: 300,   buckets: 12},  # 12 × 5 min
@@ -235,6 +236,39 @@ class Trace < ApplicationRecord
         p95:      row['p95']&.to_f,
         p99:      row['p99']&.to_f }
     end
+  end
+
+  def self.polygon_calls(range:)
+    start = window_start(range)
+
+    sql = <<~SQL
+      WITH calls AS (
+        SELECT traces.created_at,
+               traces.created_at >= ?               AS recent,
+               (span.value->>'duration')::float     AS duration,
+               span.value->>'exception' IS NOT NULL AS failed
+        FROM traces
+        CROSS JOIN LATERAL json_each(traces.breakdown) AS span
+        WHERE traces.source IN ('user', 'canary', 'load')
+          AND traces.created_at >= ?
+          AND traces.breakdown::text LIKE '%"used_api":true%'
+          AND span.value->>'used_api' = 'true'
+      )
+      SELECT COUNT(*) FILTER (WHERE recent)                                               AS calls,
+             COUNT(*) FILTER (WHERE recent AND failed)                                    AS failures,
+             percentile_disc(0.50) WITHIN GROUP (ORDER BY duration) FILTER (WHERE recent) AS p50,
+             percentile_disc(0.99) WITHIN GROUP (ORDER BY duration) FILTER (WHERE recent) AS p99,
+             MAX(created_at) FILTER (WHERE NOT failed)                                    AS last_success_at
+      FROM calls
+    SQL
+
+    row = connection.select_all(sanitize_sql_array([sql, start, [start, POLYGON_LOOKBACK.ago].min])).first
+
+    { calls:           row['calls'].to_i,
+      failures:        row['failures'].to_i,
+      p50:             row['p50']&.to_f,
+      p99:             row['p99']&.to_f,
+      last_success_at: row['last_success_at'] }
   end
 
   def self.window_start(range)

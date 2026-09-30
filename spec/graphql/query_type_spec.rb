@@ -615,6 +615,54 @@ RSpec.describe(Types::QueryType) do
     end
   end
 
+  describe("polygon_calls") do
+    let(:query) { '{ polygonCalls(range: "1h") { calls failures p50 p99 lastSuccessAt } }' }
+
+    def execute_query
+      SteakAndEggsSchema.execute(query).to_h.dig("data", "polygonCalls")
+    end
+
+    def polygon_call(duration:, failed: false, at: 10.minutes.ago, source: "user")
+      span = {symbol: "AAPL", used_redis: false, used_api: true, duration: duration}
+      span[:exception] = ["MarketService::ApiError", "MarketService::ApiError"] if failed
+      Trace.create!(endpoint: "GET /stocks/AAPL/marketdata", duration: duration + 5, status: failed ? 500 : 200, source: source, breakdown: {"MarketService.marketdata" => span}, created_at: at)
+    end
+
+    it("returns no calls and no last success when nothing called polygon") do
+      expect(execute_query).to(eq({"calls" => 0, "failures" => 0, "p50" => nil, "p99" => nil, "lastSuccessAt" => nil}))
+    end
+
+    it("counts calls and failures across sources and times the api span, not the request") do
+      polygon_call(duration: 100.0, at: 30.minutes.ago)
+      polygon_call(duration: 300.0, at: 20.minutes.ago, source: "load")
+      polygon_call(duration: 2000.0, failed: true, at: 10.minutes.ago, source: "canary")
+
+      calls = execute_query
+
+      expect(calls["calls"]).to(eq(3))
+      expect(calls["failures"]).to(eq(1))
+      expect(calls["p50"]).to(eq(300.0))
+      expect(calls["p99"]).to(eq(2000.0))
+      expect(Time.zone.parse(calls["lastSuccessAt"])).to(be_within(1.second).of(20.minutes.ago))
+    end
+
+    it("ignores cache hits") do
+      Trace.create!(endpoint: "GET /stocks/AAPL/marketdata", duration: 3.0, status: 200, breakdown: {"MarketService.marketdata" => {used_redis: true, used_api: false, duration: 1.0}}, created_at: 10.minutes.ago)
+
+      expect(execute_query["calls"]).to(eq(0))
+    end
+
+    it("finds the last success from earlier in the day when nothing called polygon this hour") do
+      polygon_call(duration: 150.0, at: 5.hours.ago)
+      polygon_call(duration: 150.0, at: 2.days.ago)
+
+      calls = execute_query
+
+      expect(calls["calls"]).to(eq(0))
+      expect(Time.zone.parse(calls["lastSuccessAt"])).to(be_within(1.second).of(5.hours.ago))
+    end
+  end
+
   describe("service_timeseries") do
     let(:query) do
       <<~GQL
