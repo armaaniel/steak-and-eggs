@@ -43,6 +43,10 @@ module Types
       description('probe runs per time bucket')
     end
     
+    field(:dependency_health, [Types::DependencyHealthType], null: false) do
+      description('cloudwatch health for the alb, ecs services, rds and redis over the last hour, cached for a minute')
+    end
+
     field(:canary_slo, Types::CanarySloType, null: false) do
       argument(:range, String, required: false, default_value: '1h')
       description('canary availability against the SLO: the SLI over the range, the error budget over 30 days')
@@ -170,6 +174,10 @@ module Types
 
     def synthetic_buckets(range: '1h')
       Trace.synthetic_buckets(range: range)
+    end
+
+    def dependency_health
+      DependencyHealthService.current
     end
 
     def canary_slo(range: '1h')

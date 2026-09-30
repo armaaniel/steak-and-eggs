@@ -653,4 +653,21 @@ RSpec.describe(Types::QueryType) do
       expect(execute_query.sum { |b| b["requests"] }).to(eq(0))
     end
   end
+
+  describe("dependency_health") do
+    let(:query) { '{ dependencyHealth { id configured status readings { key label unit now peak total } } }' }
+
+    it("resolves fresh and cached results the same way") do
+      fresh = [{id: "rails", configured: true, status: "good", readings: [{key: "cpu", label: "CPU", unit: "percent", now: 12.0, peak: 30.0, total: nil}]}]
+      cached = JSON.parse(fresh.to_json)
+
+      results = [fresh, cached].map do |health|
+        allow(DependencyHealthService).to(receive(:current).and_return(health))
+        SteakAndEggsSchema.execute(query).to_h.dig("data", "dependencyHealth")
+      end
+
+      expect(results[0]).to(eq(results[1]))
+      expect(results[0][0]["readings"][0]["peak"]).to(eq(30.0))
+    end
+  end
 end

@@ -501,7 +501,11 @@ resource "aws_ecs_task_definition" "steakneggs" {
         { name = "SYNTHETIC_KEY", value = var.synthetic_key },
         { name = "API_KEY", value = var.api_key },
         { name = "SENTRY_DSN", value = var.sentry_dsn },
-				{ name = "SECRET_KEY_BASE", value = var.secret_key_base }
+				{ name = "SECRET_KEY_BASE", value = var.secret_key_base },
+        { name = "RDS_INSTANCE_ID", value = aws_db_instance.postgres.identifier },
+        { name = "REDIS_NODE_ID", value = tolist(aws_elasticache_replication_group.redis.member_clusters)[0] },
+        { name = "ALB_METRIC_ID", value = aws_lb.main.arn_suffix },
+        { name = "TARGET_GROUP_METRIC_ID", value = aws_lb_target_group.ecs.arn_suffix }
       ]
 
       logConfiguration = {
