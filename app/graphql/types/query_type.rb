@@ -3,7 +3,13 @@ module Types
     INGESTER_MAX_WINDOW = 30.days
 
     field(:trace_summary, [Types::TraceSummaryType]) do
-      description('fetch trace data by routes')
+      argument(:range, String, required: false)
+      description('fetch trace data by routes, over the range when one is given')
+    end
+
+    field(:service_timeseries, [Types::ServiceBucketType], null: false) do
+      argument(:range, String, required: false, default_value: '24h')
+      description('requests, errors and latency percentiles per bucket, without DataCat or load test traffic')
     end
 
     field(:trace_list, [Types::TraceType]) do
@@ -151,8 +157,12 @@ module Types
       Trace.latent
     end
 
-    def trace_summary
-      Trace.summary
+    def trace_summary(range: nil)
+      Trace.summary(range: range)
+    end
+
+    def service_timeseries(range: '24h')
+      Trace.service_timeseries(range: range)
     end
 
     def synthetic_buckets(range: '1h')

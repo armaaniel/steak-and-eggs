@@ -36,7 +36,9 @@ class Trace < ApplicationRecord
     "CASE #{whens.join("\n")} ELSE endpoint END"
   end
 
-  def self.summary
+  def self.summary(range: nil)
+    start = range ? overview_window(range)[:start] : Time.at(0)
+
     sql = <<~SQL
       SELECT #{route_case} as route,
         COUNT(*) as total_requests,
@@ -45,11 +47,13 @@ class Trace < ApplicationRecord
         COUNT(*) FILTER (WHERE breakdown IS NOT NULL AND breakdown::text != '{}') as with_breakdown
       FROM traces
       WHERE source IN ('user', 'canary')
+        AND endpoint <> 'POST /graphql'
+        AND created_at >= ?
       GROUP BY route
       ORDER BY total_requests DESC
     SQL
 
-    results = connection.execute(sql)
+    results = connection.execute(sanitize_sql_array([sql, start]))
     results.map do |row|
       route = row['route']
       with_breakdown = row['with_breakdown'].to_i
@@ -192,6 +196,48 @@ class Trace < ApplicationRecord
     where(run_id: run_id).order(created_at: :asc)
   end
 
+  def self.service_timeseries(range:)
+    window = overview_window(range)
+    step = window[:step]
+
+    sql = <<~SQL
+      SELECT floor(extract(epoch FROM created_at) / ?) * ?          AS bucket,
+             COUNT(*)                                               AS requests,
+             COUNT(*) FILTER (WHERE status >= 500)                  AS errors,
+             percentile_disc(0.50) WITHIN GROUP (ORDER BY duration) AS p50,
+             percentile_disc(0.95) WITHIN GROUP (ORDER BY duration) AS p95,
+             percentile_disc(0.99) WITHIN GROUP (ORDER BY duration) AS p99
+      FROM traces
+      WHERE source IN ('user', 'canary')
+        AND endpoint <> 'POST /graphql'
+        AND created_at >= ?
+      GROUP BY bucket
+    SQL
+
+    rows = connection.select_all(sanitize_sql_array([sql, step, step, window[:start]]))
+    by_bucket = rows.index_by { |row| row['bucket'].to_i }
+
+    window[:buckets].times.map do |index|
+      bucket = window[:start] + (index * step)
+      row = by_bucket[bucket.to_i] || {}
+
+      { bucket:   bucket,
+        requests: row['requests'].to_i,
+        errors:   row['errors'].to_i,
+        p50:      row['p50']&.to_f,
+        p95:      row['p95']&.to_f,
+        p99:      row['p99']&.to_f }
+    end
+  end
+
+  def self.overview_window(range)
+    window = RANGES.fetch(range, RANGES['24h'])
+    step = window[:seconds_per_bucket]
+    current = Time.at((Time.now.to_i / step) * step).utc
+
+    {start: current - (step * (window[:buckets] - 1)), step: step, buckets: window[:buckets]}
+  end
+
   def self.canary_slo(range:)
     window = RANGES.fetch(range, RANGES['1h'])
     finish = Time.at((Time.now.to_i / PROBE_INTERVAL) * PROBE_INTERVAL).utc
@@ -230,5 +276,5 @@ class Trace < ApplicationRecord
     {good: [good, expected].min, expected: expected}
   end
 
-  private_class_method(:normalize_endpoint, :canary_counts)
+  private_class_method(:normalize_endpoint, :canary_counts, :overview_window)
 end
