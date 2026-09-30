@@ -24,11 +24,6 @@ module Types
       description('fetch a route\'s traces split by cache hit')
     end
 
-    field(:latent_traces, [Types::TraceType]) do
-      argument(:range, String, required: false)
-      description('fetch most latent traces, over the range when one is given')
-    end
-
     field(:recent_traces, [Types::TraceType]) do
       argument(:range, String, required: false)
       description('the latest 1000 user and canary traces, over the range when one is given')
@@ -170,10 +165,6 @@ module Types
 
     def trace_stats(endpoint:, range: nil)
       Trace.stats(endpoint: endpoint, range: range)
-    end
-
-    def latent_traces(range: nil)
-      Trace.latent(range: range)
     end
 
     def recent_traces(range: nil)

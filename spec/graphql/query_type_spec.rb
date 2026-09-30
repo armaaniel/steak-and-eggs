@@ -431,69 +431,6 @@ RSpec.describe(Types::QueryType) do
     end
   end
 
-  describe("latent_traces") do
-    let(:query) do
-      <<~GQL
-        {
-          latentTraces {
-            id
-            endpoint
-            duration
-            status
-          }
-        }
-      GQL
-    end
-
-    def execute_query
-      SteakAndEggsSchema.execute(query).to_h
-    end
-
-    it("only returns traces inside the range when one is given") do
-      Trace.create!(endpoint: "POST /signup", duration: 900.0, status: 200, created_at: 3.hours.ago)
-      Trace.create!(endpoint: "POST /signup", duration: 300.0, status: 200)
-
-      result = SteakAndEggsSchema.execute('{ latentTraces(range: "1h") { duration } }').to_h
-
-      expect(result.dig("data", "latentTraces").map { |t| t["duration"] }).to(eq([300.0]))
-    end
-
-    it("returns traces ordered by duration descending") do
-      slow = Trace.create!(endpoint: "GET /users", duration: 500.0, status: 200)
-      fast = Trace.create!(endpoint: "GET /health", duration: 10.0, status: 200)
-      medium = Trace.create!(endpoint: "GET /stocks", duration: 100.0, status: 200)
-
-      result = execute_query
-      traces = result.dig("data", "latentTraces")
-
-      expect(traces[0]["id"].to_i).to(eq(slow.id))
-      expect(traces[1]["id"].to_i).to(eq(medium.id))
-      expect(traces[2]["id"].to_i).to(eq(fast.id))
-    end
-
-    it("excludes POST /graphql endpoints") do
-      Trace.create!(endpoint: "POST /graphql", duration: 500.0, status: 200)
-      recorded = Trace.create!(endpoint: "POST /record", duration: 400.0, status: 200)
-      kept = Trace.create!(endpoint: "GET /users", duration: 100.0, status: 200)
-
-      result = execute_query
-      traces = result.dig("data", "latentTraces")
-
-      expect(traces.length).to(eq(2))
-      expect(traces[0]["id"].to_i).to(eq(recorded.id))
-      expect(traces[1]["id"].to_i).to(eq(kept.id))
-    end
-
-    it("limits results to 1000") do
-      1001.times { |i| Trace.create!(endpoint: "GET /users", duration: i.to_f, status: 200) }
-
-      result = execute_query
-      traces = result.dig("data", "latentTraces")
-
-      expect(traces.length).to(eq(1000))
-    end
-  end
-
   describe("recent_traces") do
     let(:query) do
       <<~GQL
