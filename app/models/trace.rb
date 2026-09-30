@@ -250,7 +250,7 @@ class Trace < ApplicationRecord
                span.value->>'exception' IS NOT NULL AS failed
         FROM traces
         CROSS JOIN LATERAL json_each(traces.breakdown) AS span
-        WHERE traces.source IN ('user', 'canary', 'load')
+        WHERE traces.source IN ('user', 'canary')
           AND traces.created_at >= ?
           AND traces.breakdown::text LIKE '%"used_api":true%'
           AND span.value->>'used_api' = 'true'

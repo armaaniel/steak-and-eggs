@@ -628,9 +628,9 @@ RSpec.describe(Types::QueryType) do
       expect(execute_query).to(eq({"calls" => 0, "failures" => 0, "p50" => nil, "p99" => nil, "lastSuccessAt" => nil}))
     end
 
-    it("counts calls and failures across sources and times the api span, not the request") do
+    it("counts user and canary calls and failures and times the api span, not the request") do
       polygon_call(duration: 100.0, at: 30.minutes.ago)
-      polygon_call(duration: 300.0, at: 20.minutes.ago, source: "load")
+      polygon_call(duration: 300.0, at: 20.minutes.ago)
       polygon_call(duration: 2000.0, failed: true, at: 10.minutes.ago, source: "canary")
 
       calls = execute_query
@@ -640,6 +640,16 @@ RSpec.describe(Types::QueryType) do
       expect(calls["p50"]).to(eq(300.0))
       expect(calls["p99"]).to(eq(2000.0))
       expect(Time.zone.parse(calls["lastSuccessAt"])).to(be_within(1.second).of(20.minutes.ago))
+    end
+
+    it("leaves out load test calls") do
+      polygon_call(duration: 100.0, at: 10.minutes.ago, source: "load")
+      polygon_call(duration: 100.0, failed: true, at: 5.minutes.ago, source: "load")
+
+      calls = execute_query
+
+      expect(calls["calls"]).to(eq(0))
+      expect(calls["lastSuccessAt"]).to(be_nil)
     end
 
     it("ignores cache hits") do

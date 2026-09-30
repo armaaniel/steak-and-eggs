@@ -51,7 +51,7 @@ module Types
 
     field(:polygon_calls, Types::PolygonCallsType, null: false) do
       argument(:range, String, required: false, default_value: '1h')
-      description('polygon rest calls from rails, read from the api spans in trace breakdowns, including load tests')
+      description('polygon rest calls from rails, read from the api spans in user and canary trace breakdowns')
     end
 
     field(:canary_slo, Types::CanarySloType, null: false) do
