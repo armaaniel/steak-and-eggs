@@ -199,11 +199,13 @@ class Trace < ApplicationRecord
     sli = canary_counts(start: finish - (window[:seconds_per_bucket] * window[:buckets]), finish: finish)
     budget = canary_counts(start: finish - SLO_PERIOD, finish: finish)
 
-    { target:         SLO_TARGET,
-      good:           sli[:good],
-      expected:       sli[:expected],
-      budget_allowed: (budget[:expected] * (1 - SLO_TARGET)).floor,
-      budget_used:    budget[:expected] - budget[:good] }
+    { target:          SLO_TARGET,
+      good:            sli[:good],
+      expected:        sli[:expected],
+      period_good:     budget[:good],
+      period_expected: budget[:expected],
+      budget_allowed:  (budget[:expected] * (1 - SLO_TARGET)).floor,
+      budget_used:     budget[:expected] - budget[:good] }
   end
 
   def self.canary_counts(start:, finish:)

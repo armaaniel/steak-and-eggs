@@ -468,6 +468,8 @@ RSpec.describe(Types::QueryType) do
             target
             good
             expected
+            periodGood
+            periodExpected
             budgetAllowed
             budgetUsed
           }
@@ -491,6 +493,8 @@ RSpec.describe(Types::QueryType) do
       expect(slo["target"]).to(eq(0.995))
       expect(slo["good"]).to(eq(0))
       expect(slo["expected"]).to(eq(12))
+      expect(slo["periodGood"]).to(eq(0))
+      expect(slo["periodExpected"]).to(eq(8640))
       expect(slo["budgetAllowed"]).to(eq(43))
       expect(slo["budgetUsed"]).to(eq(8640))
     end
@@ -521,6 +525,7 @@ RSpec.describe(Types::QueryType) do
       slo = execute_query
 
       expect(slo["good"]).to(eq(0))
+      expect(slo["periodGood"]).to(eq(1))
       expect(slo["budgetUsed"]).to(eq(8639))
     end
 
