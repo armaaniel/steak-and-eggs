@@ -664,10 +664,10 @@ RSpec.describe(Types::QueryType) do
   end
 
   describe("dependency_health") do
-    let(:query) { '{ dependencyHealth { id configured status readings { key label unit now peak total } } }' }
+    let(:query) { '{ dependencyHealth { id configured status readings { key label unit now peak total points { at value } } } }' }
 
     it("resolves fresh and cached results the same way") do
-      fresh = [{id: "rails", configured: true, status: "good", readings: [{key: "cpu", label: "CPU", unit: "percent", now: 12.0, peak: 30.0, total: nil}]}]
+      fresh = [{id: "rails", configured: true, status: "good", readings: [{key: "cpu", label: "CPU", unit: "percent", now: 12.0, peak: 30.0, total: nil, points: [{at: Time.utc(2026, 9, 29, 12, 0), value: 12.0}]}]}]
       cached = JSON.parse(fresh.to_json)
 
       results = [fresh, cached].map do |health|
@@ -677,6 +677,7 @@ RSpec.describe(Types::QueryType) do
 
       expect(results[0]).to(eq(results[1]))
       expect(results[0][0]["readings"][0]["peak"]).to(eq(30.0))
+      expect(results[0][0]["readings"][0]["points"]).to(eq([{"at" => "2026-09-29T12:00:00Z", "value" => 12.0}]))
     end
   end
 end

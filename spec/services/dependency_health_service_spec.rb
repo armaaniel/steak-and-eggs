@@ -46,6 +46,24 @@ RSpec.describe(DependencyHealthService) do
       expect(cpu[:total]).to(be_nil)
     end
 
+    it("returns one-minute points for percentages but not for counts") do
+      stub_series(series("rails_cpu", [20.0, 45.0, 25.0]))
+
+      readings = health_for("rails")[:readings]
+
+      expect(readings.find { |r| r[:key] == "cpu" }[:points].map { |p| p[:value] }).to(eq([20.0, 45.0, 25.0]))
+    end
+
+    it("leaves points empty for count readings") do
+      allow(ENV).to(receive(:[]).with("ALB_METRIC_ID").and_return("app/steakneggs-alb/1"))
+      allow(ENV).to(receive(:[]).with("TARGET_GROUP_METRIC_ID").and_return("targetgroup/steakneggs-tg/2"))
+      stub_series(series("alb_healthy", [1.0, 1.0]))
+
+      healthy = health_for("alb")[:readings].find { |r| r[:key] == "healthy" }
+
+      expect(healthy[:points]).to(eq([]))
+    end
+
     it "says a service with no datapoints has no status" do
       stub_series
 

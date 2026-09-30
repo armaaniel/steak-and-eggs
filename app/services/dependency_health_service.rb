@@ -34,7 +34,7 @@ class DependencyHealthService
     configured = configured_dependencies
 
     DEPENDENCIES.map do |dependency|
-      readings = specs.select { |spec| spec[:dependency] == dependency }.map { |spec| reading(spec, series[spec[:id]] || []) }
+      readings = specs.select { |spec| spec[:dependency] == dependency }.map { |spec| reading(spec, series[spec[:id]] || {timestamps: [], values: []}) }
       by_key = readings.index_by { |r| r[:key] }
       has_data = readings.any? { |r| !r[:now].nil? }
       status = configured.include?(dependency) && has_data ? status_for(dependency, by_key) : 'none'
@@ -101,16 +101,20 @@ class DependencyHealthService
     finish = Time.current
     result = client.get_metric_data(metric_data_queries: specs.map { |spec| spec[:query] }, start_time: finish - WINDOW, end_time: finish, scan_by: 'TimestampAscending')
 
-    result.metric_data_results.to_h { |series| [series.id, series.values] }
+    result.metric_data_results.to_h { |series| [series.id, {timestamps: series.timestamps, values: series.values}] }
   end
 
-  def self.reading(spec, values)
+  def self.reading(spec, series)
+    values = series[:values]
+    points = spec[:unit] == 'percent' ? series[:timestamps].zip(values).map { |at, value| {at: at, value: value} } : []
+
     {key: spec[:key],
      label: spec[:label],
      unit: spec[:unit],
      now: values.last,
      peak: values.max,
-     total: spec[:counter] ? values.sum : nil}
+     total: spec[:counter] ? values.sum : nil,
+     points: points}
   end
 
   def self.status_for(dependency, readings)
