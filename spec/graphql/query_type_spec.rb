@@ -494,6 +494,65 @@ RSpec.describe(Types::QueryType) do
     end
   end
 
+  describe("recent_traces") do
+    let(:query) do
+      <<~GQL
+        {
+          recentTraces {
+            id
+            endpoint
+            duration
+            status
+            source
+          }
+        }
+      GQL
+    end
+
+    def execute_query
+      SteakAndEggsSchema.execute(query).to_h.dig("data", "recentTraces")
+    end
+
+    it("only returns traces inside the range when one is given") do
+      Trace.create!(endpoint: "POST /signup", duration: 900.0, status: 200, created_at: 3.hours.ago)
+      Trace.create!(endpoint: "POST /signup", duration: 300.0, status: 200)
+
+      result = SteakAndEggsSchema.execute('{ recentTraces(range: "1h") { duration } }').to_h
+
+      expect(result.dig("data", "recentTraces").map { |t| t["duration"] }).to(eq([300.0]))
+    end
+
+    it("returns the newest traces first, whatever their duration") do
+      oldest = Trace.create!(endpoint: "GET /users", duration: 500.0, status: 200, created_at: 3.minutes.ago)
+      newest = Trace.create!(endpoint: "GET /health", duration: 10.0, status: 200, created_at: 1.minute.ago)
+      middle = Trace.create!(endpoint: "GET /stocks", duration: 100.0, status: 200, created_at: 2.minutes.ago)
+
+      expect(execute_query.map { |t| t["id"].to_i }).to(eq([newest.id, middle.id, oldest.id]))
+    end
+
+    it("says which traces came from the canary and leaves out load tests") do
+      Trace.create!(endpoint: "GET /users", duration: 10.0, status: 200, source: "user", created_at: 2.minutes.ago)
+      Trace.create!(endpoint: "GET /users", duration: 10.0, status: 200, source: "canary", created_at: 1.minute.ago)
+      Trace.create!(endpoint: "GET /users", duration: 10.0, status: 200, source: "load")
+
+      expect(execute_query.map { |t| t["source"] }).to(eq(["canary", "user"]))
+    end
+
+    it("excludes POST /graphql endpoints") do
+      Trace.create!(endpoint: "POST /graphql", duration: 500.0, status: 200)
+      Trace.create!(endpoint: "POST /record", duration: 400.0, status: 200)
+      Trace.create!(endpoint: "GET /users", duration: 100.0, status: 200)
+
+      expect(execute_query.map { |t| t["endpoint"] }).to(contain_exactly("POST /record", "GET /users"))
+    end
+
+    it("limits results to 1000") do
+      1001.times { Trace.create!(endpoint: "GET /users", duration: 10.0, status: 200) }
+
+      expect(execute_query.length).to(eq(1000))
+    end
+  end
+
   describe("connections") do
     let(:query) do
       <<~GQL

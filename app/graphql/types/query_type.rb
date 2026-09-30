@@ -29,6 +29,11 @@ module Types
       description('fetch most latent traces, over the range when one is given')
     end
 
+    field(:recent_traces, [Types::TraceType]) do
+      argument(:range, String, required: false)
+      description('the latest 1000 user and canary traces, over the range when one is given')
+    end
+
     field(:connections, [Types::ConnectionsType], null:false) do
       description('fetch active connections')
     end
@@ -169,6 +174,10 @@ module Types
 
     def latent_traces(range: nil)
       Trace.latent(range: range)
+    end
+
+    def recent_traces(range: nil)
+      Trace.recent(range: range)
     end
 
     def trace_summary(range: nil)

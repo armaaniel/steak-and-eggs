@@ -134,6 +134,14 @@ class Trace < ApplicationRecord
       .limit(1000)
   end
 
+  def self.recent(range: nil)
+    where.not(endpoint: 'POST /graphql')
+      .where(source: %w[user canary])
+      .where(created_at: window_start(range)..)
+      .order(created_at: :desc)
+      .limit(1000)
+  end
+
   def self.synthetic_buckets(range:)
     window = RANGES.fetch(range, RANGES['1h'])
     

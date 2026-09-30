@@ -8,6 +8,7 @@ module Types
    field(:status, Integer)
    field(:controller, String)
    field(:action, String)
+   field(:source, String)
    field(:breakdown, GraphQL::Types::JSON)
    field(:created_at, GraphQL::Types::ISO8601DateTime)
    field(:updated_at, GraphQL::Types::ISO8601DateTime)
