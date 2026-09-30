@@ -117,6 +117,62 @@ RSpec.describe(DependencyHealthService) do
       end
     end
 
+    context "with a range longer than the last hour" do
+      def stub_by_period(recent, history)
+        client.stub_responses(:get_metric_data, ->(context) do
+          period = context.params[:metric_data_queries].first[:metric_stat][:period]
+          {metric_data_results: [series("rails_cpu", period == 60 ? recent : history)]}
+        end)
+      end
+
+      it "takes the status and the current value from the last hour and the peak and points from the range" do
+        stub_by_period([20.0, 95.0], [30.0, 60.0, 40.0])
+
+        rails = DependencyHealthService.current(range: "24h").find { |d| d[:id] == "rails" }
+        cpu = rails[:readings].find { |r| r[:key] == "cpu" }
+
+        expect(rails[:status]).to(eq("critical"))
+        expect(cpu[:now]).to(eq(95.0))
+        expect(cpu[:peak]).to(eq(60.0))
+        expect(cpu[:points].map { |p| p[:value] }).to(eq([30.0, 60.0, 40.0]))
+      end
+
+      it "asks cloudwatch at the range's own resolution" do
+        periods = []
+        client.stub_responses(:get_metric_data, ->(context) do
+          periods << context.params[:metric_data_queries].map { |q| q[:metric_stat][:period] }.uniq
+          {metric_data_results: []}
+        end)
+
+        DependencyHealthService.current(range: "7d")
+
+        expect(periods).to(eq([[60], [3600]]))
+      end
+    end
+
+    it "asks cloudwatch once for the last hour and caches each range under its own key" do
+      calls = 0
+      client.stub_responses(:get_metric_data, ->(_context) do
+        calls += 1
+        {metric_data_results: []}
+      end)
+
+      DependencyHealthService.current(range: "1h")
+      DependencyHealthService.current(range: "12h")
+
+      expect(calls).to(eq(3))
+      expect(RedisService).to(have_received(:safe_setex).with("dependency_health:1h", 60, anything))
+      expect(RedisService).to(have_received(:safe_setex).with("dependency_health:12h", 60, anything))
+    end
+
+    it "falls back to the last hour for a range it does not know" do
+      stub_series
+
+      DependencyHealthService.current(range: "90d")
+
+      expect(RedisService).to(have_received(:safe_setex).with("dependency_health:1h", 60, anything))
+    end
+
     it "serves the cached result without calling cloudwatch" do
       allow(RedisService).to(receive(:safe_get).and_return([{id: "alb", configured: false, status: "none", readings: []}].to_json))
       expect(client).not_to(receive(:get_metric_data))

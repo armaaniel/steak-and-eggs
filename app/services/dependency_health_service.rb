@@ -4,8 +4,16 @@ class DependencyHealthService
   SERVICES = {'rails' => 'steakneggs', 'ingester' => 'ingester'}.freeze
   DEPENDENCIES = %w[alb rails ingester postgres redis].freeze
 
-  WINDOW = 1.hour
-  PERIOD = 60
+  RANGES = {
+    '1h'  => {window: 1.hour,   period: 60},
+    '12h' => {window: 12.hours, period: 300},
+    '24h' => {window: 24.hours, period: 300},
+    '7d'  => {window: 7.days,   period: 3600},
+    '14d' => {window: 14.days,  period: 3600},
+    '30d' => {window: 30.days,  period: 3600}
+  }.freeze
+  STATUS_RANGE = '1h'
+  EMPTY_SERIES = {timestamps: [], values: []}.freeze
   CACHE_KEY = 'dependency_health'
   CACHE_SECONDS = 60
 
@@ -16,28 +24,33 @@ class DependencyHealthService
   CONNECTIONS_WARN = 80
   STORAGE_WARN_BYTES = 2 * 1024**3
 
-  def self.current
-    cached = RedisService.safe_get(CACHE_KEY)
+  def self.current(range: STATUS_RANGE)
+    range = STATUS_RANGE unless RANGES.key?(range)
+    key = "#{CACHE_KEY}:#{range}"
+
+    cached = RedisService.safe_get(key)
     return JSON.parse(cached) if cached
 
-    health = build
-    RedisService.safe_setex(CACHE_KEY, CACHE_SECONDS, health.to_json)
+    health = build(range)
+    RedisService.safe_setex(key, CACHE_SECONDS, health.to_json)
     health
   rescue => e
     Sentry.capture_exception(e)
     []
   end
 
-  def self.build
+  def self.build(range)
     specs = metric_specs
-    series = fetch(specs)
+    recent = fetch(specs, **RANGES[STATUS_RANGE])
+    history = range == STATUS_RANGE ? recent : fetch(specs, **RANGES[range])
     configured = configured_dependencies
 
     DEPENDENCIES.map do |dependency|
-      readings = specs.select { |spec| spec[:dependency] == dependency }.map { |spec| reading(spec, series[spec[:id]] || {timestamps: [], values: []}) }
-      by_key = readings.index_by { |r| r[:key] }
-      has_data = readings.any? { |r| !r[:now].nil? }
-      status = configured.include?(dependency) && has_data ? status_for(dependency, by_key) : 'none'
+      own = specs.select { |spec| spec[:dependency] == dependency }
+      latest = own.map { |spec| reading(spec, recent.fetch(spec[:id], EMPTY_SERIES)) }.index_by { |r| r[:key] }
+      readings = own.map { |spec| reading(spec, history.fetch(spec[:id], EMPTY_SERIES)).merge(now: latest[spec[:key]][:now]) }
+      has_data = latest.values.any? { |r| !r[:now].nil? }
+      status = configured.include?(dependency) && has_data ? status_for(dependency, latest) : 'none'
 
       {id: dependency, configured: configured.include?(dependency), status: status, readings: readings}
     end
@@ -91,15 +104,15 @@ class DependencyHealthService
   end
 
   def self.spec(dependency:, key:, label:, unit:, namespace:, metric:, dimensions:, stat:)
-    id = "#{dependency}_#{key}"
-    query = {id: id, metric_stat: {metric: {namespace: namespace, metric_name: metric, dimensions: dimensions}, period: PERIOD, stat: stat}}
+    metric_stat = {metric: {namespace: namespace, metric_name: metric, dimensions: dimensions}, stat: stat}
 
-    {id: id, dependency: dependency, key: key, label: label, unit: unit, counter: stat == 'Sum', query: query}
+    {id: "#{dependency}_#{key}", dependency: dependency, key: key, label: label, unit: unit, counter: stat == 'Sum', metric_stat: metric_stat}
   end
 
-  def self.fetch(specs)
+  def self.fetch(specs, window:, period:)
     finish = Time.current
-    result = client.get_metric_data(metric_data_queries: specs.map { |spec| spec[:query] }, start_time: finish - WINDOW, end_time: finish, scan_by: 'TimestampAscending')
+    queries = specs.map { |spec| {id: spec[:id], metric_stat: spec[:metric_stat].merge(period: period)} }
+    result = client.get_metric_data(metric_data_queries: queries, start_time: finish - window, end_time: finish, scan_by: 'TimestampAscending')
 
     result.metric_data_results.to_h { |series| [series.id, {timestamps: series.timestamps, values: series.values}] }
   end

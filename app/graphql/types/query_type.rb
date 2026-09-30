@@ -45,7 +45,8 @@ module Types
     end
     
     field(:dependency_health, [Types::DependencyHealthType], null: false) do
-      description('cloudwatch health for the alb, ecs services, rds and redis over the last hour, cached for a minute')
+      argument(:range, String, required: false, default_value: '1h')
+      description('cloudwatch health for the alb, ecs services, rds and redis: status and now from the last hour, peaks, totals and points over the range, cached for a minute per range')
     end
 
     field(:polygon_calls, Types::PolygonCallsType, null: false) do
@@ -182,8 +183,8 @@ module Types
       Trace.synthetic_buckets(range: range)
     end
 
-    def dependency_health
-      DependencyHealthService.current
+    def dependency_health(range: '1h')
+      DependencyHealthService.current(range: range)
     end
 
     def polygon_calls(range: '1h')
