@@ -459,4 +459,77 @@ RSpec.describe(Types::QueryType) do
       expect(connections[0]["startedAt"]).to(be_present)
     end
   end
+
+  describe("canary_slo") do
+    let(:query) do
+      <<~GQL
+        {
+          canarySlo(range: "1h") {
+            target
+            good
+            expected
+            budgetAllowed
+            budgetUsed
+          }
+        }
+      GQL
+    end
+
+    def execute_query
+      SteakAndEggsSchema.execute(query).to_h.dig("data", "canarySlo")
+    end
+
+    def canary_run(result:, status: 200, at: 20.minutes.ago)
+      run_id = SecureRandom.uuid
+      Trace.create!(endpoint: "GET /stocks/AAPL/stockprice", duration: 10.0, status: status, source: "canary", run_id: run_id, created_at: at)
+      Trace.create!(endpoint: "POST /record", duration: 5.0, status: 200, source: "canary", run_id: run_id, result: result, created_at: at) if result
+    end
+
+    it("counts every expected run as bad when no canary runs exist") do
+      slo = execute_query
+
+      expect(slo["target"]).to(eq(0.995))
+      expect(slo["good"]).to(eq(0))
+      expect(slo["expected"]).to(eq(12))
+      expect(slo["budgetAllowed"]).to(eq(43))
+      expect(slo["budgetUsed"]).to(eq(8640))
+    end
+
+    it("counts a passing run as good in both the range and the budget") do
+      canary_run(result: "pass")
+
+      slo = execute_query
+
+      expect(slo["good"]).to(eq(1))
+      expect(slo["budgetUsed"]).to(eq(8639))
+    end
+
+    it("does not count failed, errored or unfinished runs as good") do
+      canary_run(result: "fail")
+      canary_run(result: "pass", status: 503)
+      canary_run(result: nil)
+
+      slo = execute_query
+
+      expect(slo["good"]).to(eq(0))
+      expect(slo["budgetUsed"]).to(eq(8640))
+    end
+
+    it("counts a run outside the range toward the budget but not the SLI") do
+      canary_run(result: "pass", at: 3.hours.ago)
+
+      slo = execute_query
+
+      expect(slo["good"]).to(eq(0))
+      expect(slo["budgetUsed"]).to(eq(8639))
+    end
+
+    it("ignores traces that are not from the canary") do
+      Trace.create!(endpoint: "GET /stocks/AAPL/stockprice", duration: 10.0, status: 200, source: "user", run_id: SecureRandom.uuid, result: "pass", created_at: 20.minutes.ago)
+
+      slo = execute_query
+
+      expect(slo["good"]).to(eq(0))
+    end
+  end
 end

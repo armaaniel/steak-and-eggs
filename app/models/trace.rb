@@ -1,5 +1,7 @@
 class Trace < ApplicationRecord
   PROBE_INTERVAL = 300
+  SLO_TARGET = 0.995
+  SLO_PERIOD = 30.days
 
   RANGES = {
     '1h'  => {seconds_per_bucket: 300,   buckets: 12},  # 12 × 5 min
@@ -190,5 +192,41 @@ class Trace < ApplicationRecord
     where(run_id: run_id).order(created_at: :asc)
   end
 
-  private_class_method(:normalize_endpoint)
+  def self.canary_slo(range:)
+    window = RANGES.fetch(range, RANGES['1h'])
+    finish = Time.at((Time.now.to_i / PROBE_INTERVAL) * PROBE_INTERVAL).utc
+
+    sli = canary_counts(start: finish - (window[:seconds_per_bucket] * window[:buckets]), finish: finish)
+    budget = canary_counts(start: finish - SLO_PERIOD, finish: finish)
+
+    { target:         SLO_TARGET,
+      good:           sli[:good],
+      expected:       sli[:expected],
+      budget_allowed: (budget[:expected] * (1 - SLO_TARGET)).floor,
+      budget_used:    budget[:expected] - budget[:good] }
+  end
+
+  def self.canary_counts(start:, finish:)
+    sql = <<~SQL
+      WITH runs AS (
+        SELECT run_id,
+               bool_or(result = 'pass')                  AS passed,
+               bool_or(result = 'fail' OR status >= 500) AS failed
+        FROM traces
+        WHERE source = 'canary'
+          AND run_id IS NOT NULL
+          AND created_at >= ?
+          AND created_at <  ?
+        GROUP BY run_id
+      )
+      SELECT COUNT(*) FILTER (WHERE passed AND failed IS NOT TRUE) FROM runs
+    SQL
+
+    good = connection.select_value(sanitize_sql_array([sql, start, finish])).to_i
+    expected = ((finish - start) / PROBE_INTERVAL).to_i
+
+    {good: [good, expected].min, expected: expected}
+  end
+
+  private_class_method(:normalize_endpoint, :canary_counts)
 end

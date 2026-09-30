@@ -34,6 +34,11 @@ module Types
       description('probe runs per time bucket')
     end
     
+    field(:canary_slo, Types::CanarySloType, null: false) do
+      argument(:range, String, required: false, default_value: '1h')
+      description('canary availability against the SLO: the SLI over the range, the error budget over 30 days')
+    end
+
     field(:synthetic_runs, [Types::SyntheticRunType]) do
       argument(:bucket, GraphQL::Types::ISO8601DateTime)
       argument(:bucket_end, GraphQL::Types::ISO8601DateTime)
@@ -152,6 +157,10 @@ module Types
 
     def synthetic_buckets(range: '1h')
       Trace.synthetic_buckets(range: range)
+    end
+
+    def canary_slo(range: '1h')
+      Trace.canary_slo(range: range)
     end
 
     def synthetic_runs(bucket:, bucket_end:)
