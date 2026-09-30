@@ -449,6 +449,15 @@ RSpec.describe(Types::QueryType) do
       SteakAndEggsSchema.execute(query).to_h
     end
 
+    it("only returns traces inside the range when one is given") do
+      Trace.create!(endpoint: "POST /signup", duration: 900.0, status: 200, created_at: 3.hours.ago)
+      Trace.create!(endpoint: "POST /signup", duration: 300.0, status: 200)
+
+      result = SteakAndEggsSchema.execute('{ latentTraces(range: "1h") { duration } }').to_h
+
+      expect(result.dig("data", "latentTraces").map { |t| t["duration"] }).to(eq([300.0]))
+    end
+
     it("returns traces ordered by duration descending") do
       slow = Trace.create!(endpoint: "GET /users", duration: 500.0, status: 200)
       fast = Trace.create!(endpoint: "GET /health", duration: 10.0, status: 200)

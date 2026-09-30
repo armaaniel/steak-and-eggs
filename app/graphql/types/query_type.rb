@@ -25,7 +25,8 @@ module Types
     end
 
     field(:latent_traces, [Types::TraceType]) do
-      description('fetch most latent traces')
+      argument(:range, String, required: false)
+      description('fetch most latent traces, over the range when one is given')
     end
 
     field(:connections, [Types::ConnectionsType], null:false) do
@@ -160,8 +161,8 @@ module Types
       Trace.stats(endpoint: endpoint, range: range)
     end
 
-    def latent_traces
-      Trace.latent
+    def latent_traces(range: nil)
+      Trace.latent(range: range)
     end
 
     def trace_summary(range: nil)

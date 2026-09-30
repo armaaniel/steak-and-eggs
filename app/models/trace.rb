@@ -125,8 +125,12 @@ class Trace < ApplicationRecord
       used_api: result['used_api'] || false}
   end
 
-  def self.latent
-    where.not(endpoint: 'POST /graphql').where(source: %w[user canary]).order(duration: :desc).limit(1000)
+  def self.latent(range: nil)
+    where.not(endpoint: 'POST /graphql')
+      .where(source: %w[user canary])
+      .where(created_at: window_start(range)..)
+      .order(duration: :desc)
+      .limit(1000)
   end
 
   def self.synthetic_buckets(range:)
