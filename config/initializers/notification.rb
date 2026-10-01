@@ -1,4 +1,6 @@
 Rails.application.config.after_initialize do
+  next if Rails.env.test?
+
   TRACKED_ROUTES = [
     '/stocks/',
     '/search',
