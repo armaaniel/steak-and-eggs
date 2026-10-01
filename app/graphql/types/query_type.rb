@@ -46,7 +46,7 @@ module Types
     
     field(:dependency_health, [Types::DependencyHealthType], null: false) do
       argument(:range, String, required: false, default_value: '1h')
-      description('cloudwatch health for the alb, ecs services, rds and redis: status and now from the last hour, peaks, totals and points over the range, cached for a minute per range')
+      description('cloudwatch health for the alb, ecs services, rds and redis: status and now from the last ten minutes, down only when metrics stop, peaks, totals and points over the range, cached for a minute per range')
     end
 
     field(:polygon_calls, Types::PolygonCallsType, null: false) do

@@ -5,6 +5,7 @@ class DependencyHealthService
   DEPENDENCIES = %w[alb rails ingester postgres redis].freeze
 
   RANGES = {
+    '10m' => {window: 10.minutes, period: 60},
     '1h'  => {window: 1.hour,   period: 60},
     '12h' => {window: 12.hours, period: 300},
     '24h' => {window: 24.hours, period: 300},
@@ -12,7 +13,9 @@ class DependencyHealthService
     '14d' => {window: 14.days,  period: 3600},
     '30d' => {window: 30.days,  period: 3600}
   }.freeze
-  STATUS_RANGE = '1h'
+  STATUS_RANGE = '10m'
+  HEARTBEATS = {'alb' => 'healthy', 'rails' => 'cpu', 'ingester' => 'cpu', 'postgres' => 'cpu', 'redis' => 'cpu'}.freeze
+  STALE_AFTER = 5.minutes
   RESOURCE_PERIODS = [60, 300, 900, 3600].freeze
   RESOURCE_MAX_POINTS = 500
   EMPTY_SERIES = {timestamps: [], values: []}.freeze
@@ -20,9 +23,8 @@ class DependencyHealthService
   CACHE_SECONDS = 60
 
   CPU_WARN = 70
-  CPU_CRITICAL = 90
+  INGESTER_CPU_WARN = 90
   MEMORY_WARN = 80
-  MEMORY_CRITICAL = 90
   CONNECTIONS_WARN = 80
   STORAGE_WARN_BYTES = 2 * 1024**3
 
@@ -51,8 +53,12 @@ class DependencyHealthService
       own = specs.select { |spec| spec[:dependency] == dependency }
       latest = own.map { |spec| reading(spec, recent.fetch(spec[:id], EMPTY_SERIES)) }.index_by { |r| r[:key] }
       readings = own.map { |spec| reading(spec, history.fetch(spec[:id], EMPTY_SERIES)).merge(now: latest[spec[:key]][:now]) }
-      has_data = latest.values.any? { |r| !r[:now].nil? }
-      status = configured.include?(dependency) && has_data ? status_for(dependency, latest) : 'none'
+      heartbeat = recent.fetch("#{dependency}_#{HEARTBEATS[dependency]}", EMPTY_SERIES)[:timestamps].last
+
+      status = if !configured.include?(dependency) then 'none'
+               elsif heartbeat.nil? || heartbeat < STALE_AFTER.ago then 'critical'
+               else status_for(dependency, latest)
+               end
 
       {id: dependency, configured: configured.include?(dependency), status: status, readings: readings}
     end
@@ -139,15 +145,14 @@ class DependencyHealthService
     when 'alb'
       return 'critical' if readings.dig('healthy', :now)&.zero?
       return 'warn' if above.('unhealthy', :now, 0) || above.('errors', :total, 0)
-    when 'rails', 'ingester'
-      return 'critical' if above.('cpu', :now, CPU_CRITICAL) || above.('memory', :now, MEMORY_CRITICAL)
-      return 'warn' if above.('cpu', :peak, CPU_WARN) || above.('memory', :peak, MEMORY_WARN)
+    when 'rails'
+      return 'warn' if above.('memory', :peak, MEMORY_WARN)
+    when 'ingester'
+      return 'warn' if above.('cpu', :peak, INGESTER_CPU_WARN) || above.('memory', :peak, MEMORY_WARN)
     when 'postgres'
-      return 'critical' if above.('cpu', :now, CPU_CRITICAL)
       return 'warn' if above.('cpu', :peak, CPU_WARN) || above.('connections', :peak, CONNECTIONS_WARN)
       return 'warn' if (storage = readings.dig('storage', :now)) && storage < STORAGE_WARN_BYTES
     when 'redis'
-      return 'critical' if above.('cpu', :now, CPU_CRITICAL) || above.('memory', :now, MEMORY_CRITICAL)
       return 'warn' if above.('cpu', :peak, CPU_WARN) || above.('memory', :peak, MEMORY_WARN) || above.('evictions', :total, 0)
     end
 

@@ -560,6 +560,12 @@ RSpec.describe(Types::QueryType) do
       Trace.create!(endpoint: "POST /record", duration: 5.0, status: 200, source: "canary", run_id: run_id, result: result, created_at: at) if result
     end
 
+    it("expects two runs over the ten minute status window") do
+      slo = SteakAndEggsSchema.execute('{ canarySlo(range: "10m") { good expected } }').to_h.dig("data", "canarySlo")
+
+      expect(slo).to(eq({"good" => 0, "expected" => 2}))
+    end
+
     it("counts every expected run as bad when no canary runs exist") do
       slo = execute_query
 
@@ -713,6 +719,12 @@ RSpec.describe(Types::QueryType) do
       expect(buckets.last["bucket"]).to(eq("2026-09-30T12:00:00Z"))
       expect(buckets.map { |b| b["requests"] }.uniq).to(eq([0]))
       expect(buckets.map { |b| b["p99"] }.uniq).to(eq([nil]))
+    end
+
+    it("covers the last two finished buckets for the ten minute status window") do
+      buckets = SteakAndEggsSchema.execute('{ serviceTimeseries(range: "10m") { bucket } }').to_h.dig("data", "serviceTimeseries")
+
+      expect(buckets.map { |b| b["bucket"] }).to(eq(["2026-09-30T11:55:00Z", "2026-09-30T12:00:00Z"]))
     end
 
     it("counts requests and errors in the bucket they happened in") do

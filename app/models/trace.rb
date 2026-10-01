@@ -5,6 +5,7 @@ class Trace < ApplicationRecord
   POLYGON_LOOKBACK = 1.day
 
   RANGES = {
+    '10m' => {seconds_per_bucket: 300,   buckets: 2},
     '1h'  => {seconds_per_bucket: 300,   buckets: 12},  # 12 × 5 min
     '12h' => {seconds_per_bucket: 3600,  buckets: 12},  # 12 × 1 hr
     '24h' => {seconds_per_bucket: 3600,  buckets: 24},  # 24 × 1 hr

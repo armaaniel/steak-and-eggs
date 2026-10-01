@@ -64,17 +64,44 @@ RSpec.describe(DependencyHealthService) do
       expect(healthy[:points]).to(eq([]))
     end
 
-    it "says a service with no datapoints has no status" do
-      stub_series
+    it "marks a configured service down when its metrics stop arriving" do
+      stale = series("ingester_cpu", [10.0, 12.0]).merge(timestamps: [9.minutes.ago, 8.minutes.ago])
+      stub_series(series("rails_cpu", [10.0]), stale)
 
-      expect(health_for("rails")[:status]).to(eq("none"))
+      expect(health_for("rails")[:status]).to(eq("good"))
+      expect(health_for("ingester")[:status]).to(eq("critical"))
     end
 
-    it "flags a cpu peak over the warning threshold and a current value over the critical one" do
-      stub_series(series("rails_cpu", [20.0, 75.0, 30.0]), series("ingester_cpu", [20.0, 95.0]))
+    it "marks a configured service down when it has no metrics at all" do
+      stub_series
+
+      expect(health_for("rails")[:status]).to(eq("critical"))
+    end
+
+    it "ignores rails cpu, since every deploy pins it while the new task boots" do
+      stub_series(series("rails_cpu", [20.0, 100.0, 30.0]))
+
+      expect(health_for("rails")[:status]).to(eq("good"))
+    end
+
+    it "warns on rails memory" do
+      stub_series(series("rails_cpu", [5.0]), series("rails_memory", [60.0, 85.0]))
 
       expect(health_for("rails")[:status]).to(eq("warn"))
-      expect(health_for("ingester")[:status]).to(eq("critical"))
+    end
+
+    it "warns on ingester cpu only above 90%, so the daily close stays green" do
+      stub_series(series("ingester_cpu", [20.0, 85.0]))
+      expect(health_for("ingester")[:status]).to(eq("good"))
+
+      stub_series(series("ingester_cpu", [20.0, 95.0]))
+      expect(health_for("ingester")[:status]).to(eq("warn"))
+    end
+
+    it "never marks anything down for cpu or memory alone" do
+      stub_series(series("ingester_cpu", [20.0, 100.0]), series("ingester_memory", [99.0]))
+
+      expect(health_for("ingester")[:status]).to(eq("warn"))
     end
 
     it "asks for the maximum of cpu and memory so short spikes survive wider buckets" do
@@ -116,9 +143,16 @@ RSpec.describe(DependencyHealthService) do
       end
 
       it "flags postgres when free storage runs low" do
-        stub_series(series("postgres_storage", [1.5 * 1024**3]))
+        stub_series(series("postgres_cpu", [12.0]), series("postgres_storage", [1.5 * 1024**3]))
 
         expect(health_for("postgres")[:status]).to(eq("warn"))
+      end
+
+      it "marks redis and postgres down when their metrics stop" do
+        stub_series(series("alb_healthy", [1.0]))
+
+        expect(health_for("postgres")[:status]).to(eq("critical"))
+        expect(health_for("redis")[:status]).to(eq("critical"))
       end
 
       it "calls everything healthy when every value is under its threshold" do
@@ -129,21 +163,21 @@ RSpec.describe(DependencyHealthService) do
       end
     end
 
-    context "with a range longer than the last hour" do
+    context "with a range longer than the status window" do
       def stub_by_period(recent, history)
         client.stub_responses(:get_metric_data, ->(context) do
           period = context.params[:metric_data_queries].first[:metric_stat][:period]
-          {metric_data_results: [series("rails_cpu", period == 60 ? recent : history)]}
+          {metric_data_results: [series("ingester_cpu", period == 60 ? recent : history)]}
         end)
       end
 
-      it "takes the status and the current value from the last hour and the peak and points from the range" do
+      it "takes the status and the current value from the last ten minutes and the peak and points from the range" do
         stub_by_period([20.0, 95.0], [30.0, 60.0, 40.0])
 
-        rails = DependencyHealthService.current(range: "24h").find { |d| d[:id] == "rails" }
-        cpu = rails[:readings].find { |r| r[:key] == "cpu" }
+        ingester = DependencyHealthService.current(range: "24h").find { |d| d[:id] == "ingester" }
+        cpu = ingester[:readings].find { |r| r[:key] == "cpu" }
 
-        expect(rails[:status]).to(eq("critical"))
+        expect(ingester[:status]).to(eq("warn"))
         expect(cpu[:now]).to(eq(95.0))
         expect(cpu[:peak]).to(eq(60.0))
         expect(cpu[:points].map { |p| p[:value] }).to(eq([30.0, 60.0, 40.0]))
@@ -162,27 +196,27 @@ RSpec.describe(DependencyHealthService) do
       end
     end
 
-    it "asks cloudwatch once for the last hour and caches each range under its own key" do
+    it "asks cloudwatch once for the status window and caches each range under its own key" do
       calls = 0
       client.stub_responses(:get_metric_data, ->(_context) do
         calls += 1
         {metric_data_results: []}
       end)
 
-      DependencyHealthService.current(range: "1h")
+      DependencyHealthService.current(range: "10m")
       DependencyHealthService.current(range: "12h")
 
       expect(calls).to(eq(3))
-      expect(RedisService).to(have_received(:safe_setex).with("dependency_health:1h", 60, anything))
+      expect(RedisService).to(have_received(:safe_setex).with("dependency_health:10m", 60, anything))
       expect(RedisService).to(have_received(:safe_setex).with("dependency_health:12h", 60, anything))
     end
 
-    it "falls back to the last hour for a range it does not know" do
+    it "falls back to the status window for a range it does not know" do
       stub_series
 
       DependencyHealthService.current(range: "90d")
 
-      expect(RedisService).to(have_received(:safe_setex).with("dependency_health:1h", 60, anything))
+      expect(RedisService).to(have_received(:safe_setex).with("dependency_health:10m", 60, anything))
     end
 
     it "serves the cached result without calling cloudwatch" do
