@@ -80,23 +80,23 @@ class DependencyHealthService
     SERVICES.each do |dependency, service|
       dimensions = [{name: 'ClusterName', value: CLUSTER}, {name: 'ServiceName', value: service}]
 
-      specs << spec(dependency: dependency, key: 'cpu', label: 'CPU', unit: 'percent', namespace: 'AWS/ECS', metric: 'CPUUtilization', dimensions: dimensions, stat: 'Average')
-      specs << spec(dependency: dependency, key: 'memory', label: 'Memory', unit: 'percent', namespace: 'AWS/ECS', metric: 'MemoryUtilization', dimensions: dimensions, stat: 'Average')
+      specs << spec(dependency: dependency, key: 'cpu', label: 'CPU', unit: 'percent', namespace: 'AWS/ECS', metric: 'CPUUtilization', dimensions: dimensions, stat: 'Maximum')
+      specs << spec(dependency: dependency, key: 'memory', label: 'Memory', unit: 'percent', namespace: 'AWS/ECS', metric: 'MemoryUtilization', dimensions: dimensions, stat: 'Maximum')
     end
 
     if configured.include?('postgres')
       dimensions = [{name: 'DBInstanceIdentifier', value: ENV['RDS_INSTANCE_ID']}]
 
-      specs << spec(dependency: 'postgres', key: 'cpu', label: 'CPU', unit: 'percent', namespace: 'AWS/RDS', metric: 'CPUUtilization', dimensions: dimensions, stat: 'Average')
-      specs << spec(dependency: 'postgres', key: 'connections', label: 'Connections', unit: 'count', namespace: 'AWS/RDS', metric: 'DatabaseConnections', dimensions: dimensions, stat: 'Average')
+      specs << spec(dependency: 'postgres', key: 'cpu', label: 'CPU', unit: 'percent', namespace: 'AWS/RDS', metric: 'CPUUtilization', dimensions: dimensions, stat: 'Maximum')
+      specs << spec(dependency: 'postgres', key: 'connections', label: 'Connections', unit: 'count', namespace: 'AWS/RDS', metric: 'DatabaseConnections', dimensions: dimensions, stat: 'Maximum')
       specs << spec(dependency: 'postgres', key: 'storage', label: 'Free storage', unit: 'bytes', namespace: 'AWS/RDS', metric: 'FreeStorageSpace', dimensions: dimensions, stat: 'Minimum')
     end
 
     if configured.include?('redis')
       dimensions = [{name: 'CacheClusterId', value: ENV['REDIS_NODE_ID']}]
 
-      specs << spec(dependency: 'redis', key: 'cpu', label: 'Engine CPU', unit: 'percent', namespace: 'AWS/ElastiCache', metric: 'EngineCPUUtilization', dimensions: dimensions, stat: 'Average')
-      specs << spec(dependency: 'redis', key: 'memory', label: 'Memory used', unit: 'percent', namespace: 'AWS/ElastiCache', metric: 'DatabaseMemoryUsagePercentage', dimensions: dimensions, stat: 'Average')
+      specs << spec(dependency: 'redis', key: 'cpu', label: 'Engine CPU', unit: 'percent', namespace: 'AWS/ElastiCache', metric: 'EngineCPUUtilization', dimensions: dimensions, stat: 'Maximum')
+      specs << spec(dependency: 'redis', key: 'memory', label: 'Memory used', unit: 'percent', namespace: 'AWS/ElastiCache', metric: 'DatabaseMemoryUsagePercentage', dimensions: dimensions, stat: 'Maximum')
       specs << spec(dependency: 'redis', key: 'evictions', label: 'Evictions', unit: 'count', namespace: 'AWS/ElastiCache', metric: 'Evictions', dimensions: dimensions, stat: 'Sum')
     end
 

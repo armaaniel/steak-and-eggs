@@ -77,6 +77,18 @@ RSpec.describe(DependencyHealthService) do
       expect(health_for("ingester")[:status]).to(eq("critical"))
     end
 
+    it "asks for the maximum of cpu and memory so short spikes survive wider buckets" do
+      stats = {}
+      client.stub_responses(:get_metric_data, ->(context) do
+        context.params[:metric_data_queries].each { |q| stats[q[:id]] = q[:metric_stat][:stat] }
+        {metric_data_results: []}
+      end)
+
+      DependencyHealthService.current(range: "7d")
+
+      expect(stats.values_at("rails_cpu", "rails_memory", "ingester_cpu", "ingester_memory").uniq).to(eq(["Maximum"]))
+    end
+
     context "with every resource id set" do
       let(:resource_ids) do
         {"ALB_METRIC_ID" => "app/steakneggs-alb/1", "TARGET_GROUP_METRIC_ID" => "targetgroup/steakneggs-tg/2", "RDS_INSTANCE_ID" => "steakneggs-db", "REDIS_NODE_ID" => "steakneggs-redis-001"}
