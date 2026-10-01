@@ -104,6 +104,12 @@ module Types
       argument :from, GraphQL::Types::ISO8601DateTime
       argument :to, GraphQL::Types::ISO8601DateTime
     end
+
+    field(:ingester_resources, [Types::ResourcePointType], null: false) do
+      argument(:from, GraphQL::Types::ISO8601DateTime)
+      argument(:to, GraphQL::Types::ISO8601DateTime)
+      description('the ingester task cpu and memory from cloudwatch, highest per bucket, with buckets sized to the window')
+    end
     
     field :ingester_transitions, [Types::IngesterTransitionType], null: false do
       argument :from, GraphQL::Types::ISO8601DateTime
@@ -231,6 +237,11 @@ module Types
     def ingester_lag(from:, to:)
       from, to = ingester_window(from, to)
       IngesterSample.lag(from: from, to: to)
+    end
+
+    def ingester_resources(from:, to:)
+      from, to = ingester_window(from, to)
+      DependencyHealthService.resources(dependency: 'ingester', from: from, to: to)
     end
 
     def ingester_transitions(from:, to:)

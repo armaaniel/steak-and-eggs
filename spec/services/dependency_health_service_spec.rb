@@ -200,4 +200,51 @@ RSpec.describe(DependencyHealthService) do
       expect(Sentry).to(have_received(:capture_exception))
     end
   end
+
+  describe "resources" do
+    def queries_for(from, to)
+      queries = nil
+      client.stub_responses(:get_metric_data, ->(context) do
+        queries = context.params[:metric_data_queries]
+        {metric_data_results: []}
+      end)
+      DependencyHealthService.resources(dependency: "ingester", from: from, to: to)
+      queries
+    end
+
+    it "lines cpu and memory up by timestamp, as maximums of the ingester service" do
+      cpu = series("cpu", [20.0, 80.0])
+      memory = series("memory", [41.0, 42.0]).merge(timestamps: cpu[:timestamps])
+      client.stub_responses(:get_metric_data, {metric_data_results: [cpu, memory]})
+
+      points = DependencyHealthService.resources(dependency: "ingester", from: 1.hour.ago, to: Time.current)
+
+      expect(points.map { |p| [p[:cpu], p[:memory]] }).to(eq([[20.0, 41.0], [80.0, 42.0]]))
+      expect(queries_for(1.hour.ago, Time.current).map { |q| q[:metric_stat][:stat] }.uniq).to(eq(["Maximum"]))
+      expect(queries_for(1.hour.ago, Time.current).first[:metric_stat][:metric][:dimensions]).to(include({name: "ServiceName", value: "ingester"}))
+    end
+
+    it "sizes buckets to the window, from one minute up to an hour" do
+      periods = {1.hour => 60, 24.hours => 300, 3.days => 900, 30.days => 3600}.to_h do |window, _|
+        [window, queries_for(Time.current - window, Time.current).first[:metric_stat][:period]]
+      end
+
+      expect(periods.values).to(eq([60, 300, 900, 3600]))
+    end
+
+    it "never asks for one-minute data older than CloudWatch keeps it" do
+      twenty_days_ago = queries_for(20.days.ago, 20.days.ago + 1.hour).first[:metric_stat][:period]
+      seventy_days_ago = queries_for(70.days.ago, 70.days.ago + 1.hour).first[:metric_stat][:period]
+
+      expect([twenty_days_ago, seventy_days_ago]).to(eq([300, 3600]))
+    end
+
+    it "returns no points and reports to sentry when cloudwatch fails" do
+      client.stub_responses(:get_metric_data, "Throttling")
+      allow(Sentry).to(receive(:capture_exception))
+
+      expect(DependencyHealthService.resources(dependency: "ingester", from: 1.hour.ago, to: Time.current)).to(eq([]))
+      expect(Sentry).to(have_received(:capture_exception))
+    end
+  end
 end

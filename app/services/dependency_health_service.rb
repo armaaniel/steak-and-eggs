@@ -13,6 +13,8 @@ class DependencyHealthService
     '30d' => {window: 30.days,  period: 3600}
   }.freeze
   STATUS_RANGE = '1h'
+  RESOURCE_PERIODS = [60, 300, 900, 3600].freeze
+  RESOURCE_MAX_POINTS = 500
   EMPTY_SERIES = {timestamps: [], values: []}.freeze
   CACHE_KEY = 'dependency_health'
   CACHE_SECONDS = 60
@@ -152,9 +154,35 @@ class DependencyHealthService
     'good'
   end
 
+  def self.resources(dependency:, from:, to:)
+    dimensions = [{name: 'ClusterName', value: CLUSTER}, {name: 'ServiceName', value: SERVICES.fetch(dependency)}]
+    period = resource_period(from, to)
+
+    queries = {'cpu' => 'CPUUtilization', 'memory' => 'MemoryUtilization'}.map do |id, metric|
+      {id: id, metric_stat: {metric: {namespace: 'AWS/ECS', metric_name: metric, dimensions: dimensions}, period: period, stat: 'Maximum'}}
+    end
+
+    result = client.get_metric_data(metric_data_queries: queries, start_time: from, end_time: to, scan_by: 'TimestampAscending')
+    series = result.metric_data_results.to_h { |s| [s.id, s.timestamps.zip(s.values).to_h] }
+
+    series.values.flat_map(&:keys).uniq.sort.map do |at|
+      {at: at, cpu: series.dig('cpu', at), memory: series.dig('memory', at)}
+    end
+  rescue => e
+    Sentry.capture_exception(e)
+    []
+  end
+
+  def self.resource_period(from, to)
+    age = Time.current - from
+    floor = if age > 63.days then 3600 elsif age > 15.days then 300 else 60 end
+
+    RESOURCE_PERIODS.find { |p| p >= floor && (to - from) / p <= RESOURCE_MAX_POINTS } || RESOURCE_PERIODS.last
+  end
+
   def self.client
     @client ||= Aws::CloudWatch::Client.new(region: REGION)
   end
 
-  private_class_method :build, :configured_dependencies, :metric_specs, :spec, :fetch, :reading, :status_for, :client
+  private_class_method :build, :configured_dependencies, :metric_specs, :spec, :fetch, :reading, :status_for, :resource_period, :client
 end

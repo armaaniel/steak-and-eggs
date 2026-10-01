@@ -741,6 +741,17 @@ RSpec.describe(Types::QueryType) do
     end
   end
 
+  describe("ingester_resources") do
+    it("returns the ingester's cpu and memory for the window, capped like the other ingester fields") do
+      allow(DependencyHealthService).to(receive(:resources).and_return([{at: Time.utc(2026, 9, 30, 12, 0), cpu: 80.7, memory: 41.0}]))
+
+      result = SteakAndEggsSchema.execute('{ ingesterResources(from: "2026-07-01T00:00:00Z", to: "2026-09-30T12:00:00Z") { at cpu memory } }').to_h
+
+      expect(result.dig("data", "ingesterResources")).to(eq([{"at" => "2026-09-30T12:00:00Z", "cpu" => 80.7, "memory" => 41.0}]))
+      expect(DependencyHealthService).to(have_received(:resources).with(dependency: "ingester", from: Time.utc(2026, 8, 31, 12, 0), to: Time.utc(2026, 9, 30, 12, 0)))
+    end
+  end
+
   describe("dependency_health") do
     let(:query) { '{ dependencyHealth { id configured status readings { key label unit now peak total points { at value } } } }' }
 
