@@ -107,6 +107,7 @@ class MarketService
         return {price: cached_price, open: cached_open}
       end
 
+      raise NotFoundError unless Ticker.exists?(symbol: symbol, delisted_at: nil)
       raise ApiError
     end
   end

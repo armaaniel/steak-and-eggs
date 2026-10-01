@@ -106,6 +106,8 @@ class StocksController < ApplicationController
     data = MarketService.marketprice(symbol:params[:symbol])
     render(json:data)
 
+  rescue MarketService::NotFoundError
+    render(json:{price:"N/A", open:"N/A"}, status:404)
   rescue => e
     Sentry.capture_exception(e)
     render(json:{price:"N/A", open:"N/A"}, status:503)

@@ -171,12 +171,30 @@ RSpec.describe(MarketService) do
       expect(result[:open]).to(eq("95"))
     end
 
-    it("raises ApiError when price is not cached") do
+    it("raises ApiError when a listed ticker has no price, since the ingester should have one") do
+      Ticker.create!(symbol: "TSLA", name: "Tesla, Inc.", ticker_type: "CS", exchange: "XNAS", currency: "usd")
       allow(RedisService).to(receive(:safe_mget).with("price:TSLA", "open:TSLA").and_return([nil, nil]))
 
       expect {
         MarketService.marketprice(symbol: "TSLA")
       }.to(raise_error(MarketService::ApiError))
+    end
+
+    it("raises NotFoundError when a delisted ticker has no price") do
+      Ticker.create!(symbol: "TSE", name: "Trinseo PLC", ticker_type: "CS", exchange: "XNYS", currency: "usd", delisted_at: 1.day.ago)
+      allow(RedisService).to(receive(:safe_mget).with("price:TSE", "open:TSE").and_return([nil, nil]))
+
+      expect {
+        MarketService.marketprice(symbol: "TSE")
+      }.to(raise_error(MarketService::NotFoundError))
+    end
+
+    it("raises NotFoundError for a symbol that was never listed") do
+      allow(RedisService).to(receive(:safe_mget).with("price:NOPE", "open:NOPE").and_return([nil, nil]))
+
+      expect {
+        MarketService.marketprice(symbol: "NOPE")
+      }.to(raise_error(MarketService::NotFoundError))
     end
   end
 

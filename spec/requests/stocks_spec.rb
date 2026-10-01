@@ -320,17 +320,31 @@ RSpec.describe("Stocks", type: :request) do
       expect(body["open"]).to(eq("95"))
     end
 
-    it "returns fallback data when price not cached" do
+    it "returns fallback data when a listed ticker has no price" do
+      Ticker.create!(symbol: "TSLA", name: "Tesla, Inc.", ticker_type: "CS", exchange: "XNAS", currency: "usd")
       allow(RedisService).to(receive(:safe_mget).with("price:TSLA", "open:TSLA").and_return([nil, nil]))
       allow(Sentry).to(receive(:capture_exception))
 
       get "/stocks/TSLA/stockprice", headers: headers
 
       expect(response).to(have_http_status(503))
+      expect(Sentry).to(have_received(:capture_exception).with(an_instance_of(MarketService::ApiError)))
 
       body = JSON.parse(response.body)
       expect(body["price"]).to(eq("N/A"))
       expect(body["open"]).to(eq("N/A"))
+    end
+
+    it "returns 404 without reporting for a delisted ticker" do
+      Ticker.create!(symbol: "TSE", name: "Trinseo PLC", ticker_type: "CS", exchange: "XNYS", currency: "usd", delisted_at: 1.day.ago)
+      allow(RedisService).to(receive(:safe_mget).with("price:TSE", "open:TSE").and_return([nil, nil]))
+      allow(Sentry).to(receive(:capture_exception))
+
+      get "/stocks/TSE/stockprice", headers: headers
+
+      expect(response).to(have_http_status(404))
+      expect(JSON.parse(response.body)).to(eq({"price" => "N/A", "open" => "N/A"}))
+      expect(Sentry).not_to(have_received(:capture_exception))
     end
   end
 
