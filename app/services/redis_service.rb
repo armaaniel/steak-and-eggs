@@ -20,6 +20,13 @@ class RedisService
     nil
   end
 
+  def self.safe_delete_matching(pattern)
+    REDIS.scan_each(match: pattern, count: 1000).each_slice(500).sum { |keys| REDIS.del(*keys) }
+  rescue Redis::BaseError => e
+    Sentry.capture_exception(e)
+    nil
+  end
+
   def self.safe_mget(*keys)
     REDIS.mget(*keys)
   rescue Redis::BaseError => e

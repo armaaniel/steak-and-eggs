@@ -14,7 +14,7 @@ class Ticker < ApplicationRecord
       end
 
       payload[:used_db] = true
-      results = Ticker.where("symbol ILIKE ? OR name ILIKE ?", "#{term_sanny}%", "#{term_sanny}%").limit(15)
+      results = Ticker.where(delisted_at: nil).where("symbol ILIKE ? OR name ILIKE ?", "#{term_sanny}%", "#{term_sanny}%").limit(15)
 
       RedisService.safe_setex("search:#{term_sanny}", 3.days.to_i, results.to_json)
       results

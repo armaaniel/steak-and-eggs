@@ -68,6 +68,15 @@ RSpec.describe(Ticker) do
       expect(result.first.name).to(eq("Tesla, Inc."))
     end
 
+    it("leaves out delisted tickers") do
+      Ticker.create!(symbol: "TSE", name: "Trinseo PLC", ticker_type: "CS", exchange: "XNYS", currency: "usd", delisted_at: 1.day.ago)
+      Ticker.create!(symbol: "TSLA", name: "Tesla, Inc.", ticker_type: "CS", exchange: "NASDAQ", currency: "USD")
+
+      result = Ticker.search(term: "TS")
+
+      expect(result.map(&:symbol)).to(eq(["TSLA"]))
+    end
+
     it("is case insensitive") do
       Ticker.create!(symbol: "TSLA", name: "Tesla, Inc.", ticker_type: "CS", exchange: "NASDAQ", currency: "USD")
 

@@ -1,72 +1,47 @@
+require "net/http"
+require "json"
+
 namespace :tickers do
-  desc "Fetch common stock tickers from Polygon and upsert into the tickers table"
-  task stocks: :environment do
-    fetch_polygon_tickers("CS")
-  end
+  desc "Sync tickers with Polygon: upsert the active ones and mark the rest delisted. DRY_RUN=1 previews"
+  task sync: :environment do
+    fetched = %w[CS ETF ETV ADRC UNIT FUND].flat_map { |type| fetch_polygon_tickers(type) }.uniq { |t| t[:symbol] }
+    symbols = fetched.map { |t| t[:symbol] }
 
-  desc "Fetch ETF tickers from Polygon and upsert into the tickers table"
-  task etfs: :environment do
-    fetch_polygon_tickers("ETF")
-  end
-  
-  desc "Fetch ETF tickers from Polygon and upsert into the tickers table"
-  task adrcs: :environment do
-    fetch_polygon_tickers("ADRC")
-  end
-  
-  desc "Fetch ETF tickers from Polygon and upsert into the tickers table"
-  task units: :environment do
-    fetch_polygon_tickers("UNIT")
-  end
-  
-  desc "Fetch ETF tickers from Polygon and upsert into the tickers table"
-  task funds: :environment do
-    fetch_polygon_tickers("FUND")
-  end
+    listed = Ticker.where(delisted_at: nil)
+    missing = listed.where.not(symbol: symbols).pluck(:symbol).sort
+    returning = Ticker.where.not(delisted_at: nil).where(symbol: symbols).count
 
-  desc "Fetch both stock and ETF tickers"
-  task all: %i[stocks etfs adrcs units funds]
+    puts "Polygon lists #{fetched.size} active tickers; #{missing.size} of #{listed.count} listed here are gone, #{returning} come back"
+    puts "Gone: #{missing.join(', ')}" if missing.any?
+    next puts("Dry run, nothing written") if ENV["DRY_RUN"].present?
+
+    ActiveRecord::Base.transaction do
+      Ticker.upsert_all(fetched.map { |t| t.merge(delisted_at: nil) }, unique_by: :symbol)
+      Ticker.where(symbol: missing).update_all(delisted_at: Time.current)
+    end
+
+    cleared = RedisService.safe_delete_matching("search:*")
+    puts "Upserted #{fetched.size}, marked #{missing.size} delisted, cleared #{cleared || 0} cached searches"
+  end
 end
 
 def fetch_polygon_tickers(type)
-  require "net/http"
-  require "json"
-
-  all_tickers = []
-  url = "https://api.polygon.io/v3/reference/tickers?apikey=#{ENV['API_KEY']}&limit=1000&market=stocks&type=#{type}"
+  tickers = []
+  url = "https://api.polygon.io/v3/reference/tickers?limit=1000&market=stocks&type=#{type}"
 
   while url
-    puts "Fetching #{type}: #{url}"
-    response = Net::HTTP.get_response(URI(url))
-
-    unless response.code == "200"
-      puts "Error: #{response.body}"
-      break
-    end
+    response = Net::HTTP.get_response(URI("#{url}&apikey=#{ENV['API_KEY']}"))
+    raise "Polygon returned #{response.code} fetching #{type} tickers" unless response.code == "200"
 
     data = JSON.parse(response.body)
-    all_tickers += data["results"] if data["results"]
-
-    url = data["next_url"] ? "#{data['next_url']}&apikey=#{ENV['API_KEY']}" : nil
-
-    puts "Got #{data['results']&.length} #{type} (total: #{all_tickers.length})"
-    sleep(0.1)
+    tickers.concat(data["results"] || [])
+    url = data["next_url"]
+    sleep(0.1) if url
   end
 
-  puts "Final total: #{all_tickers.length} #{type} tickers"
+  puts "Fetched #{tickers.size} #{type} tickers"
 
-  ticker_attrs = all_tickers.map do |t|
-    {
-      symbol: t["ticker"],
-      name: t["name"],
-      ticker_type: t["type"],
-      exchange: t["primary_exchange"],
-      currency: t["currency_name"],
-    }
-  end.uniq { |t| t[:symbol] }
-
-  puts "Removed #{all_tickers.length - ticker_attrs.length} duplicates"
-
-  Ticker.upsert_all(ticker_attrs, unique_by: :symbol)
-  puts "Upserted #{ticker_attrs.length} #{type} tickers"
+  tickers.map do |t|
+    {symbol: t["ticker"], name: t["name"], ticker_type: t["type"], exchange: t["primary_exchange"], currency: t["currency_name"]}
+  end
 end
