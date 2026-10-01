@@ -4,11 +4,11 @@ import secrets from 'k6/secrets'
 import { expect as baseExpect } from 'https://jslib.k6.io/k6-testing/0.6.1/index.js'
 
 const BASE = 'https://www.steakneggs.art'
-const SYMBOL = 'AAPL'
 const DEPOSIT = 10000
 const expect = baseExpect.configure({ soft: true, softMode: 'throw' })
 
 const BASKET = ['AAPL', 'MSFT', 'NVDA', 'AMZN', 'GOOG', 'META', 'TSLA']
+const SYMBOL = BASKET[Math.floor(Date.now() / 300000) % BASKET.length]
 const searchTerm = BASKET[Math.floor(Date.now() / 86400000) % BASKET.length]
 
 const username = `canary_${crypto.randomUUID().replace(/-/g, '').slice(0, 12)}`
