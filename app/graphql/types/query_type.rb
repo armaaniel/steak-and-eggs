@@ -26,7 +26,9 @@ module Types
 
     field(:recent_traces, [Types::TraceType]) do
       argument(:range, String, required: false)
-      description('the latest 1000 user and canary traces, over the range when one is given')
+      argument(:bucket, GraphQL::Types::ISO8601DateTime, required: false)
+      argument(:bucket_end, GraphQL::Types::ISO8601DateTime, required: false)
+      description('the latest 1000 user and canary traces, inside the bucket when one is given, otherwise over the range')
     end
 
     field(:connections, [Types::ConnectionsType], null:false) do
@@ -173,8 +175,8 @@ module Types
       Trace.stats(endpoint: endpoint, range: range)
     end
 
-    def recent_traces(range: nil)
-      Trace.recent(range: range)
+    def recent_traces(range: nil, bucket: nil, bucket_end: nil)
+      Trace.recent(range: range, bucket: bucket, bucket_end: bucket_end)
     end
 
     def trace_summary(range: nil)

@@ -459,6 +459,17 @@ RSpec.describe(Types::QueryType) do
       expect(result.dig("data", "recentTraces").map { |t| t["duration"] }).to(eq([300.0]))
     end
 
+    it("only returns traces inside the bucket when one is given, ignoring the range") do
+      Trace.create!(endpoint: "GET /users", duration: 100.0, status: 200, created_at: Time.utc(2026, 9, 30, 10, 59, 59))
+      Trace.create!(endpoint: "GET /users", duration: 200.0, status: 200, created_at: Time.utc(2026, 9, 30, 11, 0))
+      Trace.create!(endpoint: "GET /users", duration: 300.0, status: 200, created_at: Time.utc(2026, 9, 30, 11, 59, 59))
+      Trace.create!(endpoint: "GET /users", duration: 400.0, status: 200, created_at: Time.utc(2026, 9, 30, 12, 0))
+
+      result = SteakAndEggsSchema.execute('{ recentTraces(range: "1h", bucket: "2026-09-30T11:00:00Z", bucketEnd: "2026-09-30T12:00:00Z") { duration } }').to_h
+
+      expect(result.dig("data", "recentTraces").map { |t| t["duration"] }).to(eq([300.0, 200.0]))
+    end
+
     it("returns the newest traces first, whatever their duration") do
       oldest = Trace.create!(endpoint: "GET /users", duration: 500.0, status: 200, created_at: 3.minutes.ago)
       newest = Trace.create!(endpoint: "GET /health", duration: 10.0, status: 200, created_at: 1.minute.ago)
@@ -692,6 +703,7 @@ RSpec.describe(Types::QueryType) do
         {
           serviceTimeseries(range: "1h") {
             bucket
+            bucketEnd
             requests
             errors
             p50
@@ -717,6 +729,7 @@ RSpec.describe(Types::QueryType) do
       expect(buckets.length).to(eq(12))
       expect(buckets.first["bucket"]).to(eq("2026-09-30T11:05:00Z"))
       expect(buckets.last["bucket"]).to(eq("2026-09-30T12:00:00Z"))
+      expect(buckets.last["bucketEnd"]).to(eq("2026-09-30T12:05:00Z"))
       expect(buckets.map { |b| b["requests"] }.uniq).to(eq([0]))
       expect(buckets.map { |b| b["p99"] }.uniq).to(eq([nil]))
     end

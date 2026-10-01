@@ -127,10 +127,12 @@ class Trace < ApplicationRecord
       used_api: result['used_api'] || false}
   end
 
-  def self.recent(range: nil)
+  def self.recent(range: nil, bucket: nil, bucket_end: nil)
+    window = bucket && bucket_end ? (bucket...bucket_end) : (window_start(range)..)
+
     where.not(endpoint: 'POST /graphql')
       .where(source: %w[user canary])
-      .where(created_at: window_start(range)..)
+      .where(created_at: window)
       .order(created_at: :desc)
       .limit(1000)
   end
@@ -231,12 +233,13 @@ class Trace < ApplicationRecord
       bucket = window[:start] + (index * step)
       row = by_bucket[bucket.to_i] || {}
 
-      { bucket:   bucket,
-        requests: row['requests'].to_i,
-        errors:   row['errors'].to_i,
-        p50:      row['p50']&.to_f,
-        p95:      row['p95']&.to_f,
-        p99:      row['p99']&.to_f }
+      { bucket:     bucket,
+        bucket_end: bucket + step,
+        requests:   row['requests'].to_i,
+        errors:     row['errors'].to_i,
+        p50:        row['p50']&.to_f,
+        p95:        row['p95']&.to_f,
+        p99:        row['p99']&.to_f }
     end
   end
 
