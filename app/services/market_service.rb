@@ -2,6 +2,7 @@ class MarketService
   class InsufficientFundsError < StandardError; end
   class InsufficientSharesError < StandardError; end
   class ApiError < StandardError; end
+  class NotFoundError < StandardError; end
 
   MARKET_ZONE = 'America/New_York'
   MARKET_OPEN_MINUTE = (9 * 60) + 30
@@ -131,6 +132,7 @@ class MarketService
       http.read_timeout = 2
       
       response = http.request(Net::HTTP::Get.new(uri))
+      raise NotFoundError if response.code == '404'
       raise ApiError unless response.code == '200'
 
       body = JSON.parse(response.body)
@@ -164,6 +166,7 @@ class MarketService
       http.read_timeout = 2
       
       response = http.request(Net::HTTP::Get.new(uri))
+      raise NotFoundError if response.code == '404'
       raise ApiError unless response.code == '200'
 
       body = JSON.parse(response.body)
@@ -196,6 +199,7 @@ class MarketService
       http.read_timeout = 2.5
 
       response = http.request(Net::HTTP::Get.new(uri))
+      raise NotFoundError if response.code == '404'
       raise ApiError unless response.code == '200'
 
       body=JSON.parse(response.body)

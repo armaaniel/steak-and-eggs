@@ -642,6 +642,17 @@ RSpec.describe(Types::QueryType) do
       expect(Time.zone.parse(calls["lastSuccessAt"])).to(be_within(1.second).of(20.minutes.ago))
     end
 
+    it("counts a 404 as a call polygon answered, not a failure") do
+      Trace.create!(endpoint: "GET /stocks/TSE/companydata", duration: 210.0, status: 404, created_at: 5.minutes.ago,
+        breakdown: {"MarketService.companydata" => {symbol: "TSE", used_redis: false, used_api: true, duration: 200.0, exception: ["MarketService::NotFoundError", "MarketService::NotFoundError"]}})
+
+      calls = execute_query
+
+      expect(calls["calls"]).to(eq(1))
+      expect(calls["failures"]).to(eq(0))
+      expect(Time.zone.parse(calls["lastSuccessAt"])).to(be_within(1.second).of(5.minutes.ago))
+    end
+
     it("leaves out load test calls") do
       polygon_call(duration: 100.0, at: 10.minutes.ago, source: "load")
       polygon_call(duration: 100.0, failed: true, at: 5.minutes.ago, source: "load")

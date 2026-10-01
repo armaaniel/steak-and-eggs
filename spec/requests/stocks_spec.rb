@@ -4,6 +4,15 @@ RSpec.describe("Stocks", type: :request) do
   let(:user) { create(:user) }
   let(:headers) { auth_headers(user) }
 
+  def polygon_answers(code)
+    http = instance_double(Net::HTTP)
+    allow(http).to(receive(:use_ssl=))
+    allow(http).to(receive(:open_timeout=))
+    allow(http).to(receive(:read_timeout=))
+    allow(http).to(receive(:request).and_return(instance_double(Net::HTTPResponse, code: code)))
+    allow(Net::HTTP).to(receive(:new).and_return(http))
+  end
+
   describe "POST /stocks/:symbol/buy" do
     before do
       allow(RedisService).to(receive(:safe_get).with("price:TSLA").and_return("100"))
@@ -197,6 +206,18 @@ RSpec.describe("Stocks", type: :request) do
       expect(body).to(be_an(Array))
       expect(body.length).to(eq(2))
     end
+
+    it "returns 404 without reporting when polygon does not know the symbol" do
+      allow(RedisService).to(receive(:safe_get).with("chart:TSE:1D").and_return(nil))
+      polygon_answers("404")
+      allow(Sentry).to(receive(:capture_exception))
+
+      get "/stocks/TSE/chartdata", headers: headers
+
+      expect(response).to(have_http_status(404))
+      expect(JSON.parse(response.body).length).to(eq(2))
+      expect(Sentry).not_to(have_received(:capture_exception))
+    end
   end
 
   describe "GET /stocks/:symbol/companydata" do
@@ -221,6 +242,29 @@ RSpec.describe("Stocks", type: :request) do
       body = JSON.parse(response.body)
       expect(body["market_cap"]).to(eq("N/A"))
       expect(body["description"]).to(eq("N/A"))
+    end
+
+    it "returns 404 without reporting when polygon does not know the symbol" do
+      allow(RedisService).to(receive(:safe_get).with("company:TSE").and_return(nil))
+      polygon_answers("404")
+      allow(Sentry).to(receive(:capture_exception))
+
+      get "/stocks/TSE/companydata", headers: headers
+
+      expect(response).to(have_http_status(404))
+      expect(JSON.parse(response.body)).to(eq({"market_cap" => "N/A", "description" => "N/A"}))
+      expect(Sentry).not_to(have_received(:capture_exception))
+    end
+
+    it "still returns 503 and reports when polygon itself fails" do
+      allow(RedisService).to(receive(:safe_get).with("company:TSE").and_return(nil))
+      polygon_answers("502")
+      allow(Sentry).to(receive(:capture_exception))
+
+      get "/stocks/TSE/companydata", headers: headers
+
+      expect(response).to(have_http_status(503))
+      expect(Sentry).to(have_received(:capture_exception).with(an_instance_of(MarketService::ApiError)))
     end
   end
 
@@ -248,6 +292,18 @@ RSpec.describe("Stocks", type: :request) do
       expect(body["high"]).to(eq("N/A"))
       expect(body["low"]).to(eq("N/A"))
       expect(body["volume"]).to(eq("N/A"))
+    end
+
+    it "returns 404 without reporting when polygon does not know the symbol" do
+      allow(RedisService).to(receive(:safe_get).with("market:TSE").and_return(nil))
+      polygon_answers("404")
+      allow(Sentry).to(receive(:capture_exception))
+
+      get "/stocks/TSE/marketdata", headers: headers
+
+      expect(response).to(have_http_status(404))
+      expect(JSON.parse(response.body)["open"]).to(eq("N/A"))
+      expect(Sentry).not_to(have_received(:capture_exception))
     end
   end
 

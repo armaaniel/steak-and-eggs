@@ -59,6 +59,8 @@ class StocksController < ApplicationController
     data = MarketService.chartdata(symbol:params[:symbol], range: range)
     render(json:data)
 
+  rescue MarketService::NotFoundError
+    render(json:[{date:Date.current, value:0}, {date:Date.current, value:0}], status:404)
   rescue => e
     Sentry.capture_exception(e)
     render(json:[{date:Date.current, value:0}, {date:Date.current, value:0}], status:503)
@@ -68,6 +70,8 @@ class StocksController < ApplicationController
     data = MarketService.companydata(symbol:params[:symbol])
     render(json: data)
 
+  rescue MarketService::NotFoundError
+    render(json:{market_cap:'N/A', description:'N/A'}, status:404)
   rescue => e
     Sentry.capture_exception(e)
     render(json:{market_cap:'N/A', description:'N/A'}, status:503)
@@ -77,6 +81,8 @@ class StocksController < ApplicationController
     data = MarketService.marketdata(symbol:params[:symbol])
     render(json: data)
 
+  rescue MarketService::NotFoundError
+    render(json:{open:'N/A', high: 'N/A', low: 'N/A', volume: 'N/A', last: 'N/A'}, status:404)
   rescue => e
     Sentry.capture_exception(e)
     render(json:{open:'N/A', high: 'N/A', low: 'N/A', volume: 'N/A', last: 'N/A'}, status:503)
