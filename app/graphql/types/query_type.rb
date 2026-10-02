@@ -9,7 +9,21 @@ module Types
 
     field(:service_timeseries, [Types::ServiceBucketType], null: false) do
       argument(:range, String, required: false, default_value: '24h')
-      description('requests, errors and latency percentiles per bucket, without DataCat or load test traffic')
+      argument(:endpoint, String, required: false)
+      argument(:include_partial, Boolean, required: false, default_value: false)
+      description('requests, errors and latency percentiles per bucket, without DataCat or load test traffic, for one route when an endpoint is given, with the bucket still in progress appended when asked for')
+    end
+
+    field(:trace_scatter, [Types::TraceScatterPointType], null: false) do
+      argument(:endpoint, String)
+      argument(:range, String, required: false)
+      argument(:status, Integer, required: false)
+      description("one point per occupied cell of a #{Trace::SCATTER_COLUMNS} column, #{Trace::SCATTER_ROWS_PER_DECADE} rows per decade latency grid up to now, errors never sharing a point with successes")
+    end
+
+    field(:trace, Types::TraceType) do
+      argument(:id, ID)
+      description('one trace by id')
     end
 
     field(:trace_list, [Types::TraceType]) do
@@ -183,8 +197,16 @@ module Types
       Trace.summary(range: range)
     end
 
-    def service_timeseries(range: '24h')
-      Trace.service_timeseries(range: range)
+    def service_timeseries(range: '24h', endpoint: nil, include_partial: false)
+      Trace.service_timeseries(range: range, endpoint: endpoint, include_partial: include_partial)
+    end
+
+    def trace_scatter(endpoint:, range: nil, status: nil)
+      Trace.scatter(endpoint: endpoint, range: range, status: status)
+    end
+
+    def trace(id:)
+      Trace.find_by(id: id)
     end
 
     def synthetic_buckets(range: '1h')

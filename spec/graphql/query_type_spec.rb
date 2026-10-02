@@ -764,6 +764,91 @@ RSpec.describe(Types::QueryType) do
 
       expect(execute_query.sum { |b| b["requests"] }).to(eq(0))
     end
+
+    it("narrows to one route when an endpoint is given") do
+      Trace.create!(endpoint: "GET /stocks/AAPL/chartdata", duration: 10.0, status: 200, created_at: Time.utc(2026, 9, 30, 12, 2))
+      Trace.create!(endpoint: "GET /stocks/TSLA/chartdata?range=1y", duration: 10.0, status: 200, created_at: Time.utc(2026, 9, 30, 12, 3))
+      Trace.create!(endpoint: "GET /stocks/AAPL/marketdata", duration: 10.0, status: 200, created_at: Time.utc(2026, 9, 30, 12, 3))
+
+      buckets = SteakAndEggsSchema.execute('{ serviceTimeseries(range: "1h", endpoint: "GET /stocks/symbol/chartdata") { requests } }').to_h.dig("data", "serviceTimeseries")
+
+      expect(buckets.sum { |b| b["requests"] }).to(eq(2))
+    end
+
+    it("appends the bucket still in progress, marked partial, only when asked") do
+      Trace.create!(endpoint: "GET /users", duration: 10.0, status: 200, created_at: Time.utc(2026, 9, 30, 12, 6))
+
+      buckets = SteakAndEggsSchema.execute('{ serviceTimeseries(range: "1h", includePartial: true) { bucket bucketEnd partial requests } }').to_h.dig("data", "serviceTimeseries")
+
+      expect(buckets.length).to(eq(13))
+      expect(buckets.last).to(eq("bucket" => "2026-09-30T12:05:00Z", "bucketEnd" => "2026-09-30T12:10:00Z", "partial" => true, "requests" => 1))
+      expect(buckets.first(12).map { |b| b["partial"] }.uniq).to(eq([false]))
+    end
+  end
+
+  describe("trace_scatter") do
+    include ActiveSupport::Testing::TimeHelpers
+
+    before { travel_to(Time.utc(2026, 9, 30, 12, 7, 30)) }
+    after { travel_back }
+
+    def scatter(arguments = 'endpoint: "GET /users", range: "1h"')
+      SteakAndEggsSchema.execute("{ traceScatter(#{arguments}) { id at status duration count } }").to_h.dig("data", "traceScatter")
+    end
+
+    it("folds requests that land on the same spot into one point that opens the slowest of them") do
+      Trace.create!(endpoint: "GET /users", duration: 100.0, status: 200, created_at: Time.utc(2026, 9, 30, 12, 0))
+      slowest = Trace.create!(endpoint: "GET /users", duration: 105.0, status: 200, created_at: Time.utc(2026, 9, 30, 12, 0))
+
+      points = scatter
+
+      expect(points.length).to(eq(1))
+      expect(points.first).to(include("id" => slowest.id.to_s, "duration" => 105.0, "count" => 2))
+    end
+
+    it("keeps requests far apart in duration as separate points") do
+      Trace.create!(endpoint: "GET /users", duration: 2.0, status: 200, created_at: Time.utc(2026, 9, 30, 12, 0))
+      Trace.create!(endpoint: "GET /users", duration: 400.0, status: 200, created_at: Time.utc(2026, 9, 30, 12, 0))
+
+      expect(scatter.map { |point| point["duration"] }).to(contain_exactly(2.0, 400.0))
+    end
+
+    it("never lets an error share a point with a success") do
+      Trace.create!(endpoint: "GET /users", duration: 50.0, status: 200, created_at: Time.utc(2026, 9, 30, 12, 0))
+      Trace.create!(endpoint: "GET /users", duration: 50.0, status: 503, created_at: Time.utc(2026, 9, 30, 12, 0))
+
+      expect(scatter.map { |point| point["status"] }).to(contain_exactly(200, 503))
+    end
+
+    it("plots up to now, including the bucket still in progress") do
+      Trace.create!(endpoint: "GET /users", duration: 50.0, status: 200, created_at: Time.utc(2026, 9, 30, 12, 6))
+
+      expect(scatter.map { |point| point["at"] }).to(eq(["2026-09-30T12:06:00Z"]))
+    end
+
+    it("only covers the endpoint's route, from user and canary traffic") do
+      Trace.create!(endpoint: "GET /stocks/AAPL/chartdata", duration: 50.0, status: 200, created_at: Time.utc(2026, 9, 30, 12, 0))
+      Trace.create!(endpoint: "GET /stocks/AAPL/chartdata", duration: 50.0, status: 200, source: "load", created_at: Time.utc(2026, 9, 30, 12, 0))
+      Trace.create!(endpoint: "GET /stocks/AAPL/marketdata", duration: 50.0, status: 200, created_at: Time.utc(2026, 9, 30, 12, 0))
+
+      expect(scatter('endpoint: "GET /stocks/symbol/chartdata", range: "1h"').sum { |point| point["count"] }).to(eq(1))
+    end
+
+    it("narrows to one status when asked") do
+      Trace.create!(endpoint: "GET /users", duration: 50.0, status: 200, created_at: Time.utc(2026, 9, 30, 12, 0))
+      Trace.create!(endpoint: "GET /users", duration: 900.0, status: 503, created_at: Time.utc(2026, 9, 30, 12, 1))
+
+      expect(scatter('endpoint: "GET /users", range: "1h", status: 503').map { |point| point["status"] }).to(eq([503]))
+    end
+  end
+
+  describe("trace") do
+    it("returns one trace by id, or nothing for an unknown one") do
+      trace = Trace.create!(endpoint: "GET /users", duration: 12.0, status: 200)
+
+      expect(SteakAndEggsSchema.execute("{ trace(id: #{trace.id}) { endpoint duration } }").to_h.dig("data", "trace")).to(eq("endpoint" => "GET /users", "duration" => 12.0))
+      expect(SteakAndEggsSchema.execute("{ trace(id: #{trace.id + 1}) { endpoint } }").to_h.dig("data", "trace")).to(be_nil)
+    end
   end
 
   describe("ingester_resources") do

@@ -3,6 +3,8 @@ class Trace < ApplicationRecord
   SLO_TARGET = 0.995
   SLO_PERIOD = 30.days
   POLYGON_LOOKBACK = 1.day
+  SCATTER_COLUMNS = 600
+  SCATTER_ROWS_PER_DECADE = 25
 
   RANGES = {
     '10m' => {seconds_per_bucket: 300,   buckets: 2},
@@ -207,9 +209,12 @@ class Trace < ApplicationRecord
     where(run_id: run_id).order(created_at: :asc)
   end
 
-  def self.service_timeseries(range:)
+  def self.service_timeseries(range:, endpoint: nil, include_partial: false)
     window = overview_window(range)
     step = window[:step]
+    buckets = window[:buckets] + (include_partial ? 1 : 0)
+    finish = window[:start] + (buckets * step)
+    route = endpoint && normalize_endpoint(endpoint)
 
     sql = <<~SQL
       SELECT floor(extract(epoch FROM created_at) / ?) * ?          AS bucket,
@@ -221,25 +226,58 @@ class Trace < ApplicationRecord
       FROM traces
       WHERE source IN ('user', 'canary')
         AND endpoint <> 'POST /graphql'
+        AND (?::text IS NULL OR endpoint ILIKE ?)
         AND created_at >= ?
         AND created_at < ?
       GROUP BY bucket
     SQL
 
-    rows = connection.select_all(sanitize_sql_array([sql, step, step, window[:start], window[:finish]]))
+    rows = connection.select_all(sanitize_sql_array([sql, step, step, route, route, window[:start], finish]))
     by_bucket = rows.index_by { |row| row['bucket'].to_i }
 
-    window[:buckets].times.map do |index|
+    buckets.times.map do |index|
       bucket = window[:start] + (index * step)
       row = by_bucket[bucket.to_i] || {}
 
       { bucket:     bucket,
         bucket_end: bucket + step,
+        partial:    index == window[:buckets],
         requests:   row['requests'].to_i,
         errors:     row['errors'].to_i,
         p50:        row['p50']&.to_f,
         p95:        row['p95']&.to_f,
         p99:        row['p99']&.to_f }
+    end
+  end
+
+  def self.scatter(endpoint:, range: nil, status: nil)
+    route = normalize_endpoint(endpoint)
+    start = window_start(range)
+    column = [(Time.current - start) / SCATTER_COLUMNS, 1].max
+
+    sql = <<~SQL
+      SELECT (array_agg(id ORDER BY duration DESC))[1]         AS id,
+             (array_agg(created_at ORDER BY duration DESC))[1] AS at,
+             (array_agg(status ORDER BY duration DESC))[1]     AS status,
+             MAX(duration)                                     AS duration,
+             COUNT(*)                                          AS count
+      FROM traces
+      WHERE source IN ('user', 'canary')
+        AND endpoint ILIKE ?
+        AND created_at >= ?
+        AND (?::int IS NULL OR status = ?)
+      GROUP BY floor(extract(epoch FROM created_at) / ?),
+               floor(log(greatest(duration, 1)) * ?),
+               status >= 500
+      ORDER BY at
+    SQL
+
+    connection.select_all(sanitize_sql_array([sql, route, start, status, status, column, SCATTER_ROWS_PER_DECADE])).map do |row|
+      { id:       row['id'],
+        at:       row['at'],
+        status:   row['status'],
+        duration: row['duration'].to_f,
+        count:    row['count'].to_i }
     end
   end
 
