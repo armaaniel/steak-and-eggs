@@ -6,6 +6,7 @@ namespace :tickers do
   task sync: :environment do
     fetched = %w[CS ETF ETV ADRC UNIT FUND].flat_map { |type| fetch_polygon_tickers(type) }.uniq { |t| t[:symbol] }
     symbols = fetched.map { |t| t[:symbol] }
+    complete, incomplete = fetched.partition { |t| t.values.all?(&:present?) }
 
     listed = Ticker.where(delisted_at: nil)
     missing = listed.where.not(symbol: symbols).pluck(:symbol).sort
@@ -13,15 +14,16 @@ namespace :tickers do
 
     puts "Polygon lists #{fetched.size} active tickers; #{missing.size} of #{listed.count} listed here are gone, #{returning} come back"
     puts "Gone: #{missing.join(', ')}" if missing.any?
+    puts "Skipping #{incomplete.size} with missing fields: #{incomplete.map { |t| t[:symbol] }.join(', ')}" if incomplete.any?
     next puts("Dry run, nothing written") if ENV["DRY_RUN"].present?
 
     ActiveRecord::Base.transaction do
-      Ticker.upsert_all(fetched.map { |t| t.merge(delisted_at: nil) }, unique_by: :symbol)
+      Ticker.upsert_all(complete.map { |t| t.merge(delisted_at: nil) }, unique_by: :symbol)
       Ticker.where(symbol: missing).update_all(delisted_at: Time.current)
     end
 
     cleared = RedisService.safe_delete_matching("search:*")
-    puts "Upserted #{fetched.size}, marked #{missing.size} delisted, cleared #{cleared || 0} cached searches"
+    puts "Upserted #{complete.size}, marked #{missing.size} delisted, cleared #{cleared || 0} cached searches"
   end
 end
 
