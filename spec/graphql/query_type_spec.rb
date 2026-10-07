@@ -640,6 +640,38 @@ RSpec.describe(Types::QueryType) do
     end
   end
 
+  describe("synthetic_buckets") do
+    include ActiveSupport::Testing::TimeHelpers
+
+    before { travel_to(Time.utc(2026, 9, 30, 12, 7, 30)) }
+    after { travel_back }
+
+    def buckets
+      SteakAndEggsSchema.execute('{ syntheticBuckets(range: "24h") { bucket started completed failures expected } }').to_h.dig("data", "syntheticBuckets")
+    end
+
+    it("appends the bucket still in progress after the finished ones, which each expect a full bucket of runs") do
+      result = buckets
+
+      expect(result.length).to(eq(25))
+      expect(result.last["bucket"]).to(eq("2026-09-30T12:00:00Z"))
+      expect(result[0...-1].map { |b| b["expected"] }.uniq).to(eq([12]))
+    end
+
+    it("only expects runs whose five minute slot has already passed in the bucket still in progress") do
+      expect(buckets.last["expected"]).to(eq(1))
+    end
+
+    it("counts each canary run once, and whether it passed or failed") do
+      run = SecureRandom.uuid
+      Trace.create!(endpoint: "GET /users", duration: 10.0, status: 200, source: "canary", run_id: run, created_at: Time.utc(2026, 9, 30, 12, 1))
+      Trace.create!(endpoint: "GET /health", duration: 10.0, status: 200, source: "canary", run_id: run, result: "pass", created_at: Time.utc(2026, 9, 30, 12, 1, 5))
+      Trace.create!(endpoint: "GET /users", duration: 10.0, status: 503, source: "canary", run_id: SecureRandom.uuid, result: "fail", created_at: Time.utc(2026, 9, 30, 12, 6))
+
+      expect(buckets.last).to(include("started" => 2, "completed" => 1, "failures" => 1))
+    end
+  end
+
   describe("service_timeseries") do
     let(:query) do
       <<~GQL

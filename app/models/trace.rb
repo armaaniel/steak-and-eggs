@@ -153,23 +153,25 @@ class Trace < ApplicationRecord
       ORDER BY bucket
     SQL
     
-    current_bucket = Time.at((Time.now.to_i / seconds_per_bucket) * seconds_per_bucket).utc
+    now = Time.now
+    current_bucket = Time.at((now.to_i / seconds_per_bucket) * seconds_per_bucket).utc
     cutoff  = current_bucket - (seconds_per_bucket * buckets)
     
     rows = connection.execute(sanitize_sql_array([sql, seconds_per_bucket, seconds_per_bucket, cutoff]))
     
     by_bucket = rows.index_by { |row| row ['bucket'].to_i }
     
-    buckets.downto(1).map do |buckets_back|
+    buckets.downto(0).map do |buckets_back|
       bucket     = current_bucket - (buckets_back * seconds_per_bucket)
       bucket_end = bucket + seconds_per_bucket
+      elapsed    = [bucket_end, now].min - bucket
       row        = by_bucket[bucket.to_i] || {}
       { bucket:     bucket,
         bucket_end: bucket_end,
         started:    row['started'].to_i,
         completed:  row['completed'].to_i,
         failures:   row['failures'].to_i,
-        expected:   seconds_per_bucket / PROBE_INTERVAL }
+        expected:   (elapsed / PROBE_INTERVAL).floor }
     end
   end
 
