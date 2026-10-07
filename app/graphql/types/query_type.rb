@@ -43,13 +43,6 @@ module Types
       description('fetch a route\'s traces split by cache hit')
     end
 
-    field(:recent_traces, [Types::TraceType]) do
-      argument(:range, String, required: false)
-      argument(:bucket, GraphQL::Types::ISO8601DateTime, required: false)
-      argument(:bucket_end, GraphQL::Types::ISO8601DateTime, required: false)
-      description('the latest 1000 user and canary traces, inside the bucket when one is given, otherwise over the range')
-    end
-
     field(:connections, [Types::ConnectionsType], null:false) do
       description('fetch active connections')
     end
@@ -192,10 +185,6 @@ module Types
 
     def trace_stats(endpoint:, range: nil)
       Trace.stats(endpoint: endpoint, range: range)
-    end
-
-    def recent_traces(range: nil, bucket: nil, bucket_end: nil)
-      Trace.list(range: range, bucket: bucket, bucket_end: bucket_end)
     end
 
     def trace_summary(range: nil)
