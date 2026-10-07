@@ -204,7 +204,7 @@ class Trace < ApplicationRecord
     where(run_id: run_id).order(created_at: :asc)
   end
 
-  def self.service_timeseries(range:, endpoint: nil, include_partial: false)
+  def self.service_timeseries(range:, endpoint: nil, include_partial: false, status: nil, cache: nil)
     window = overview_window(range)
     step = window[:step]
     buckets = window[:buckets] + (include_partial ? 1 : 0)
@@ -222,12 +222,14 @@ class Trace < ApplicationRecord
       WHERE source IN ('user', 'canary')
         AND endpoint <> 'POST /graphql'
         AND (?::text IS NULL OR endpoint ILIKE ?)
+        AND (?::int IS NULL OR status = ?)
+        AND (#{cache_condition(cache)})
         AND created_at >= ?
         AND created_at < ?
       GROUP BY bucket
     SQL
 
-    rows = connection.select_all(sanitize_sql_array([sql, step, step, route, route, window[:start], finish]))
+    rows = connection.select_all(sanitize_sql_array([sql, step, step, route, route, status, status, window[:start], finish]))
     by_bucket = rows.index_by { |row| row['bucket'].to_i }
 
     buckets.times.map do |index|

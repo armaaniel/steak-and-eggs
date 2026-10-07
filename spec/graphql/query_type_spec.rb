@@ -695,6 +695,27 @@ RSpec.describe(Types::QueryType) do
       expect(last["p99"]).to(eq(30.0))
     end
 
+    it("only counts requests with the status when one is given") do
+      Trace.create!(endpoint: "GET /users", duration: 10.0, status: 200, created_at: Time.utc(2026, 9, 30, 12, 2))
+      Trace.create!(endpoint: "GET /users", duration: 30.0, status: 500, created_at: Time.utc(2026, 9, 30, 12, 4))
+
+      last = SteakAndEggsSchema.execute('{ serviceTimeseries(range: "1h", status: 500) { requests errors } }').to_h.dig("data", "serviceTimeseries").last
+
+      expect(last).to(eq({ "requests" => 1, "errors" => 1 }))
+    end
+
+    it("only counts cached or uncached requests when cache is given") do
+      Trace.create!(endpoint: "GET /users", duration: 10.0, status: 200, created_at: Time.utc(2026, 9, 30, 12, 2), breakdown: { "Ticker.search" => { "used_redis" => true } })
+      Trace.create!(endpoint: "GET /users", duration: 30.0, status: 200, created_at: Time.utc(2026, 9, 30, 12, 3), breakdown: { "Ticker.search" => { "used_db" => true } })
+      Trace.create!(endpoint: "GET /users", duration: 50.0, status: 401, created_at: Time.utc(2026, 9, 30, 12, 4), breakdown: {})
+
+      cached = SteakAndEggsSchema.execute('{ serviceTimeseries(range: "1h", cache: CACHED) { requests p50 } }').to_h.dig("data", "serviceTimeseries").last
+      uncached = SteakAndEggsSchema.execute('{ serviceTimeseries(range: "1h", cache: UNCACHED) { requests p50 } }').to_h.dig("data", "serviceTimeseries").last
+
+      expect(cached).to(eq({ "requests" => 1, "p50" => 10.0 }))
+      expect(uncached).to(eq({ "requests" => 1, "p50" => 30.0 }))
+    end
+
     it("leaves out the bucket still in progress so it never reads as a drop") do
       Trace.create!(endpoint: "GET /users", duration: 10.0, status: 200, created_at: Time.utc(2026, 9, 30, 12, 6))
 

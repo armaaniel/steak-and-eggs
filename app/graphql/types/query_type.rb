@@ -11,6 +11,8 @@ module Types
       argument(:range, String, required: false, default_value: '24h')
       argument(:endpoint, String, required: false)
       argument(:include_partial, Boolean, required: false, default_value: false)
+      argument(:status, Integer, required: false)
+      argument(:cache, Types::TraceCacheFilterType, required: false)
       description('requests, errors and latency percentiles per bucket, without DataCat or load test traffic, for one route when an endpoint is given, with the bucket still in progress appended when asked for')
     end
 
@@ -183,8 +185,8 @@ module Types
       Trace.summary(range: range)
     end
 
-    def service_timeseries(range: '24h', endpoint: nil, include_partial: false)
-      Trace.service_timeseries(range: range, endpoint: endpoint, include_partial: include_partial)
+    def service_timeseries(range: '24h', endpoint: nil, include_partial: false, status: nil, cache: nil)
+      Trace.service_timeseries(range: range, endpoint: endpoint, include_partial: include_partial, status: status, cache: cache)
     end
 
     def trace_scatter(endpoint:, range: nil, status: nil, cache: nil)
