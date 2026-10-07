@@ -29,7 +29,9 @@ module Types
     field(:trace_list, [Types::TraceType]) do
       argument(:endpoint, String)
       argument(:range, String, required: false)
-      description('fetch trace list by route')
+      argument(:bucket, GraphQL::Types::ISO8601DateTime, required: false)
+      argument(:bucket_end, GraphQL::Types::ISO8601DateTime, required: false)
+      description('the latest 1000 traces for a route, inside the bucket when one is given, otherwise over the range')
     end
 
     field(:cache_split, Types::CacheSplitType) do
@@ -181,8 +183,8 @@ module Types
       Trace.cache_split(endpoint: endpoint, range: range)
     end
 
-    def trace_list(endpoint:, range: nil)
-      Trace.list(endpoint: endpoint, range: range)
+    def trace_list(endpoint:, range: nil, bucket: nil, bucket_end: nil)
+      Trace.list(endpoint: endpoint, range: range, bucket: bucket, bucket_end: bucket_end)
     end
 
     def trace_stats(endpoint:, range: nil)

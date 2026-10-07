@@ -207,6 +207,23 @@ RSpec.describe(Types::QueryType) do
 
       expect(traces).to(eq([]))
     end
+
+    it("only returns traces inside the bucket when one is given, ignoring the range") do
+      Trace.create!(endpoint: "GET /users", duration: 100.0, status: 200, created_at: Time.utc(2026, 9, 30, 10, 59, 59))
+      Trace.create!(endpoint: "GET /users", duration: 200.0, status: 200, created_at: Time.utc(2026, 9, 30, 11, 0))
+      Trace.create!(endpoint: "GET /users", duration: 300.0, status: 200, created_at: Time.utc(2026, 9, 30, 11, 59, 59))
+      Trace.create!(endpoint: "GET /users", duration: 400.0, status: 200, created_at: Time.utc(2026, 9, 30, 12, 0))
+
+      result = SteakAndEggsSchema.execute('{ traceList(endpoint: "GET /users", range: "1h", bucket: "2026-09-30T11:00:00Z", bucketEnd: "2026-09-30T12:00:00Z") { duration } }').to_h
+
+      expect(result.dig("data", "traceList").map { |t| t["duration"] }).to(eq([300.0, 200.0]))
+    end
+
+    it("limits results to 1000") do
+      1001.times { Trace.create!(endpoint: "GET /users", duration: 10.0, status: 200) }
+
+      expect(execute_query(endpoint: "GET /users").dig("data", "traceList").length).to(eq(1000))
+    end
   end
 
   describe("cache_split") do

@@ -73,13 +73,15 @@ class Trace < ApplicationRecord
     end
   end
 
-  def self.list(endpoint:, range: nil)
+  def self.list(endpoint:, range: nil, bucket: nil, bucket_end: nil)
     route = normalize_endpoint(endpoint)
+    window = bucket && bucket_end ? (bucket...bucket_end) : (window_start(range)..)
 
     where("endpoint ILIKE ?", route)
       .where(source: %w[user canary])
-      .where(created_at: window_start(range)..)
+      .where(created_at: window)
       .order(created_at: :desc)
+      .limit(1000)
   end
 
   def self.cache_split(endpoint:, range: nil)
