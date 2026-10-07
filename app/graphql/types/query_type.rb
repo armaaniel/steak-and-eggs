@@ -27,11 +27,14 @@ module Types
     end
 
     field(:trace_list, [Types::TraceType]) do
-      argument(:endpoint, String)
+      argument(:endpoint, String, required: false)
       argument(:range, String, required: false)
       argument(:bucket, GraphQL::Types::ISO8601DateTime, required: false)
       argument(:bucket_end, GraphQL::Types::ISO8601DateTime, required: false)
-      description('the latest 1000 traces for a route, inside the bucket when one is given, otherwise over the range')
+      argument(:status, Integer, required: false)
+      argument(:sort, Types::TraceSortType, required: false)
+      argument(:direction, Types::SortDirectionType, required: false)
+      description('the first 1000 user and canary traces in the given order (newest first by default), for one route or every route but POST /graphql, inside the bucket when one is given, otherwise over the range')
     end
 
     field(:cache_split, Types::CacheSplitType) do
@@ -183,8 +186,8 @@ module Types
       Trace.cache_split(endpoint: endpoint, range: range)
     end
 
-    def trace_list(endpoint:, range: nil, bucket: nil, bucket_end: nil)
-      Trace.list(endpoint: endpoint, range: range, bucket: bucket, bucket_end: bucket_end)
+    def trace_list(endpoint: nil, range: nil, bucket: nil, bucket_end: nil, status: nil, sort: nil, direction: nil)
+      Trace.list(endpoint: endpoint, range: range, bucket: bucket, bucket_end: bucket_end, status: status, sort: sort, direction: direction)
     end
 
     def trace_stats(endpoint:, range: nil)
@@ -192,7 +195,7 @@ module Types
     end
 
     def recent_traces(range: nil, bucket: nil, bucket_end: nil)
-      Trace.recent(range: range, bucket: bucket, bucket_end: bucket_end)
+      Trace.list(range: range, bucket: bucket, bucket_end: bucket_end)
     end
 
     def trace_summary(range: nil)

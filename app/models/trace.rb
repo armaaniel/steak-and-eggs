@@ -16,6 +16,8 @@ class Trace < ApplicationRecord
     '30d' => {seconds_per_bucket: 86400, buckets: 30}   # 30 × 1 day
   }
 
+  TRACE_SORT_COLUMNS = %w[created_at duration status].freeze
+
   ROUTE_PATTERNS = {
     'GET /stocks/symbol/marketdata'  => 'GET /stocks/%/marketdata',
     'GET /stocks/symbol/companydata' => 'GET /stocks/%/companydata',
@@ -73,14 +75,20 @@ class Trace < ApplicationRecord
     end
   end
 
-  def self.list(endpoint:, range: nil, bucket: nil, bucket_end: nil)
-    route = normalize_endpoint(endpoint)
-    window = bucket && bucket_end ? (bucket...bucket_end) : (window_start(range)..)
+  def self.list(endpoint: nil, range: nil, bucket: nil, bucket_end: nil, status: nil, sort: nil, direction: nil)
+    sort ||= 'created_at'
+    direction ||= 'desc'
+    raise(ArgumentError, "can't sort traces by #{sort}") unless TRACE_SORT_COLUMNS.include?(sort)
+    raise(ArgumentError, "can't sort traces #{direction}") unless %w[asc desc].include?(direction)
 
-    where("endpoint ILIKE ?", route)
-      .where(source: %w[user canary])
+    window = bucket && bucket_end ? (bucket...bucket_end) : (window_start(range)..)
+    traces = endpoint ? where("endpoint ILIKE ?", normalize_endpoint(endpoint)) : where.not(endpoint: 'POST /graphql')
+    traces = traces.where(status: status) if status
+    column = direction == 'asc' ? arel_table[sort].asc.nulls_last : arel_table[sort].desc.nulls_last
+
+    traces.where(source: %w[user canary])
       .where(created_at: window)
-      .order(created_at: :desc)
+      .order(column, id: direction)
       .limit(1000)
   end
 
@@ -129,16 +137,6 @@ class Trace < ApplicationRecord
       error_rate: total.zero? ? 0.0 : (errors / total * 100).round(2),
       used_redis: result['used_redis'] || false,
       used_api: result['used_api'] || false}
-  end
-
-  def self.recent(range: nil, bucket: nil, bucket_end: nil)
-    window = bucket && bucket_end ? (bucket...bucket_end) : (window_start(range)..)
-
-    where.not(endpoint: 'POST /graphql')
-      .where(source: %w[user canary])
-      .where(created_at: window)
-      .order(created_at: :desc)
-      .limit(1000)
   end
 
   def self.synthetic_buckets(range:)

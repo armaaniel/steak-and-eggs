@@ -224,6 +224,62 @@ RSpec.describe(Types::QueryType) do
 
       expect(execute_query(endpoint: "GET /users").dig("data", "traceList").length).to(eq(1000))
     end
+
+    it("returns every route but POST /graphql when no endpoint is given") do
+      Trace.create!(endpoint: "GET /users", duration: 10.0, status: 200)
+      Trace.create!(endpoint: "GET /health", duration: 20.0, status: 200)
+      Trace.create!(endpoint: "POST /graphql", duration: 30.0, status: 200)
+
+      result = SteakAndEggsSchema.execute('{ traceList { endpoint } }').to_h
+
+      expect(result.dig("data", "traceList").map { |t| t["endpoint"] }).to(contain_exactly("GET /users", "GET /health"))
+    end
+
+    it("only returns traces with the status when one is given") do
+      Trace.create!(endpoint: "GET /users", duration: 10.0, status: 200)
+      Trace.create!(endpoint: "GET /users", duration: 20.0, status: 500)
+
+      result = SteakAndEggsSchema.execute('{ traceList(endpoint: "GET /users", status: 500) { duration } }').to_h
+
+      expect(result.dig("data", "traceList").map { |t| t["duration"] }).to(eq([20.0]))
+    end
+
+    it("sorts by duration in either direction") do
+      Trace.create!(endpoint: "GET /users", duration: 20.0, status: 200)
+      Trace.create!(endpoint: "GET /users", duration: 30.0, status: 200)
+      Trace.create!(endpoint: "GET /users", duration: 10.0, status: 200)
+
+      slowest = SteakAndEggsSchema.execute('{ traceList(endpoint: "GET /users", sort: DURATION, direction: DESC) { duration } }').to_h
+      fastest = SteakAndEggsSchema.execute('{ traceList(endpoint: "GET /users", sort: DURATION, direction: ASC) { duration } }').to_h
+
+      expect(slowest.dig("data", "traceList").map { |t| t["duration"] }).to(eq([30.0, 20.0, 10.0]))
+      expect(fastest.dig("data", "traceList").map { |t| t["duration"] }).to(eq([10.0, 20.0, 30.0]))
+    end
+
+    it("returns the oldest first when sorted by created_at ascending") do
+      newest = Trace.create!(endpoint: "GET /users", duration: 10.0, status: 200, created_at: 1.hour.ago)
+      oldest = Trace.create!(endpoint: "GET /users", duration: 10.0, status: 200, created_at: 2.days.ago)
+
+      result = SteakAndEggsSchema.execute('{ traceList(endpoint: "GET /users", sort: CREATED_AT, direction: ASC) { id } }').to_h
+
+      expect(result.dig("data", "traceList").map { |t| t["id"].to_i }).to(eq([oldest.id, newest.id]))
+    end
+
+    it("sorts before it limits, so the slowest trace is found even when 1000 newer ones exist") do
+      slowest = Trace.create!(endpoint: "GET /users", duration: 900.0, status: 200, created_at: 2.days.ago)
+      now = Time.current
+      Trace.insert_all(Array.new(1000) { { endpoint: "GET /users", duration: 10.0, status: 200, source: "user", created_at: now, updated_at: now } })
+
+      result = SteakAndEggsSchema.execute('{ traceList(endpoint: "GET /users", sort: DURATION, direction: DESC) { id } }').to_h
+
+      expect(result.dig("data", "traceList").first["id"].to_i).to(eq(slowest.id))
+    end
+
+    it("rejects a sort column it doesn't know") do
+      result = SteakAndEggsSchema.execute('{ traceList(endpoint: "GET /users", sort: ENDPOINT) { id } }').to_h
+
+      expect(result["errors"]).to(be_present)
+    end
   end
 
   describe("cache_split") do
