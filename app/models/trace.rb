@@ -102,21 +102,6 @@ class Trace < ApplicationRecord
       .limit(1000)
   end
 
-  def self.cache_split(endpoint:, range: nil)
-    route = normalize_endpoint(endpoint)
-
-    query = where("endpoint ILIKE ?", route)
-    .where.not("breakdown::text = ? OR breakdown IS NULL", '{}')
-    .where(source: %w[user canary])
-    .where(created_at: window_start(range)..)
-    .order(created_at: :desc)
-
-    {
-      cached: query.where(cache_condition('cached')),
-      uncached: query.where(cache_condition('uncached'))
-    }
-  end
-
   def self.stats(endpoint:, range: nil)
     route = normalize_endpoint(endpoint)
 

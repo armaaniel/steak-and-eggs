@@ -39,12 +39,6 @@ module Types
       description('the first 1000 user and canary traces in the given order (newest first by default), for one route or every route but POST /graphql, inside the bucket when one is given, otherwise over the range')
     end
 
-    field(:cache_split, Types::CacheSplitType) do
-      argument(:endpoint, String)
-      argument(:range, String, required: false)
-      description('fetch a route\'s traces split by cache hit')
-    end
-
     field(:connections, [Types::ConnectionsType], null:false) do
       description('fetch active connections')
     end
@@ -175,10 +169,6 @@ module Types
           end
         }
       end
-    end
-
-    def cache_split(endpoint:, range: nil)
-      Trace.cache_split(endpoint: endpoint, range: range)
     end
 
     def trace_list(endpoint: nil, range: nil, bucket: nil, bucket_end: nil, status: nil, cache: nil, sort: nil, direction: nil)

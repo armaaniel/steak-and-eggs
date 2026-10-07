@@ -290,6 +290,7 @@ RSpec.describe(Types::QueryType) do
       Trace.create!(endpoint: "GET /users", duration: 20.0, status: 200, breakdown: { "Ticker.search" => { "used_redis" => false, "used_db" => true, "duration" => 2.0 } })
       Trace.create!(endpoint: "GET /users", duration: 30.0, status: 200, breakdown: { "MarketService.marketdata" => { "used_api" => true, "duration" => 3.0 } })
       Trace.create!(endpoint: "GET /users", duration: 40.0, status: 401, breakdown: {})
+      Trace.create!(endpoint: "GET /users", duration: 50.0, status: 200, breakdown: nil)
 
       cached = SteakAndEggsSchema.execute('{ traceList(endpoint: "GET /users", cache: CACHED) { duration } }').to_h
       uncached = SteakAndEggsSchema.execute('{ traceList(endpoint: "GET /users", cache: UNCACHED) { duration } }').to_h
@@ -302,90 +303,6 @@ RSpec.describe(Types::QueryType) do
       result = SteakAndEggsSchema.execute('{ traceList(endpoint: "GET /users", sort: ENDPOINT) { id } }').to_h
 
       expect(result["errors"]).to(be_present)
-    end
-  end
-
-  describe("cache_split") do
-    let(:query) do
-      <<~GQL
-        query($endpoint: String!) {
-          cacheSplit(endpoint: $endpoint) {
-            cached {
-              id
-              endpoint
-              breakdown
-            }
-            uncached {
-              id
-              endpoint
-              breakdown
-            }
-          }
-        }
-      GQL
-    end
-
-    def execute_query(endpoint:)
-      SteakAndEggsSchema.execute(query, variables: { endpoint: endpoint }).to_h
-    end
-
-    it("only splits traces inside the range when one is given") do
-      Trace.create!(endpoint: "GET /users", duration: 50.0, status: 200, breakdown: { "Ticker.query" => { "used_redis" => true } }, created_at: 3.hours.ago)
-      Trace.create!(endpoint: "GET /users", duration: 60.0, status: 200, breakdown: { "Ticker.query" => { "used_redis" => true } })
-
-      result = SteakAndEggsSchema.execute('{ cacheSplit(endpoint: "GET /users", range: "1h") { cached { duration } } }').to_h
-
-      expect(result.dig("data", "cacheSplit", "cached").map { |t| t["duration"] }).to(eq([60.0]))
-    end
-
-    it("returns cache hits in cached") do
-      Trace.create!(endpoint: "GET /users", duration: 50.0, status: 200,
-        breakdown: { used_redis: true })
-      Trace.create!(endpoint: "GET /users", duration: 60.0, status: 200,
-        breakdown: { used_redis: false, used_db: true })
-
-      result = execute_query(endpoint: "GET /users")
-      redis = result.dig("data", "cacheSplit", "cached")
-
-      expect(redis.length).to(eq(1))
-    end
-
-    it("returns cache misses in uncached") do
-      Trace.create!(endpoint: "GET /users", duration: 50.0, status: 200,
-        breakdown: { used_db: true })
-      Trace.create!(endpoint: "GET /users", duration: 60.0, status: 200,
-        breakdown: { used_api: true })
-      Trace.create!(endpoint: "GET /users", duration: 70.0, status: 200,
-        breakdown: { used_redis: true })
-
-      result = execute_query(endpoint: "GET /users")
-      db_api = result.dig("data", "cacheSplit", "uncached")
-
-      expect(db_api.length).to(eq(2))
-    end
-
-    it("excludes traces with empty or null breakdown") do
-      Trace.create!(endpoint: "GET /users", duration: 50.0, status: 200, breakdown: {})
-      Trace.create!(endpoint: "GET /users", duration: 60.0, status: 200, breakdown: nil)
-      Trace.create!(endpoint: "GET /users", duration: 70.0, status: 200,
-        breakdown: { used_redis: true })
-
-      result = execute_query(endpoint: "GET /users")
-      redis = result.dig("data", "cacheSplit", "cached")
-      db_api = result.dig("data", "cacheSplit", "uncached")
-
-      expect(redis.length).to(eq(1))
-      expect(db_api).to(eq([]))
-    end
-
-    it("normalizes parameterized endpoints") do
-      Trace.create!(endpoint: "GET /stocks/TSLA/marketdata", duration: 30.0, status: 200,
-        breakdown: { used_redis: true })
-
-      result = execute_query(endpoint: "GET /stocks/symbol/marketdata")
-      redis = result.dig("data", "cacheSplit", "cached")
-
-      expect(redis.length).to(eq(1))
     end
   end
 
