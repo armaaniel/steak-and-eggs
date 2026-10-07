@@ -18,6 +18,7 @@ module Types
       argument(:endpoint, String)
       argument(:range, String, required: false)
       argument(:status, Integer, required: false)
+      argument(:cache, Types::TraceCacheFilterType, required: false)
       description("one point per occupied cell of a #{Trace::SCATTER_COLUMNS} column, #{Trace::SCATTER_ROWS_PER_DECADE} rows per decade latency grid up to now, errors never sharing a point with successes")
     end
 
@@ -32,6 +33,7 @@ module Types
       argument(:bucket, GraphQL::Types::ISO8601DateTime, required: false)
       argument(:bucket_end, GraphQL::Types::ISO8601DateTime, required: false)
       argument(:status, Integer, required: false)
+      argument(:cache, Types::TraceCacheFilterType, required: false)
       argument(:sort, Types::TraceSortType, required: false)
       argument(:direction, Types::SortDirectionType, required: false)
       description('the first 1000 user and canary traces in the given order (newest first by default), for one route or every route but POST /graphql, inside the bucket when one is given, otherwise over the range')
@@ -179,8 +181,8 @@ module Types
       Trace.cache_split(endpoint: endpoint, range: range)
     end
 
-    def trace_list(endpoint: nil, range: nil, bucket: nil, bucket_end: nil, status: nil, sort: nil, direction: nil)
-      Trace.list(endpoint: endpoint, range: range, bucket: bucket, bucket_end: bucket_end, status: status, sort: sort, direction: direction)
+    def trace_list(endpoint: nil, range: nil, bucket: nil, bucket_end: nil, status: nil, cache: nil, sort: nil, direction: nil)
+      Trace.list(endpoint: endpoint, range: range, bucket: bucket, bucket_end: bucket_end, status: status, cache: cache, sort: sort, direction: direction)
     end
 
     def trace_stats(endpoint:, range: nil)
@@ -195,8 +197,8 @@ module Types
       Trace.service_timeseries(range: range, endpoint: endpoint, include_partial: include_partial)
     end
 
-    def trace_scatter(endpoint:, range: nil, status: nil)
-      Trace.scatter(endpoint: endpoint, range: range, status: status)
+    def trace_scatter(endpoint:, range: nil, status: nil, cache: nil)
+      Trace.scatter(endpoint: endpoint, range: range, status: status, cache: cache)
     end
 
     def trace(id:)

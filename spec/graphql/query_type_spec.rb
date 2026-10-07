@@ -285,6 +285,19 @@ RSpec.describe(Types::QueryType) do
       expect(result.dig("data", "traceList").first["id"].to_i).to(eq(slowest.id))
     end
 
+    it("keeps only cached or only uncached traces when cache is given") do
+      Trace.create!(endpoint: "GET /users", duration: 10.0, status: 200, breakdown: { "Ticker.search" => { "used_redis" => true, "duration" => 1.0 } })
+      Trace.create!(endpoint: "GET /users", duration: 20.0, status: 200, breakdown: { "Ticker.search" => { "used_redis" => false, "used_db" => true, "duration" => 2.0 } })
+      Trace.create!(endpoint: "GET /users", duration: 30.0, status: 200, breakdown: { "MarketService.marketdata" => { "used_api" => true, "duration" => 3.0 } })
+      Trace.create!(endpoint: "GET /users", duration: 40.0, status: 401, breakdown: {})
+
+      cached = SteakAndEggsSchema.execute('{ traceList(endpoint: "GET /users", cache: CACHED) { duration } }').to_h
+      uncached = SteakAndEggsSchema.execute('{ traceList(endpoint: "GET /users", cache: UNCACHED) { duration } }').to_h
+
+      expect(cached.dig("data", "traceList").map { |t| t["duration"] }).to(eq([10.0]))
+      expect(uncached.dig("data", "traceList").map { |t| t["duration"] }).to(contain_exactly(20.0, 30.0))
+    end
+
     it("rejects a sort column it doesn't know") do
       result = SteakAndEggsSchema.execute('{ traceList(endpoint: "GET /users", sort: ENDPOINT) { id } }').to_h
 
@@ -837,6 +850,14 @@ RSpec.describe(Types::QueryType) do
       Trace.create!(endpoint: "GET /users", duration: 50.0, status: 200, created_at: Time.utc(2026, 9, 30, 12, 6))
 
       expect(scatter.map { |point| point["at"] }).to(eq(["2026-09-30T12:06:00Z"]))
+    end
+
+    it("keeps only cached or only uncached requests when cache is given") do
+      Trace.create!(endpoint: "GET /users", duration: 2.0, status: 200, created_at: Time.utc(2026, 9, 30, 12, 0), breakdown: { "Ticker.search" => { "used_redis" => true } })
+      Trace.create!(endpoint: "GET /users", duration: 400.0, status: 200, created_at: Time.utc(2026, 9, 30, 12, 0), breakdown: { "Ticker.search" => { "used_db" => true } })
+
+      expect(scatter('endpoint: "GET /users", range: "1h", cache: CACHED').map { |point| point["duration"] }).to(eq([2.0]))
+      expect(scatter('endpoint: "GET /users", range: "1h", cache: UNCACHED').map { |point| point["duration"] }).to(eq([400.0]))
     end
 
     it("only covers the endpoint's route, from user and canary traffic") do

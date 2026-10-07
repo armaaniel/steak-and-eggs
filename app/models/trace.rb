@@ -18,6 +18,11 @@ class Trace < ApplicationRecord
 
   TRACE_SORT_COLUMNS = %w[created_at duration status].freeze
 
+  CACHE_CONDITIONS = {
+    'cached' => ['breakdown::text LIKE ?', '%"used_redis":true%'],
+    'uncached' => ['breakdown::text LIKE ? OR breakdown::text LIKE ?', '%"used_api":true%', '%"used_db":true%']
+  }.freeze
+
   ROUTE_PATTERNS = {
     'GET /stocks/symbol/marketdata'  => 'GET /stocks/%/marketdata',
     'GET /stocks/symbol/companydata' => 'GET /stocks/%/companydata',
@@ -75,7 +80,11 @@ class Trace < ApplicationRecord
     end
   end
 
-  def self.list(endpoint: nil, range: nil, bucket: nil, bucket_end: nil, status: nil, sort: nil, direction: nil)
+  def self.cache_condition(cache)
+    cache ? sanitize_sql_array(CACHE_CONDITIONS.fetch(cache)) : 'TRUE'
+  end
+
+  def self.list(endpoint: nil, range: nil, bucket: nil, bucket_end: nil, status: nil, cache: nil, sort: nil, direction: nil)
     sort ||= 'created_at'
     direction ||= 'desc'
     raise(ArgumentError, "can't sort traces by #{sort}") unless TRACE_SORT_COLUMNS.include?(sort)
@@ -84,6 +93,7 @@ class Trace < ApplicationRecord
     window = bucket && bucket_end ? (bucket...bucket_end) : (window_start(range)..)
     traces = endpoint ? where("endpoint ILIKE ?", normalize_endpoint(endpoint)) : where.not(endpoint: 'POST /graphql')
     traces = traces.where(status: status) if status
+    traces = traces.where(cache_condition(cache)) if cache
     column = direction == 'asc' ? arel_table[sort].asc.nulls_last : arel_table[sort].desc.nulls_last
 
     traces.where(source: %w[user canary])
@@ -102,8 +112,8 @@ class Trace < ApplicationRecord
     .order(created_at: :desc)
 
     {
-      cached: query.where("breakdown::text LIKE ?", '%"used_redis":true%'),
-      uncached: query.where("breakdown::text LIKE ? OR breakdown::text LIKE ?", '%"used_api":true%', '%"used_db":true%')
+      cached: query.where(cache_condition('cached')),
+      uncached: query.where(cache_condition('uncached'))
     }
   end
 
@@ -250,7 +260,7 @@ class Trace < ApplicationRecord
     end
   end
 
-  def self.scatter(endpoint:, range: nil, status: nil)
+  def self.scatter(endpoint:, range: nil, status: nil, cache: nil)
     route = normalize_endpoint(endpoint)
     start = window_start(range)
     column = [(Time.current - start) / SCATTER_COLUMNS, 1].max
@@ -266,6 +276,7 @@ class Trace < ApplicationRecord
         AND endpoint ILIKE ?
         AND created_at >= ?
         AND (?::int IS NULL OR status = ?)
+        AND (#{cache_condition(cache)})
       GROUP BY floor(extract(epoch FROM created_at) / ?),
                floor(log(greatest(duration, 1)) * ?),
                status >= 500
