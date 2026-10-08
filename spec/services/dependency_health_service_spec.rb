@@ -121,10 +121,16 @@ RSpec.describe(DependencyHealthService) do
         {"ALB_METRIC_ID" => "app/steakneggs-alb/1", "TARGET_GROUP_METRIC_ID" => "targetgroup/steakneggs-tg/2", "RDS_INSTANCE_ID" => "steakneggs-db", "REDIS_NODE_ID" => "steakneggs-redis-001"}
       end
 
-      it "marks the alb down when it has no healthy targets" do
-        stub_series(series("alb_healthy", [1.0, 0.0]))
+      it "marks rails down when the alb has no healthy targets, since the targets are the rails tasks" do
+        stub_series(series("alb_healthy", [1.0, 0.0]), series("rails_cpu", [10.0]))
 
-        expect(health_for("alb")[:status]).to(eq("critical"))
+        expect(health_for("rails")[:status]).to(eq("critical"))
+      end
+
+      it "only degrades the alb when its targets fail, leaving down to rails" do
+        stub_series(series("alb_healthy", [0.0]), series("alb_unhealthy", [1.0]))
+
+        expect(health_for("alb")[:status]).to(eq("warn"))
       end
 
       it "flags any 5xx the alb returned itself" do

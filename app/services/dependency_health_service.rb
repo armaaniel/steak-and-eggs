@@ -48,6 +48,7 @@ class DependencyHealthService
     recent = fetch(specs, **RANGES[STATUS_RANGE])
     history = range == STATUS_RANGE ? recent : fetch(specs, **RANGES[range])
     configured = configured_dependencies
+    healthy_targets = recent.fetch('alb_healthy', EMPTY_SERIES)[:values].last
 
     DEPENDENCIES.map do |dependency|
       own = specs.select { |spec| spec[:dependency] == dependency }
@@ -57,7 +58,7 @@ class DependencyHealthService
 
       status = if !configured.include?(dependency) then 'none'
                elsif heartbeat.nil? || heartbeat < STALE_AFTER.ago then 'critical'
-               else status_for(dependency, latest)
+               else status_for(dependency, latest, healthy_targets)
                end
 
       {id: dependency, configured: configured.include?(dependency), status: status, readings: readings}
@@ -138,14 +139,14 @@ class DependencyHealthService
      points: points}
   end
 
-  def self.status_for(dependency, readings)
+  def self.status_for(dependency, readings, healthy_targets)
     above = ->(key, field, limit) { (value = readings.dig(key, field)) && value > limit }
 
     case dependency
     when 'alb'
-      return 'critical' if readings.dig('healthy', :now)&.zero?
       return 'warn' if above.('unhealthy', :now, 0) || above.('errors', :total, 0)
     when 'rails'
+      return 'critical' if healthy_targets&.zero?
       return 'warn' if above.('memory', :peak, MEMORY_WARN)
     when 'ingester'
       return 'warn' if above.('cpu', :peak, INGESTER_CPU_WARN) || above.('memory', :peak, MEMORY_WARN)
