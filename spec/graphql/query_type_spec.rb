@@ -668,6 +668,17 @@ RSpec.describe(Types::QueryType) do
 
       expect(buckets.last).to(include("started" => 2, "completed" => 1, "failures" => 1))
     end
+
+    it("counts a run that crosses into the next bucket once, in the bucket it started in") do
+      run = SecureRandom.uuid
+      Trace.create!(endpoint: "GET /users", duration: 10.0, status: 200, source: "canary", run_id: run, created_at: Time.utc(2026, 9, 30, 11, 59, 58))
+      Trace.create!(endpoint: "GET /health", duration: 10.0, status: 200, source: "canary", run_id: run, result: "pass", created_at: Time.utc(2026, 9, 30, 12, 0, 2))
+
+      started_hour, current_hour = buckets.last(2)
+
+      expect(started_hour).to(include("bucket" => "2026-09-30T11:00:00Z", "started" => 1, "completed" => 1))
+      expect(current_hour).to(include("started" => 0, "completed" => 0))
+    end
   end
 
   describe("service_timeseries") do

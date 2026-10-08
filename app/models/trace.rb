@@ -141,14 +141,23 @@ class Trace < ApplicationRecord
     buckets = window[:buckets]
     
     sql = <<~SQL
+      WITH runs AS (
+        SELECT run_id,
+               MIN(created_at)                           AS started_at,
+               bool_or(result = 'pass')                  AS passed,
+               bool_or(result = 'fail' OR status >= 500) AS failed
+        FROM traces
+        WHERE source = 'canary'
+          AND run_id IS NOT NULL
+          AND created_at > ?
+        GROUP BY run_id
+      )
       SELECT
-        floor(extract(epoch FROM created_at) / ?) * ? AS bucket,
-        COUNT(DISTINCT run_id)                                                 AS started,
-        COUNT(DISTINCT run_id) FILTER (WHERE result = 'pass')                  AS completed,
-        COUNT(DISTINCT run_id) FILTER (WHERE result = 'fail' OR status >= 500) AS failures
-      FROM traces
-      WHERE source = 'canary'
-        AND created_at > ?
+        floor(extract(epoch FROM started_at) / ?) * ? AS bucket,
+        COUNT(*)                                      AS started,
+        COUNT(*) FILTER (WHERE passed)                AS completed,
+        COUNT(*) FILTER (WHERE failed)                AS failures
+      FROM runs
       GROUP BY bucket
       ORDER BY bucket
     SQL
@@ -157,7 +166,7 @@ class Trace < ApplicationRecord
     current_bucket = Time.at((now.to_i / seconds_per_bucket) * seconds_per_bucket).utc
     cutoff  = current_bucket - (seconds_per_bucket * buckets)
     
-    rows = connection.execute(sanitize_sql_array([sql, seconds_per_bucket, seconds_per_bucket, cutoff]))
+    rows = connection.execute(sanitize_sql_array([sql, cutoff, seconds_per_bucket, seconds_per_bucket]))
     
     by_bucket = rows.index_by { |row| row ['bucket'].to_i }
     
