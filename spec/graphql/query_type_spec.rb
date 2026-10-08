@@ -572,7 +572,7 @@ RSpec.describe(Types::QueryType) do
   end
 
   describe("polygon_calls") do
-    let(:query) { '{ polygonCalls(range: "1h") { calls failures p50 p99 lastSuccessAt } }' }
+    let(:query) { '{ polygonCalls(range: "1h") { calls failures lastSuccessAt } }' }
 
     def execute_query
       SteakAndEggsSchema.execute(query).to_h.dig("data", "polygonCalls")
@@ -585,10 +585,10 @@ RSpec.describe(Types::QueryType) do
     end
 
     it("returns no calls and no last success when nothing called polygon") do
-      expect(execute_query).to(eq({"calls" => 0, "failures" => 0, "p50" => nil, "p99" => nil, "lastSuccessAt" => nil}))
+      expect(execute_query).to(eq({"calls" => 0, "failures" => 0, "lastSuccessAt" => nil}))
     end
 
-    it("counts user and canary calls and failures and times the api span, not the request") do
+    it("counts user and canary calls and failures") do
       polygon_call(duration: 100.0, at: 30.minutes.ago)
       polygon_call(duration: 300.0, at: 20.minutes.ago)
       polygon_call(duration: 2000.0, failed: true, at: 10.minutes.ago, source: "canary")
@@ -597,8 +597,6 @@ RSpec.describe(Types::QueryType) do
 
       expect(calls["calls"]).to(eq(3))
       expect(calls["failures"]).to(eq(1))
-      expect(calls["p50"]).to(eq(300.0))
-      expect(calls["p99"]).to(eq(2000.0))
       expect(Time.zone.parse(calls["lastSuccessAt"])).to(be_within(1.second).of(20.minutes.ago))
     end
 

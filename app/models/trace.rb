@@ -287,8 +287,7 @@ class Trace < ApplicationRecord
     sql = <<~SQL
       WITH calls AS (
         SELECT traces.created_at,
-               traces.created_at >= ?           AS recent,
-               (span.value->>'duration')::float AS duration,
+               traces.created_at >= ? AS recent,
                span.value->>'exception' IS NOT NULL
                  AND span.value->'exception'->>0 <> 'MarketService::NotFoundError' AS failed
         FROM traces
@@ -298,11 +297,9 @@ class Trace < ApplicationRecord
           AND traces.breakdown::text LIKE '%"used_api":true%'
           AND span.value->>'used_api' = 'true'
       )
-      SELECT COUNT(*) FILTER (WHERE recent)                                               AS calls,
-             COUNT(*) FILTER (WHERE recent AND failed)                                    AS failures,
-             percentile_disc(0.50) WITHIN GROUP (ORDER BY duration) FILTER (WHERE recent) AS p50,
-             percentile_disc(0.99) WITHIN GROUP (ORDER BY duration) FILTER (WHERE recent) AS p99,
-             MAX(created_at) FILTER (WHERE NOT failed)                                    AS last_success_at
+      SELECT COUNT(*) FILTER (WHERE recent)            AS calls,
+             COUNT(*) FILTER (WHERE recent AND failed) AS failures,
+             MAX(created_at) FILTER (WHERE NOT failed) AS last_success_at
       FROM calls
     SQL
 
@@ -310,8 +307,6 @@ class Trace < ApplicationRecord
 
     { calls:           row['calls'].to_i,
       failures:        row['failures'].to_i,
-      p50:             row['p50']&.to_f,
-      p99:             row['p99']&.to_f,
       last_success_at: row['last_success_at'] }
   end
 
