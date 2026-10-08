@@ -21,6 +21,11 @@ class MarketService
     '5Y'  => {multiplier: 1,  timespan: 'week',   ttl: 1.hour,     from: -> { Date.current - 5.years }}
   }
 
+  LIVE_DELAY_MS = IngesterSample::BASE_LAG_MS
+  LIVE_WINDOW_MS = 60_000
+  LIVE_TTL = 2.seconds
+  SECOND_MS = 1000
+
   def self.buy(symbol:, quantity:, user_id:)
     stock_string = RedisService.safe_get("price:#{symbol}")
     stock_price = BigDecimal(stock_string || "0")
@@ -220,6 +225,40 @@ class MarketService
       data = points.map { |point| {date: point[:time].strftime(date_format), value: point[:value]} }
 
       RedisService.safe_setex("chart:#{symbol}:#{range}", config[:ttl].to_i, data.to_json)
+      data
+    end
+  end
+
+  def self.livedata(symbol:)
+    payload = {symbol: symbol, used_redis: false, used_api: false}
+
+    ActiveSupport::Notifications.instrument("MarketService.livedata.datacat", payload) do
+      cached = RedisService.safe_get("live:#{symbol}")
+      if cached
+        payload[:used_redis] = true
+        return cached
+      end
+
+      payload[:used_api] = true
+
+      window_end = (Time.current.to_f * 1000).to_i - LIVE_DELAY_MS
+      to = window_end - SECOND_MS
+      from = window_end - LIVE_WINDOW_MS
+      uri=URI("https://api.polygon.io/v2/aggs/ticker/#{symbol}/range/1/second/#{from}/#{to}?adjusted=true&sort=asc&limit=50000&apiKey=#{ENV['API_KEY']}")
+
+      http = Net::HTTP.new(uri.host, uri.port)
+      http.use_ssl = true
+      http.open_timeout = 0.5
+      http.read_timeout = 2.5
+
+      response = http.request(Net::HTTP::Get.new(uri))
+      raise NotFoundError if response.code == '404'
+      raise ApiError unless response.code == '200'
+
+      body=JSON.parse(response.body)
+      data = (body['results'] || []).map { |result| {time: result['t'] + SECOND_MS, value: result['c']} }
+
+      RedisService.safe_setex("live:#{symbol}", LIVE_TTL.to_i, data.to_json)
       data
     end
   end

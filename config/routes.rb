@@ -16,6 +16,7 @@ Rails.application.routes.draw do
   constraints(symbol: /[^\/]+/) do
     get('stocks/:symbol/tickerdata', to: 'stocks#get_ticker_data')
     get('stocks/:symbol/chartdata', to: 'stocks#get_chart_data')
+    get('stocks/:symbol/livedata', to: 'stocks#get_live_data')
     get('stocks/:symbol/userdata', to: 'stocks#get_user_data')
     get('stocks/:symbol/companydata', to: 'stocks#get_company_data')
     get('stocks/:symbol/marketdata', to: 'stocks#get_market_data')

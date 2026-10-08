@@ -440,5 +440,81 @@ RSpec.describe(MarketService) do
       }.to(raise_error(MarketService::ApiError))
     end
   end
-  
+
+  describe("livedata") do
+    include ActiveSupport::Testing::TimeHelpers
+
+    before { travel_to(Time.utc(2026, 10, 7, 19, 30, 0)) }
+
+    let(:now_ms) { Time.utc(2026, 10, 7, 19, 30, 0).to_i * 1000 }
+    let(:window_end_ms) { now_ms - 902_000 }
+
+    let(:api_response_body) do
+      { "results" => [
+        { "t" => window_end_ms - 2000, "o" => 336.70, "c" => 336.75 },
+        { "t" => window_end_ms - 1000, "o" => 336.75, "c" => 336.69 }
+      ] }.to_json
+    end
+
+    def stub_polygon(body, code: "200")
+      response = instance_double(Net::HTTPResponse, code: code, body: body)
+      http = instance_double(Net::HTTP)
+      allow(http).to(receive(:use_ssl=))
+      allow(http).to(receive(:open_timeout=))
+      allow(http).to(receive(:read_timeout=))
+      allow(http).to(receive(:request).and_return(response))
+      allow(Net::HTTP).to(receive(:new).and_return(http))
+    end
+
+    it("returns cached data on cache hit") do
+      cached = [{ time: window_end_ms, value: 336.69 }].to_json
+      allow(RedisService).to(receive(:safe_get).with("live:TSLA").and_return(cached))
+
+      expect(MarketService.livedata(symbol: "TSLA")).to(eq(cached))
+    end
+
+    it("asks for one-second bars over the minute that ended 902 seconds ago") do
+      allow(RedisService).to(receive(:safe_get).with("live:TSLA").and_return(nil))
+      allow(RedisService).to(receive(:safe_setex))
+      allow(Net::HTTP::Get).to(receive(:new).and_call_original)
+      stub_polygon(api_response_body)
+
+      MarketService.livedata(symbol: "TSLA")
+
+      expected_path = "/v2/aggs/ticker/TSLA/range/1/second/#{window_end_ms - 60_000}/#{window_end_ms - 1000}"
+      expect(Net::HTTP::Get).to(have_received(:new).with(satisfy { |uri| uri.path == expected_path }))
+    end
+
+    it("places each bar at the end of its second and caches for two seconds") do
+      allow(RedisService).to(receive(:safe_get).with("live:TSLA").and_return(nil))
+      allow(RedisService).to(receive(:safe_setex))
+      stub_polygon(api_response_body)
+
+      result = MarketService.livedata(symbol: "TSLA")
+
+      expect(result).to(eq([
+        { time: window_end_ms - 1000, value: 336.75 },
+        { time: window_end_ms, value: 336.69 }
+      ]))
+      expect(RedisService).to(have_received(:safe_setex).with("live:TSLA", 2, result.to_json))
+    end
+
+    it("returns an empty series when there were no trades in the minute") do
+      allow(RedisService).to(receive(:safe_get).with("live:TSLA").and_return(nil))
+      allow(RedisService).to(receive(:safe_setex))
+      stub_polygon({ "resultsCount" => 0 }.to_json)
+
+      expect(MarketService.livedata(symbol: "TSLA")).to(eq([]))
+    end
+
+    it("raises ApiError on non-200 response") do
+      allow(RedisService).to(receive(:safe_get).with("live:TSLA").and_return(nil))
+      stub_polygon("", code: "500")
+
+      expect {
+        MarketService.livedata(symbol: "TSLA")
+      }.to(raise_error(MarketService::ApiError))
+    end
+  end
+
 end

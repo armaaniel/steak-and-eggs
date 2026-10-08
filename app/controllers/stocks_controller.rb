@@ -1,6 +1,7 @@
 class StocksController < ApplicationController
   before_action(:verify_token, except: [:get_ticker_data,
     :get_chart_data,
+    :get_live_data,
     :get_company_data,
     :get_market_data,
     :get_stock_price
@@ -64,6 +65,17 @@ class StocksController < ApplicationController
   rescue => e
     Sentry.capture_exception(e)
     render(json:[{date:Date.current, value:0}, {date:Date.current, value:0}], status:503)
+  end
+
+  def get_live_data
+    data = MarketService.livedata(symbol:params[:symbol])
+    render(json:data)
+
+  rescue MarketService::NotFoundError
+    render(json:[], status:404)
+  rescue => e
+    Sentry.capture_exception(e)
+    render(json:[], status:503)
   end
 
   def get_company_data

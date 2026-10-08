@@ -220,6 +220,40 @@ RSpec.describe("Stocks", type: :request) do
     end
   end
 
+  describe "GET /stocks/:symbol/livedata" do
+    it "returns live data from cache without an auth token" do
+      cached = [{ time: 1759865098000, value: 336.69 }].to_json
+      allow(RedisService).to(receive(:safe_get).with("live:TSLA").and_return(cached))
+
+      get "/stocks/TSLA/livedata"
+
+      expect(response).to(have_http_status(200))
+      expect(JSON.parse(response.body)).to(eq([{ "time" => 1759865098000, "value" => 336.69 }]))
+    end
+
+    it "returns an empty series on service error" do
+      allow(RedisService).to(receive(:safe_get).with("live:TSLA").and_return(nil))
+      allow(Net::HTTP).to(receive(:new).and_raise(StandardError))
+      allow(Sentry).to(receive(:capture_exception))
+
+      get "/stocks/TSLA/livedata"
+
+      expect(response).to(have_http_status(503))
+      expect(JSON.parse(response.body)).to(eq([]))
+    end
+
+    it "returns 404 without reporting when polygon does not know the symbol" do
+      allow(RedisService).to(receive(:safe_get).with("live:TSE").and_return(nil))
+      polygon_answers("404")
+      allow(Sentry).to(receive(:capture_exception))
+
+      get "/stocks/TSE/livedata"
+
+      expect(response).to(have_http_status(404))
+      expect(Sentry).not_to(have_received(:capture_exception))
+    end
+  end
+
   describe "GET /stocks/:symbol/companydata" do
     it "returns company data from cache" do
       cached = { market_cap: 800000000000, description: "Electric vehicles" }.to_json
