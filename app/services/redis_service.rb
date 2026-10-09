@@ -6,6 +6,13 @@ class RedisService
     nil
   end
 
+  def self.safe_set(key, value)
+    REDIS.set(key, value)
+  rescue Redis::BaseError => e
+    Sentry.capture_exception(e)
+    nil
+  end
+
   def self.safe_setex(key, time, value)
     REDIS.setex(key, time, value)
   rescue Redis::BaseError => e

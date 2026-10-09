@@ -1,6 +1,11 @@
 class CableSample < ApplicationRecord
+  COMPARE_CACHE_VERSION = 1
 
   def self.compare(run_id:)
+    key = "cable_compare:v#{COMPARE_CACHE_VERSION}:#{run_id}"
+    cached = RedisService.safe_get(key)
+    return JSON.parse(cached) if cached
+
     sql = <<~SQL
       WITH buckets AS (
         SELECT
@@ -37,8 +42,12 @@ class CableSample < ApplicationRecord
     SQL
 
     sanitized = sanitize_sql_array([sql, { run_id: run_id }])
+    rows = connection.exec_query(sanitized, 'CableSample').to_a
 
-    connection.exec_query(sanitized, 'CableSample').to_a
+    finished = rows.any? && rows.last['at'] < 5.minutes.ago
+    RedisService.safe_set(key, rows.to_json) if finished
+
+    rows
   end
 
   def self.runs(limit: 25)

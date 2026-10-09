@@ -1,6 +1,8 @@
 class LoadSample < ApplicationRecord
+  COMPARE_CACHE_VERSION = 1
+
   def self.compare(run_id:, route:, step:)
-    key = "load_compare:#{run_id}:#{route}:#{step}"
+    key = "load_compare:v#{COMPARE_CACHE_VERSION}:#{run_id}:#{route}:#{step}"
     cached = RedisService.safe_get(key)
     return JSON.parse(cached) if cached
 
@@ -40,7 +42,7 @@ class LoadSample < ApplicationRecord
     end
 
     finished = rows.any? && rows.last[:bucket] < 5.minutes.ago
-    RedisService.safe_setex(key, 1.month.to_i, rows.to_json) if finished
+    RedisService.safe_set(key, rows.to_json) if finished
 
     rows
   end
