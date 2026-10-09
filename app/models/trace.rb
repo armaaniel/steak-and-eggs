@@ -297,8 +297,8 @@ class Trace < ApplicationRecord
       WITH calls AS (
         SELECT traces.created_at,
                traces.created_at >= ? AS recent,
-               span.value->>'exception' IS NOT NULL
-                 AND span.value->'exception'->>0 <> 'MarketService::NotFoundError' AS failed
+               span.value->>'error_class' IS NOT NULL
+                 AND span.value->>'error_class' <> 'MarketService::NotFoundError' AS failed
         FROM traces
         CROSS JOIN LATERAL json_each(traces.breakdown) AS span
         WHERE traces.source IN ('user', 'canary')

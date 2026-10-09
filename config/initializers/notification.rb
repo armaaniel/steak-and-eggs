@@ -70,8 +70,10 @@ Rails.application.config.after_initialize do
       })
       
     else
+      span = payload.except(:exception_object, :exception)
+      span[:error_class] = payload[:exception].first if payload[:exception]
       current_request[id] ||= {}
-      current_request[id][name.delete_suffix('.datacat')] = payload.except(:exception_object).merge(duration: duration)
+      current_request[id][name.delete_suffix('.datacat')] = span.merge(duration: duration)
     end
   rescue => e
     Sentry.capture_exception(e)

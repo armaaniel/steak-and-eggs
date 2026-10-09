@@ -580,7 +580,7 @@ RSpec.describe(Types::QueryType) do
 
     def polygon_call(duration:, failed: false, at: 10.minutes.ago, source: "user")
       span = {symbol: "AAPL", used_redis: false, used_api: true, duration: duration}
-      span[:exception] = ["MarketService::ApiError", "MarketService::ApiError"] if failed
+      span[:error_class] = "MarketService::ApiError" if failed
       Trace.create!(endpoint: "GET /stocks/AAPL/marketdata", duration: duration + 5, status: failed ? 500 : 200, source: source, breakdown: {"MarketService.marketdata" => span}, created_at: at)
     end
 
@@ -602,7 +602,7 @@ RSpec.describe(Types::QueryType) do
 
     it("counts a 404 as a call polygon answered, not a failure") do
       Trace.create!(endpoint: "GET /stocks/TSE/companydata", duration: 210.0, status: 404, created_at: 5.minutes.ago,
-        breakdown: {"MarketService.companydata" => {symbol: "TSE", used_redis: false, used_api: true, duration: 200.0, exception: ["MarketService::NotFoundError", "MarketService::NotFoundError"]}})
+        breakdown: {"MarketService.companydata" => {symbol: "TSE", used_redis: false, used_api: true, duration: 200.0, error_class: "MarketService::NotFoundError"}})
 
       calls = execute_query
 
