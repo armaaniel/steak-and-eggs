@@ -7,7 +7,6 @@ module Types
    field(:status, Integer)
    field(:controller, String)
    field(:action, String)
-   field(:source, String)
    field(:breakdown, GraphQL::Types::JSON)
    field(:error_class, String)
    field(:error_location, String)
