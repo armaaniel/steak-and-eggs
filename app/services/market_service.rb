@@ -27,11 +27,11 @@ class MarketService
   SECOND_MS = 1000
 
   def self.buy(symbol:, quantity:, user_id:)
-    stock_string = RedisService.safe_get("price:#{symbol}")
-    stock_price = BigDecimal(stock_string || "0")
-    raise(StandardError) if stock_price <=0
-
     ActiveSupport::Notifications.instrument("MarketService.buy.datacat") do
+      stock_string = RedisService.safe_get("price:#{symbol}")
+      stock_price = BigDecimal(stock_string || "0")
+      raise(StandardError) if stock_price <=0
+
       trade_value = quantity*stock_price
       transaction = nil
 
@@ -67,11 +67,11 @@ class MarketService
       end
 
   def self.sell(symbol:, quantity:, user_id:)
-    stock_string = RedisService.safe_get("price:#{symbol}")
-    stock_price = BigDecimal(stock_string || "0")
-    raise(StandardError, "Unable to fetch Stock Price for #{symbol}") if stock_price <=0
-
     ActiveSupport::Notifications.instrument("MarketService.sell.datacat") do
+      stock_string = RedisService.safe_get("price:#{symbol}")
+      stock_price = BigDecimal(stock_string || "0")
+      raise(StandardError, "Unable to fetch Stock Price for #{symbol}") if stock_price <=0
+
       trade_value = quantity*stock_price
       transaction = nil
 
