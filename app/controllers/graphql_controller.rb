@@ -12,7 +12,7 @@ class GraphqlController < ApplicationController
       render(json: result)
     end
   rescue StandardError => e
-    Sentry.capture_exception(e)
+    report_error(e)
     render(json: { errors: [{ message: "Something went wrong"  }] }, status: 500)
   end
 

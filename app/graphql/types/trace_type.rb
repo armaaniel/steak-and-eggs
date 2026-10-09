@@ -10,6 +10,9 @@ module Types
    field(:action, String)
    field(:source, String)
    field(:breakdown, GraphQL::Types::JSON)
+   field(:error_class, String)
+   field(:error_location, String)
+   field(:sentry_event_id, String)
    field(:created_at, GraphQL::Types::ISO8601DateTime)
    field(:updated_at, GraphQL::Types::ISO8601DateTime)
  end

@@ -64,6 +64,9 @@ Rails.application.config.after_initialize do
         run_id: payload[:run_id],
         result: payload[:result],
         request_id: payload[:request_id],
+        error_class: payload[:error_class] || payload[:exception]&.first,
+        error_location: payload[:error_location],
+        sentry_event_id: payload[:sentry_event_id],
         breakdown: breakdown.presence,
         created_at: now,
         updated_at: now

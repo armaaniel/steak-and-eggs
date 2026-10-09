@@ -13,11 +13,20 @@ class ApplicationController < ActionController::API
     end
 
   rescue => e
-    Sentry.capture_exception(e)
+    report_error(e)
     render(json: {error: 'Authentication failed'}, status: 401)
   end
 
   private
+
+  def record_error(e)
+    @error = e
+  end
+
+  def report_error(e)
+    record_error(e)
+    @sentry_event_id = Sentry.capture_exception(e)&.event_id
+  end
 
   def synthetic?
     key = ENV['SYNTHETIC_KEY']
@@ -28,6 +37,11 @@ class ApplicationController < ActionController::API
   def append_info_to_payload(payload)
     super
     payload[:user_id] = @current_user&.id
+    if @error
+      payload[:error_class] = @error.class.name
+      payload[:error_location] = Rails.backtrace_cleaner.clean(@error.backtrace || []).first
+      payload[:sentry_event_id] = @sentry_event_id
+    end
     if synthetic?
       payload[:source] = request.headers['Synthetic-Source'].presence_in(SYNTHETIC_SOURCES) || 'unknown'
       payload[:run_id] = request.headers['Synthetic-Run-Id'].presence

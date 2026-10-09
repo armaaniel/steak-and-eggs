@@ -8,7 +8,7 @@ class HomeController < ApplicationController
     render(json: results)
 
   rescue => e
-    Sentry.capture_exception(e)
+    report_error(e)
     render(json:[], status:503)
   end
 
@@ -17,7 +17,7 @@ class HomeController < ApplicationController
     render(json: results)
 
   rescue => e
-    Sentry.capture_exception(e)
+    report_error(e)
     render(json:[{date:Date.current, value:0.00}, {date:Date.current, value:0.00}], status:503)
   end
 
@@ -26,7 +26,7 @@ class HomeController < ApplicationController
     render(json: result)
 
   rescue => e
-    Sentry.capture_exception(e)
+    report_error(e)
     render(json:{aum: 'N/A', balance:'N/A'}, status:503)
   end
 
@@ -35,7 +35,7 @@ class HomeController < ApplicationController
     render(json: data)
 
   rescue => e
-    Sentry.capture_exception(e)
+    report_error(e)
     render(json: [], status: 503)
   end
 end

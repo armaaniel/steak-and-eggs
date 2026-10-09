@@ -13,7 +13,7 @@ class UsersController < ApplicationController
     end
 
   rescue => e
-    Sentry.capture_exception(e)
+    report_error(e)
     render(json: {error: 'Something went wrong, please try again' }, status: 503)
   end
 
@@ -26,9 +26,10 @@ class UsersController < ApplicationController
     render(json: {token: token, username: user.username})
 
   rescue ActiveRecord::RecordInvalid => e
+    record_error(e)
     render(json: {error: "Username has been taken, please choose another"}, status: 422)
   rescue => e
-    Sentry.capture_exception(e)
+    report_error(e)
     render(json: {error: "Something went wrong, please try again"}, status: 503)
   end
 
@@ -40,7 +41,7 @@ class UsersController < ApplicationController
     head(:ok)
 
   rescue => e
-    Sentry.capture_exception(e)
+    report_error(e)
     render(json: {error: 'Deposit failed, please try again'}, status: 422)
   end
   
@@ -52,7 +53,7 @@ class UsersController < ApplicationController
     head(:ok)
 
   rescue => e
-    Sentry.capture_exception(e)
+    report_error(e)
     render(json: {error: 'Withdraw failed, please retry'}, status: 422)
   end
   
@@ -63,7 +64,7 @@ class UsersController < ApplicationController
     head(:ok)
 
   rescue => e
-    Sentry.capture_exception(e)
+    report_error(e)
     render(json: {error: 'Something went wrong, please try again'}, status: 503)
   end
 
@@ -73,7 +74,7 @@ class UsersController < ApplicationController
     head(:ok)
 
   rescue => e
-    Sentry.capture_exception(e)
+    report_error(e)
     render(json: {error: 'Something went wrong, please try again'}, status: 503)
   end
   
@@ -91,7 +92,7 @@ class UsersController < ApplicationController
     render(json: {token: token, username: user.username})
     
   rescue => e
-    Sentry.capture_exception(e)
+    report_error(e)
     render(json: {error: "Something went wrong, please try again"}, status: 503)
   end  
 end

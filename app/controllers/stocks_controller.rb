@@ -16,10 +16,10 @@ class StocksController < ApplicationController
     render(json: data, status: 201)
 
   rescue MarketService::InsufficientFundsError => e
-    Sentry.capture_exception(e)
+    report_error(e)
     render(json: {error: "Insufficient funds for this transaction"}, status: 402)
   rescue => e
-    Sentry.capture_exception(e)
+    report_error(e)
     render(json:{error: "Service temporarily unavailable"}, status:503)
   end
 
@@ -32,10 +32,10 @@ class StocksController < ApplicationController
     render(json: data, status: 201)
 
   rescue MarketService::InsufficientSharesError => e
-    Sentry.capture_exception(e)
+    report_error(e)
     render(json: {error: "Insufficient shares for this transaction"}, status: 402)
   rescue => e
-    Sentry.capture_exception(e)
+    report_error(e)
     render(json:{error:"Service temporarily unavailable"}, status:503)
   end
 
@@ -49,7 +49,7 @@ class StocksController < ApplicationController
     end
 
   rescue => e
-    Sentry.capture_exception(e)
+    report_error(e)
     head(:not_found)
   end
 
@@ -60,10 +60,11 @@ class StocksController < ApplicationController
     data = MarketService.chartdata(symbol:params[:symbol], range: range)
     render(json:data)
 
-  rescue MarketService::NotFoundError
+  rescue MarketService::NotFoundError => e
+    record_error(e)
     render(json:[{date:Date.current, value:0}, {date:Date.current, value:0}], status:404)
   rescue => e
-    Sentry.capture_exception(e)
+    report_error(e)
     render(json:[{date:Date.current, value:0}, {date:Date.current, value:0}], status:503)
   end
 
@@ -71,10 +72,11 @@ class StocksController < ApplicationController
     data = MarketService.livedata(symbol:params[:symbol])
     render(json:data)
 
-  rescue MarketService::NotFoundError
+  rescue MarketService::NotFoundError => e
+    record_error(e)
     render(json:[], status:404)
   rescue => e
-    Sentry.capture_exception(e)
+    report_error(e)
     render(json:[], status:503)
   end
 
@@ -82,10 +84,11 @@ class StocksController < ApplicationController
     data = MarketService.companydata(symbol:params[:symbol])
     render(json: data)
 
-  rescue MarketService::NotFoundError
+  rescue MarketService::NotFoundError => e
+    record_error(e)
     render(json:{market_cap:'N/A', description:'N/A'}, status:404)
   rescue => e
-    Sentry.capture_exception(e)
+    report_error(e)
     render(json:{market_cap:'N/A', description:'N/A'}, status:503)
   end
 
@@ -93,10 +96,11 @@ class StocksController < ApplicationController
     data = MarketService.marketdata(symbol:params[:symbol])
     render(json: data)
 
-  rescue MarketService::NotFoundError
+  rescue MarketService::NotFoundError => e
+    record_error(e)
     render(json:{open:'N/A', high: 'N/A', low: 'N/A', volume: 'N/A', last: 'N/A'}, status:404)
   rescue => e
-    Sentry.capture_exception(e)
+    report_error(e)
     render(json:{open:'N/A', high: 'N/A', low: 'N/A', volume: 'N/A', last: 'N/A'}, status:503)
   end
 
@@ -110,7 +114,7 @@ class StocksController < ApplicationController
     end
 
   rescue => e
-    Sentry.capture_exception(e)
+    report_error(e)
     render(json: {balance: 'N/A'}, status:503)
   end
 
@@ -118,10 +122,11 @@ class StocksController < ApplicationController
     data = MarketService.marketprice(symbol:params[:symbol])
     render(json:data)
 
-  rescue MarketService::NotFoundError
+  rescue MarketService::NotFoundError => e
+    record_error(e)
     render(json:{price:"N/A", open:"N/A"}, status:404)
   rescue => e
-    Sentry.capture_exception(e)
+    report_error(e)
     render(json:{price:"N/A", open:"N/A"}, status:503)
   end
 end
