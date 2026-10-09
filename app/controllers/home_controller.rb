@@ -2,6 +2,8 @@ class HomeController < ApplicationController
   before_action(:verify_token, except: [:search])
 
   def search
+    return render(json: []) if params[:q].blank?
+
     results = Ticker.search(term:params[:q])
     render(json: results)
 

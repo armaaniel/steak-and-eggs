@@ -23,12 +23,18 @@ RSpec.describe("Home", type: :request) do
     end
 
     it "returns empty array on blank query" do
-      allow(Sentry).to(receive(:capture_exception))
+      ["", " "].each do |q|
+        get "/search", params: { q: q }, headers: headers
 
-      get "/search", params: { q: "" }, headers: headers
+        expect(response).to(have_http_status(200))
+        expect(JSON.parse(response.body)).to(eq([]))
+      end
+    end
 
-      expect(response).to(have_http_status(503))
-      expect(JSON.parse(response.body)).to(eq([]))
+    it "does not report blank queries to sentry" do
+      expect(Sentry).not_to(receive(:capture_exception))
+
+      get "/search", params: { q: " " }, headers: headers
     end
 
     it "returns 503 with empty array on service error" do
