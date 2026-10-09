@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_10_09_164330) do
+ActiveRecord::Schema[8.0].define(version: 2026_10_09_174531) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -108,7 +108,6 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_09_164330) do
     t.string "endpoint", null: false
     t.float "duration"
     t.float "db_runtime"
-    t.float "view_runtime"
     t.integer "status"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
