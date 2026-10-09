@@ -55,7 +55,6 @@ Rails.application.config.after_initialize do
         endpoint: "#{payload[:method]} #{payload[:path].split('?').first}",
         duration: duration,
         db_runtime: payload[:db_runtime],
-        view_runtime: payload[:view_runtime] || 0,
         status: payload[:status],
         controller: payload[:controller],
         action: payload[:action],

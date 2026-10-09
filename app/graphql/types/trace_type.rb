@@ -4,7 +4,6 @@ module Types
    field(:endpoint, String)
    field(:duration, Float)
    field(:db_runtime, Float)
-   field(:view_runtime, Float)
    field(:status, Integer)
    field(:controller, String)
    field(:action, String)

@@ -1,4 +1,6 @@
 class Trace < ApplicationRecord
+  self.ignored_columns += ['view_runtime']
+
   PROBE_INTERVAL = 300
   SLO_TARGET = 0.995
   SLO_PERIOD = 30.days
