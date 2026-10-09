@@ -1,11 +1,17 @@
 class Ticker < ApplicationRecord
+  class DemoError < StandardError; end
+
+  DEMO_ERROR_TERM = '!boom'
+
   def self.search(term:)
     raise StandardError if term.blank?
-    
+
     term_sanny = ActiveRecord::Base.sanitize_sql_like(term)
-    
+
     payload = {term: term_sanny, used_redis: false, used_db: false}
     ActiveSupport::Notifications.instrument('Ticker.search.datacat', payload) do
+      raise DemoError, "intentional error from searching #{DEMO_ERROR_TERM}" if term == DEMO_ERROR_TERM
+
       cached = RedisService.safe_get("search:#{term_sanny}")
 
       if cached

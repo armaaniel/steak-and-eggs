@@ -108,6 +108,26 @@ RSpec.describe(Ticker) do
       expect { Ticker.search(term: "") }.to(raise_error(StandardError))
       expect { Ticker.search(term: nil) }.to(raise_error(StandardError))
     end
+
+    it("raises the demo error inside the search span, before the cache") do
+      expect(RedisService).not_to(receive(:safe_get))
+
+      payloads = []
+      record = ->(*, payload) { payloads << payload }
+
+      ActiveSupport::Notifications.subscribed(record, "Ticker.search.datacat") do
+        expect { Ticker.search(term: "!boom") }.to(raise_error(Ticker::DemoError))
+      end
+
+      expect(payloads.last[:exception]&.first).to(eq("Ticker::DemoError"))
+    end
+
+    it("treats partial demo terms as normal searches") do
+      allow(RedisService).to(receive(:safe_get).and_return(nil))
+      allow(RedisService).to(receive(:safe_setex))
+
+      expect(Ticker.search(term: "!boo").to_a).to(eq([]))
+    end
   end
 
   describe("query") do

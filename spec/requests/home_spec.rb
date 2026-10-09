@@ -31,6 +31,15 @@ RSpec.describe("Home", type: :request) do
       end
     end
 
+    it "returns 503 and reports the demo error when searching !boom" do
+      expect(Sentry).to(receive(:capture_exception).with(instance_of(Ticker::DemoError)))
+
+      get "/search", params: { q: "!boom" }, headers: headers
+
+      expect(response).to(have_http_status(503))
+      expect(JSON.parse(response.body)).to(eq([]))
+    end
+
     it "does not report blank queries to sentry" do
       expect(Sentry).not_to(receive(:capture_exception))
 
