@@ -19,7 +19,8 @@ class MetricService
 
     saved = RunMetric.get(run_id: run_id, metric: metric).to_a
     last_saved = saved.last&.at
-    fully_saved = last_saved && last_saved >= finish + PAD - PERIOD
+    last_available = Time.at(((finish + PAD).to_i / PERIOD - 1) * PERIOD).utc
+    fully_saved = last_saved && last_saved >= last_available
     return saved if fully_saved
 
     fetch_and_save(run_id: run_id, metric: metric, from: start - PAD, to: finish + PAD)
