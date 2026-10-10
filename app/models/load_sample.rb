@@ -1,5 +1,6 @@
 class LoadSample < ApplicationRecord
   COMPARE_CACHE_VERSION = 1
+  RUNS_CACHE_KEY = 'load_runs:v1'
 
   def self.compare(run_id:, route:, step:)
     key = "load_compare:v#{COMPARE_CACHE_VERSION}:#{run_id}:#{route}:#{step}"
@@ -48,6 +49,9 @@ class LoadSample < ApplicationRecord
   end
 
   def self.runs
+    cached = RedisService.safe_get(RUNS_CACHE_KEY)
+    return JSON.parse(cached) if cached
+
     sql = <<~SQL
       SELECT run_id,
              route,
@@ -61,12 +65,21 @@ class LoadSample < ApplicationRecord
 
     result = connection.select_all(sql)
 
-    result.map do |run|
+    runs = result.map do |run|
       { run_id:     run['run_id'],
         route:      run['route'],
         started_at: run['started_at'],
         ended_at:   run['ended_at'],
         samples:    run['samples'] }
     end
+
+    finished = runs.any? && runs.map { |run| run[:ended_at] }.max < 5.minutes.ago
+    RedisService.safe_set(RUNS_CACHE_KEY, runs.to_json) if finished
+
+    runs
+  end
+
+  def self.expire_runs
+    RedisService.safe_del(RUNS_CACHE_KEY)
   end
 end

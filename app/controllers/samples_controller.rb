@@ -20,6 +20,7 @@ class SamplesController < ApplicationController
     end
 
     LoadSample.insert_all(rows)
+    LoadSample.expire_runs
     head(:created)
   end
 
