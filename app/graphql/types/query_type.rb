@@ -48,6 +48,8 @@ module Types
     field(:trace_stats, Types::TraceStatsType) do
       argument(:endpoint, String)
       argument(:range, String, required: false)
+      argument(:status, Integer, required: false)
+      argument(:cache, Types::TraceCacheFilterType, required: false)
       description('fetch trace statistics')
     end
     
@@ -177,8 +179,8 @@ module Types
       Trace.list(endpoint: endpoint, range: range, bucket: bucket, bucket_end: bucket_end, status: status, cache: cache, sort: sort, direction: direction)
     end
 
-    def trace_stats(endpoint:, range: nil)
-      Trace.stats(endpoint: endpoint, range: range)
+    def trace_stats(endpoint:, range: nil, status: nil, cache: nil)
+      Trace.stats(endpoint: endpoint, range: range, status: status, cache: cache)
     end
 
     def trace_summary(range: nil)

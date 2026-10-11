@@ -102,7 +102,7 @@ class Trace < ApplicationRecord
       .limit(1000)
   end
 
-  def self.stats(endpoint:, range: nil)
+  def self.stats(endpoint:, range: nil, status: nil, cache: nil)
     route = normalize_endpoint(endpoint)
 
     sql = <<~SQL
@@ -118,9 +118,11 @@ class Trace < ApplicationRecord
       WHERE source IN ('user', 'canary')
         AND endpoint ILIKE ?
         AND created_at >= ?
+        AND (?::int IS NULL OR status = ?)
+        AND (#{cache_condition(cache)})
     SQL
 
-    result = connection.select_all(sanitize_sql_array([sql, route, window_start(range)])).first
+    result = connection.select_all(sanitize_sql_array([sql, route, window_start(range), status, status])).first
       
     total  = result['total_requests'].to_i
     errors = result['error_count'].to_f

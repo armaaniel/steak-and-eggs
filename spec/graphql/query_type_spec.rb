@@ -442,6 +442,29 @@ RSpec.describe(Types::QueryType) do
       expect(stats["usedRedis"]).to(be(false))
       expect(stats["usedApi"]).to(be(false))
     end
+
+    it("only counts the given status when one is given") do
+      Trace.create!(endpoint: "GET /users", duration: 50.0, status: 200)
+      Trace.create!(endpoint: "GET /users", duration: 60.0, status: 500)
+
+      result = SteakAndEggsSchema.execute('{ traceStats(endpoint: "GET /users", status: 500) { totalRequests p99 errorRate } }').to_h
+      stats = result.dig("data", "traceStats")
+
+      expect(stats["totalRequests"]).to(eq(1))
+      expect(stats["p99"]).to(eq(60.0))
+      expect(stats["errorRate"]).to(eq(100.0))
+    end
+
+    it("keeps only cached or only uncached requests when cache is given") do
+      Trace.create!(endpoint: "GET /users", duration: 2.0, status: 200, breakdown: { "Ticker.search" => { "used_redis" => true } })
+      Trace.create!(endpoint: "GET /users", duration: 400.0, status: 200, breakdown: { "Ticker.search" => { "used_db" => true } })
+
+      cached = SteakAndEggsSchema.execute('{ traceStats(endpoint: "GET /users", cache: CACHED) { totalRequests p99 } }').to_h.dig("data", "traceStats")
+      uncached = SteakAndEggsSchema.execute('{ traceStats(endpoint: "GET /users", cache: UNCACHED) { totalRequests p99 } }').to_h.dig("data", "traceStats")
+
+      expect(cached).to(eq({ "totalRequests" => 1, "p99" => 2.0 }))
+      expect(uncached).to(eq({ "totalRequests" => 1, "p99" => 400.0 }))
+    end
   end
 
   describe("connections") do
