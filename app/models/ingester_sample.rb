@@ -1,6 +1,8 @@
 class IngesterSample < ApplicationRecord
   SPAN_CAP_SECONDS = 90
   MIN_RATE_GAP = 10
+  MAX_CHART_POINTS = 720
+  SAMPLE_SECONDS = 60
   BASE_LAG_MS = 902_000 #15m delay + 2s polygonio holdback
 
   # ordered gets us timestamps + anchor row, measured converts those into raw seconds, spans union all clips downtime + gives us downtime row
@@ -48,16 +50,37 @@ class IngesterSample < ApplicationRecord
     )
   SQL
 
+  def self.bucket_seconds(from, to)
+    [((to - from) / MAX_CHART_POINTS).ceil, SAMPLE_SECONDS].max
+  end
+
   def self.spans(from:, to:)
     sql = <<~SQL
-      #{SPAN_SQL}
+      #{SPAN_SQL},
+      marked AS (
+        SELECT
+          *,
+          CASE WHEN state IS DISTINCT FROM lag(state) OVER w
+                 OR boot_id IS DISTINCT FROM lag(boot_id) OVER w
+                 OR connection_id IS DISTINCT FROM lag(connection_id) OVER w
+               THEN 1 ELSE 0 END AS starts_run
+        FROM spans
+        WINDOW w AS (ORDER BY at)
+      ),
+      runs AS (
+        SELECT
+          *,
+          sum(starts_run) OVER (ORDER BY at) AS run
+        FROM marked
+      )
       SELECT
-        at,
+        min(at) AS at,
         boot_id::text,
         connection_id::text,
         state,
-        seconds
-      FROM spans
+        sum(seconds) AS seconds
+      FROM runs
+      GROUP BY run, boot_id, connection_id, state
       ORDER BY at
     SQL
 
@@ -94,21 +117,28 @@ class IngesterSample < ApplicationRecord
 
   def self.lag(from:, to:)
     sql = <<~SQL
+      WITH bucketed AS (
+        SELECT
+          to_timestamp(floor(extract(epoch FROM at) / :bucket) * :bucket) AS bucket,
+          sum_lag_ms,
+          sampled_events,
+          symbols
+        FROM ingester_samples
+        WHERE at >= :from AND at < :to
+          AND kind = 'tick'
+          AND sampled_events > 0
+      )
       SELECT
-        at,
-        CASE WHEN sampled_events > 0
-             THEN (sum_lag_ms::float / sampled_events) - #{BASE_LAG_MS}
-        END AS mean_excess_ms,
-        sampled_events,
-        symbols
-      FROM ingester_samples
-      WHERE at >= :from AND at < :to
-        AND kind = 'tick'
-        AND sampled_events > 0
-      ORDER BY at
+        bucket AS at,
+        (sum(sum_lag_ms)::float / sum(sampled_events)) - #{BASE_LAG_MS} AS mean_excess_ms,
+        sum(sampled_events) AS sampled_events,
+        max(symbols) AS symbols
+      FROM bucketed
+      GROUP BY bucket
+      ORDER BY bucket
     SQL
 
-    sanitized = sanitize_sql_array([sql, { from: from, to: to }])
+    sanitized = sanitize_sql_array([sql, { from: from, to: to, bucket: bucket_seconds(from, to) }])
 
     connection.exec_query(sanitized, 'IngesterSample').to_a
   end
@@ -218,7 +248,7 @@ class IngesterSample < ApplicationRecord
     connection.exec_query(sanitized, 'IngesterSample').to_a
   end
 
-  # Per-sample events and frames per second, with that sample's symbol count.
+  # Events and frames per second, averaged over each bucket.
   def self.rate(from:, to:)
     sql = <<~SQL
       WITH deltas AS (
@@ -236,19 +266,30 @@ class IngesterSample < ApplicationRecord
         FROM ingester_samples
         WHERE at >= :from AND at < :to AND kind = 'tick'
         WINDOW w AS (PARTITION BY boot_id ORDER BY at, id)
+      ),
+      bucketed AS (
+        SELECT
+          to_timestamp(floor(extract(epoch FROM at) / :bucket) * :bucket) AS bucket,
+          d_events,
+          d_frames,
+          d_process_ms,
+          d_idle_ms,
+          d_seconds
+        FROM deltas
+        WHERE d_seconds >= #{MIN_RATE_GAP} AND d_events >= 0
       )
       SELECT
-        at,
-        d_events / d_seconds AS events_per_sec,
-        d_frames / d_seconds AS frames_per_sec,
-        CASE WHEN d_frames > 0 THEN d_process_ms::float / d_frames END AS mean_process_ms,
-        CASE WHEN d_frames > 0 THEN d_idle_ms::float / d_frames    END AS mean_idle_ms
-      FROM deltas
-      WHERE d_seconds >= #{MIN_RATE_GAP} AND d_events >= 0
-      ORDER BY at
+        bucket AS at,
+        sum(d_events) / sum(d_seconds) AS events_per_sec,
+        sum(d_frames) / sum(d_seconds) AS frames_per_sec,
+        sum(d_process_ms)::float / NULLIF(sum(d_frames), 0) AS mean_process_ms,
+        sum(d_idle_ms)::float / NULLIF(sum(d_frames), 0) AS mean_idle_ms
+      FROM bucketed
+      GROUP BY bucket
+      ORDER BY bucket
     SQL
 
-    sanitized = sanitize_sql_array([sql, { from: from, to: to }])
+    sanitized = sanitize_sql_array([sql, { from: from, to: to, bucket: bucket_seconds(from, to) }])
     connection.exec_query(sanitized, 'IngesterSample').to_a
   end
 
