@@ -17,6 +17,7 @@ class Trace < ApplicationRecord
   }
 
   TRACE_SORT_COLUMNS = %w[created_at duration status].freeze
+  LIST_LIMIT = 1000
 
   CACHE_CONDITIONS = {
     'cached' => ['breakdown::text LIKE ?', '%"used_redis":true%'],
@@ -84,7 +85,7 @@ class Trace < ApplicationRecord
     cache ? sanitize_sql_array(CACHE_CONDITIONS.fetch(cache)) : 'TRUE'
   end
 
-  def self.list(endpoint: nil, range: nil, bucket: nil, bucket_end: nil, status: nil, cache: nil, sort: nil, direction: nil)
+  def self.list(endpoint: nil, range: nil, bucket: nil, bucket_end: nil, status: nil, cache: nil, sort: nil, direction: nil, limit: nil)
     sort ||= 'created_at'
     direction ||= 'desc'
     raise(ArgumentError, "can't sort traces by #{sort}") unless TRACE_SORT_COLUMNS.include?(sort)
@@ -99,7 +100,7 @@ class Trace < ApplicationRecord
     traces.where(source: %w[user canary])
       .where(created_at: window)
       .order(column, id: direction)
-      .limit(1000)
+      .limit((limit || LIST_LIMIT).clamp(0, LIST_LIMIT))
   end
 
   def self.stats(endpoint:, range: nil, status: nil, cache: nil)

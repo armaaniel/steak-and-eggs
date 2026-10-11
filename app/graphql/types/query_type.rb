@@ -38,7 +38,8 @@ module Types
       argument(:cache, Types::TraceCacheFilterType, required: false)
       argument(:sort, Types::TraceSortType, required: false)
       argument(:direction, Types::SortDirectionType, required: false)
-      description('the first 1000 user and canary traces in the given order (newest first by default), for one route or every route but POST /graphql, inside the bucket when one is given, otherwise over the range')
+      argument(:limit, Integer, required: false)
+      description("up to limit (default and max #{Trace::LIST_LIMIT}) user and canary traces in the given order (newest first by default), for one route or every route but POST /graphql, inside the bucket when one is given, otherwise over the range")
     end
 
     field(:connections, [Types::ConnectionsType], null:false) do
@@ -175,8 +176,8 @@ module Types
       end
     end
 
-    def trace_list(endpoint: nil, range: nil, bucket: nil, bucket_end: nil, status: nil, cache: nil, sort: nil, direction: nil)
-      Trace.list(endpoint: endpoint, range: range, bucket: bucket, bucket_end: bucket_end, status: status, cache: cache, sort: sort, direction: direction)
+    def trace_list(endpoint: nil, range: nil, bucket: nil, bucket_end: nil, status: nil, cache: nil, sort: nil, direction: nil, limit: nil)
+      Trace.list(endpoint: endpoint, range: range, bucket: bucket, bucket_end: bucket_end, status: status, cache: cache, sort: sort, direction: direction, limit: limit)
     end
 
     def trace_stats(endpoint:, range: nil, status: nil, cache: nil)

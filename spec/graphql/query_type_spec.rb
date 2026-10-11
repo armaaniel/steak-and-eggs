@@ -148,6 +148,16 @@ RSpec.describe(Types::QueryType) do
       SteakAndEggsSchema.execute(query, variables: { endpoint: endpoint }).to_h
     end
 
+    it("returns 1000 traces by default, fewer when a smaller limit is given, and never more than 1000") do
+      Trace.insert_all(Array.new(1001) { |index| { endpoint: "GET /users", duration: index, status: 200, created_at: index.seconds.ago } })
+
+      count = ->(arguments) { SteakAndEggsSchema.execute("{ traceList(#{arguments}) { id } }").to_h.dig("data", "traceList").length }
+
+      expect(count.call('endpoint: "GET /users"')).to(eq(1000))
+      expect(count.call('endpoint: "GET /users", limit: 250')).to(eq(250))
+      expect(count.call('endpoint: "GET /users", limit: 5000')).to(eq(1000))
+    end
+
     it("only returns traces inside the range when one is given") do
       Trace.create!(endpoint: "GET /users", duration: 50.0, status: 200, created_at: 3.hours.ago)
       Trace.create!(endpoint: "GET /users", duration: 60.0, status: 200)
