@@ -1,4 +1,5 @@
 import http from 'k6/http'
+import exec from 'k6/execution'
 import { check } from 'k6'
 import secrets from 'k6/secrets'
 
@@ -26,16 +27,16 @@ export const options = {
 
 export async function setup() {
   return {
-    runId: crypto.randomUUID(),
+    runId: __ENV.RUN_ID,
     key: await secrets.get('synthetic-key'),
   }
 }
 
-let buffer = []
-let lastFlush = Date.now()
-
 export default function (data) {
   const reqId = crypto.randomUUID()
+  exec.vu.metrics.metadata.request_id = reqId
+  exec.vu.metrics.metadata.route = ROUTE
+  exec.vu.metrics.metadata.sent_at = String(Date.now())
 
   const res = http.get(`${BASE}/stocks/${SYMBOL}/stockprice`, {
     headers: {
@@ -47,33 +48,4 @@ export default function (data) {
   })
 
   check(res, { 'status 200': (r) => r.status === 200 })
-
-  buffer.push({
-    request_id: reqId,
-    at: Date.now(),
-    route: ROUTE,
-    waiting: Math.round(res.timings.waiting),
-    duration: Math.round(res.timings.duration),
-    status: res.status,
-  })
-
-  if (buffer.length >= 200 || Date.now() - lastFlush > 20000) flush(data)
-}
-
-function flush(data) {
-  if (!buffer.length) return
-  const batch = buffer.splice(0)
-  lastFlush = Date.now()
-  http.post(
-    `${BASE}/load_samples`,
-    JSON.stringify({ run_id: data.runId, samples: batch }),
-    {
-      headers: { 'Content-Type': 'application/json', 'Synthetic-Key': data.key },
-      timeout: '30s',
-    }
-  )
-}
-
-export function teardown(data) {
-  flush(data)
 }

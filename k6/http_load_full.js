@@ -1,4 +1,5 @@
 import http from 'k6/http'
+import exec from 'k6/execution'
 import { check } from 'k6'
 import secrets from 'k6/secrets'
 
@@ -10,36 +11,39 @@ export const options = {
   scenarios: {
     ramp: {
       executor: 'ramping-arrival-rate',
-      startRate: 20,
+      startRate: 50,
       timeUnit: '1s',
-      preAllocatedVUs: 50,
+      preAllocatedVUs: 150,
       maxVUs: 400,
       stages: [
-  { target: 20, duration: '2m' },                                  // warmup, discard
-  { target: 50, duration: '30s' }, { target: 50, duration: '4m' },
-  { target: 65, duration: '30s' }, { target: 65, duration: '4m' },
-  { target: 75, duration: '30s' }, { target: 75, duration: '4m' },
-  { target: 85, duration: '30s' }, { target: 85, duration: '4m' },
-],
+        { target: 50, duration: '2m' },                                  // warmup, discard
+        { target: 50, duration: '3m' },
+        { target: 100, duration: '30s' }, { target: 100, duration: '2m30s' },
+        { target: 150, duration: '30s' }, { target: 150, duration: '2m30s' },
+        { target: 200, duration: '30s' }, { target: 200, duration: '2m30s' },
+        { target: 250, duration: '30s' }, { target: 250, duration: '2m30s' },
+        { target: 300, duration: '30s' }, { target: 300, duration: '2m30s' },
+        { target: 350, duration: '30s' }, { target: 350, duration: '2m30s' },
+      ],
     },
   },
   thresholds: {
-  dropped_iterations: ['count<1'],
-},
+    dropped_iterations: ['count<1'],
+  },
 }
 
 export async function setup() {
   return {
-    runId: crypto.randomUUID(),
+    runId: __ENV.RUN_ID,
     key: await secrets.get('synthetic-key'),
   }
 }
 
-let buffer = []
-let lastFlush = Date.now()
-
 export default function (data) {
   const reqId = crypto.randomUUID()
+  exec.vu.metrics.metadata.request_id = reqId
+  exec.vu.metrics.metadata.route = ROUTE
+  exec.vu.metrics.metadata.sent_at = String(Date.now())
 
   const res = http.get(`${BASE}/stocks/${SYMBOL}/stockprice`, {
     headers: {
@@ -51,33 +55,4 @@ export default function (data) {
   })
 
   check(res, { 'status 200': (r) => r.status === 200 })
-
-  buffer.push({
-    request_id: reqId,
-    at: Date.now(),
-    route: ROUTE,
-    waiting: Math.round(res.timings.waiting),
-    duration: Math.round(res.timings.duration),
-    status: res.status,
-  })
-
-  if (buffer.length >= 200 || Date.now() - lastFlush > 20000) flush(data)
-}
-
-function flush(data) {
-  if (!buffer.length) return
-  const batch = buffer.splice(0)
-  lastFlush = Date.now()
-  http.post(
-    `${BASE}/load_samples`,
-    JSON.stringify({ run_id: data.runId, samples: batch }),
-    {
-      headers: { 'Content-Type': 'application/json', 'Synthetic-Key': data.key },
-      timeout: '30s',
-    }
-  )
-}
-
-export function teardown(data) {
-  flush(data)
 }

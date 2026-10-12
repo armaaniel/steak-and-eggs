@@ -40,3 +40,6 @@ dump.rdb
 
 # Archives
 *.zip
+
+k6/secrets.txt
+k6/runs/
