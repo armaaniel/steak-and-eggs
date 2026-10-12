@@ -27,6 +27,7 @@ Rails.application.routes.draw do
 
   post('load_samples', to: 'samples#load_samples')
   post('cable_samples', to: 'samples#cable_samples')
+  post('run_metrics', to: 'samples#run_metrics')
 
   get('/', to: 'system#health')
   mount ActionCable.server => '/cable'

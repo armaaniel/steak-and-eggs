@@ -156,7 +156,8 @@ module Types
       argument(:run_id, ID)
       argument(:kind, String)
       argument(:metric, String, required: false, default_value: 'cpu')
-      description('infrastructure metric over the window of one run')
+      argument(:step, Integer, required: false)
+      description('infrastructure metric over the window of one run, per second metrics averaged into step second buckets when a step is given')
     end
     
     def connections
@@ -279,8 +280,8 @@ module Types
       CableSample.compare(run_id: run_id)
     end
 
-    def run_metrics(run_id:, kind:, metric:)
-      MetricService.for_run(run_id: run_id, kind: kind, metric: metric)
+    def run_metrics(run_id:, kind:, metric:, step: nil)
+      MetricService.for_run(run_id: run_id, kind: kind, metric: metric, step: step&.clamp(1, 300))
     end
 
     private

@@ -7,7 +7,7 @@ BATCH_SIZE = 1000
 METRICS = { 'http_req_waiting' => :waiting, 'http_req_duration' => :duration }.freeze
 
 path, run_id = ARGV
-uri = URI('https://www.steakneggs.art/load_samples')
+uri = URI("#{ENV.fetch('API', 'https://www.steakneggs.art')}/load_samples")
 headers = { 'Content-Type' => 'application/json', 'Synthetic-Key' => ENV.fetch('SYNTHETIC_KEY') }
 pending = {}
 batch = []

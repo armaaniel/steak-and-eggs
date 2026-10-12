@@ -924,4 +924,20 @@ RSpec.describe(Types::QueryType) do
       expect(results[0][0]["readings"][0]["points"]).to(eq([{"at" => "2026-09-29T12:00:00Z", "value" => 12.0}]))
     end
   end
+
+  describe("run_metrics") do
+    it("averages per second metrics into the requested step") do
+      run_id = SecureRandom.uuid
+      start = Time.utc(2026, 10, 12, 21, 0, 0)
+      RunMetric.insert_all([[0, 10.0], [1, 30.0]].map { |offset, value| {run_id: run_id, metric: "cpu_pressure", at: start + offset, minimum: value, maximum: value, average: value} })
+
+      query = %({ runMetrics(runId: "#{run_id}", kind: "load", metric: "cpu_pressure", step: 5) { at minimum maximum average } })
+      result = SteakAndEggsSchema.execute(query).to_h
+
+      buckets = result.dig("data", "runMetrics")
+      expect(buckets.size).to(eq(1))
+      expect(Time.iso8601(buckets[0]["at"])).to(eq(start))
+      expect(buckets[0].slice("minimum", "maximum", "average")).to(eq({"minimum" => 10.0, "maximum" => 30.0, "average" => 20.0}))
+    end
+  end
 end

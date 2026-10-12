@@ -38,6 +38,8 @@ stop_sampler() {
 trap stop_sampler EXIT
 
 sleep "${SAMPLER_WARMUP}"
+sleep $(( 60 - 10#$(date +%S) ))
+echo "k6 start: $(date -u +%H:%M:%S) UTC"
 
 K6_STATUS=0
 caffeinate -i k6 run -e RUN_ID="${RUN_ID}" --secret-source=file="${SECRETS}" --out csv="${OUT}" "${SCRIPT}" || K6_STATUS=$?
@@ -45,7 +47,9 @@ caffeinate -i k6 run -e RUN_ID="${RUN_ID}" --secret-source=file="${SECRETS}" --o
 sleep "${SAMPLER_WARMUP}"
 stop_sampler
 
-SYNTHETIC_KEY="$(sed -n 's/^synthetic-key=//p' "${SECRETS}")" ruby "${SCRIPT_DIR}/import_samples.rb" "${OUT}" "${RUN_ID}"
+SYNTHETIC_KEY="$(sed -n 's/^synthetic-key=//p' "${SECRETS}")"
+SYNTHETIC_KEY="${SYNTHETIC_KEY}" ruby "${SCRIPT_DIR}/import_samples.rb" "${OUT}" "${RUN_ID}"
+SYNTHETIC_KEY="${SYNTHETIC_KEY}" ruby "${SCRIPT_DIR}/import_metrics.rb" "${CPU_LOG}" "${RUN_ID}" || echo "run metrics import failed, rerun k6/import_metrics.rb later"
 
 echo
 ruby "${SCRIPT_DIR}/cpu_summary.rb" "${CPU_LOG}"

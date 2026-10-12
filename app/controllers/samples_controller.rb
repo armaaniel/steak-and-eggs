@@ -39,6 +39,24 @@ class SamplesController < ApplicationController
     head(:created)
   end
 
+  def run_metrics
+    rows = params[:samples].map do |sample|
+      value = sample[:value].to_f
+
+      { run_id:  params[:run_id],
+        metric:  sample[:metric],
+        at:      Time.at(sample[:at].to_f / 1000).utc,
+        minimum: value,
+        maximum: value,
+        average: value }
+    end
+
+    return head(:unprocessable_entity) unless rows.all? { |row| MetricService::SAMPLED.include?(row[:metric]) }
+
+    RunMetric.upsert_all(rows, unique_by: %i[run_id metric at])
+    head(:created)
+  end
+
   private
 
   def validate_request

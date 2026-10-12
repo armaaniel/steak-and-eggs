@@ -9,10 +9,13 @@ class MetricService
   METRICS = {'cpu' => 'CPUUtilization', 'memory' => 'MemoryUtilization'}.freeze
   STATS = {'minimum' => 'Minimum', 'maximum' => 'Maximum', 'average' => 'Average'}.freeze
   SAMPLES = {'load' => LoadSample, 'cable' => CableSample}.freeze
+  SAMPLED = %w[cpu_used cpu_pressure gc_time gc_major yjit_compile].freeze
 
-  def self.for_run(run_id:, kind:, metric: 'cpu')
-    return [] unless SAMPLES.key?(kind) && METRICS.key?(metric)
-    
+  def self.for_run(run_id:, kind:, metric: 'cpu', step: nil)
+    return [] unless SAMPLES.key?(kind)
+    return sampled(run_id: run_id, metric: metric, step: step) if SAMPLED.include?(metric)
+    return [] unless METRICS.key?(metric)
+
     samples = SAMPLES.fetch(kind).where(run_id: run_id)
     start, finish = samples.pick(Arel.sql('MIN(at)'), Arel.sql('MAX(at)'))
     return [] unless start
@@ -26,6 +29,17 @@ class MetricService
     fetch_and_save(run_id: run_id, metric: metric, from: start - PAD, to: finish + PAD)
 
     RunMetric.get(run_id: run_id, metric: metric)
+  end
+
+  def self.sampled(run_id:, metric:, step:)
+    return RunMetric.get(run_id: run_id, metric: metric) unless step
+
+    bucket = "to_timestamp(floor(extract(epoch FROM at) / #{step.to_i}) * #{step.to_i})"
+
+    RunMetric.where(run_id: run_id, metric: metric)
+             .group(Arel.sql(bucket))
+             .order(Arel.sql(bucket))
+             .select(Arel.sql("#{bucket} AS at, MIN(minimum) AS minimum, MAX(maximum) AS maximum, AVG(average) AS average"))
   end
 
   def self.fetch_and_save(run_id:, metric:, from:, to:)
@@ -61,5 +75,5 @@ class MetricService
     @client ||= Aws::CloudWatch::Client.new(region: REGION)
   end
 
-  private_class_method :fetch_and_save, :client
+  private_class_method :sampled, :fetch_and_save, :client
 end
