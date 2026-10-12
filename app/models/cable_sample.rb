@@ -1,5 +1,6 @@
 class CableSample < ApplicationRecord
   COMPARE_CACHE_VERSION = 1
+  RUNS_CACHE_KEY = 'cable_runs:v1'
 
   def self.compare(run_id:)
     key = "cable_compare:v#{COMPARE_CACHE_VERSION}:#{run_id}"
@@ -50,13 +51,24 @@ class CableSample < ApplicationRecord
     rows
   end
 
-  def self.runs(limit: 25)
-    group(:run_id)
+  def self.runs
+    cached = RedisService.safe_get(RUNS_CACHE_KEY)
+    return JSON.parse(cached) if cached
+
+    runs = group(:run_id)
       .order(Arel.sql('MIN(at) DESC'))
-      .limit(limit)
       .pluck(:run_id, Arel.sql('MIN(at)'), Arel.sql('MAX(at)'), Arel.sql('COUNT(*)'))
       .map { |run_id, started_at, ended_at, samples|
         { run_id: run_id, started_at: started_at, ended_at: ended_at, samples: samples }
       }
+
+    finished = runs.any? && runs.map { |run| run[:ended_at] }.max < 5.minutes.ago
+    RedisService.safe_set(RUNS_CACHE_KEY, runs.to_json) if finished
+
+    runs
+  end
+
+  def self.expire_runs
+    RedisService.safe_del(RUNS_CACHE_KEY)
   end
 end

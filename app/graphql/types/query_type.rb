@@ -144,7 +144,6 @@ module Types
     end
     
     field(:cable_runs, [Types::CableRunType], null: false) do
-      argument(:limit, Integer, required: false, default_value: 25)
       description('websocket load runs, newest first')
     end
 
@@ -272,8 +271,8 @@ module Types
       LoadSample.compare(run_id: run_id, route: route, step: step.clamp(1, 300))
     end
     
-    def cable_runs(limit:)
-      CableSample.runs(limit: limit.clamp(1, 200))
+    def cable_runs
+      CableSample.runs
     end
 
     def cable_compare(run_id:)

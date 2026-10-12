@@ -35,6 +35,7 @@ class SamplesController < ApplicationController
     end
 
     CableSample.insert_all(rows)
+    CableSample.expire_runs
     head(:created)
   end
 
