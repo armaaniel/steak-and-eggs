@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_10_09_181255) do
+ActiveRecord::Schema[8.0].define(version: 2026_10_12_194556) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -123,6 +123,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_09_181255) do
     t.string "error_class"
     t.string "error_location"
     t.string "sentry_event_id"
+    t.index ["created_at"], name: "index_traces_on_created_at_canary", where: "((source)::text = 'canary'::text)", include: ["run_id", "result", "status"]
     t.index ["request_id"], name: "index_traces_on_request_id", where: "(request_id IS NOT NULL)"
     t.index ["run_id"], name: "index_traces_on_run_id", where: "(run_id IS NOT NULL)"
     t.index ["source", "created_at"], name: "index_traces_on_source_and_created_at"
