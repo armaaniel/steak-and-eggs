@@ -2,7 +2,7 @@ module CableLoad
   SYMBOLS = %w[LOAD_01 LOAD_02 LOAD_03 LOAD_04 LOAD_05 LOAD_06 LOAD_07 LOAD_08 LOAD_09 LOAD_10]
   BUCKET_SECONDS = 5
 
-  STAGES = [
+  DEFAULT_STAGES = [
     [2000, 60],
     [1000, 60],
     [500, 120],
@@ -10,6 +10,14 @@ module CableLoad
     [286, 180],
     [250, 180],
   ]
+
+  def self.parse_stages(value)
+    return DEFAULT_STAGES if value.blank?
+
+    value.split(',').map { |stage| stage.split(':').map { |number| Integer(number) } }
+  end
+
+  STAGES = parse_stages(ENV['CABLE_STAGES'])
 
   plan = []
   starts_at = 0

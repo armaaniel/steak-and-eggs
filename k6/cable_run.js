@@ -9,7 +9,7 @@ const SYMBOLS = ['LOAD_01', 'LOAD_02', 'LOAD_03', 'LOAD_04', 'LOAD_05',
                  'LOAD_06', 'LOAD_07', 'LOAD_08', 'LOAD_09', 'LOAD_10']
 
 const BUCKET = 5000
-const RUN_MS = 1130000
+const RUN_MS = Number(__ENV.RUN_MS || 1130000)
 const FLUSH_BASE = RUN_MS * 2
 const FLUSH_JITTER = 10000
 const FINAL_FLUSH_SPREAD = 30000
@@ -23,7 +23,7 @@ export const options = {
       executor: 'per-vu-iterations',
       vus: 100,
       iterations: 1,
-      maxDuration: '30m',
+      maxDuration: `${Math.ceil(RUN_MS / 60000) + 5}m`,
     },
   },
 }
