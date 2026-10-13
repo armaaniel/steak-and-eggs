@@ -11,10 +11,15 @@ TASK_DEF=steakneggs
 CONTAINER=steakneggs
 CONNECT_GRACE=45
 
+source "${SCRIPT_DIR}/sampler.sh"
+
 SUBNETS=$(terraform -chdir="${REPO_ROOT}" output -json ecs_subnets | jq -r 'join(",")')
 SG=$(terraform -chdir="${REPO_ROOT}" output -raw ecs_security_group)
 
+mkdir -p "${SCRIPT_DIR}/runs"
 echo "run_id: ${RUN_ID}"
+
+start_sampler "${SCRIPT_DIR}/runs/${RUN_ID}.cpu.log"
 
 k6 cloud run -e RUN_ID="${RUN_ID}" "${SCRIPT_DIR}/cable_run.js" &
 K6_PID=$!
@@ -42,8 +47,14 @@ TASK_ARN=$(aws ecs run-task \
 
 echo "publisher: ${TASK_ARN}"
 
-wait "${K6_PID}"
+K6_STATUS=0
+wait "${K6_PID}" || K6_STATUS=$?
 aws ecs wait tasks-stopped --cluster "${CLUSTER}" --tasks "${TASK_ARN}" || true
+
+sleep "${SAMPLER_WARMUP}"
+stop_sampler
+import_metrics "${RUN_ID}"
 
 echo
 echo "run_id: ${RUN_ID}"
+exit "${K6_STATUS}"
