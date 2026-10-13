@@ -149,6 +149,7 @@ module Types
 
     field(:cable_compare, [Types::CableCompareRowType], null: false) do
       argument(:run_id, ID)
+      argument(:step, Integer, required: false, default_value: 5)
       description('published against received frames, per bucket')
     end
 
@@ -276,8 +277,8 @@ module Types
       CableSample.runs
     end
 
-    def cable_compare(run_id:)
-      CableSample.compare(run_id: run_id)
+    def cable_compare(run_id:, step:)
+      CableSample.compare(run_id: run_id, step: step.clamp(5, 300))
     end
 
     def run_metrics(run_id:, kind:, metric:, step: nil)

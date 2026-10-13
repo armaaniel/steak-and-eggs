@@ -2,31 +2,31 @@ class CableSample < ApplicationRecord
   COMPARE_CACHE_VERSION = 1
   RUNS_CACHE_KEY = 'cable_runs:v1'
 
-  def self.compare(run_id:)
-    key = "cable_compare:v#{COMPARE_CACHE_VERSION}:#{run_id}"
+  def self.compare(run_id:, step:)
+    key = "cable_compare:v#{COMPARE_CACHE_VERSION}:#{run_id}:#{step}"
     cached = RedisService.safe_get(key)
     return JSON.parse(cached) if cached
 
     sql = <<~SQL
       WITH buckets AS (
         SELECT
-          at,
+          date_bin(make_interval(secs => :step), at, TIMESTAMP 'epoch') AS at,
           sum(frames) FILTER (WHERE source = 'publisher')     AS published,
           sum(frames) FILTER (WHERE source = 'client')        AS received,
           count(DISTINCT vu) FILTER (WHERE source = 'client') AS clients
         FROM cable_samples
         WHERE run_id = :run_id
-        GROUP BY at
+        GROUP BY 1
         HAVING count(DISTINCT vu) FILTER (WHERE source = 'client') > 0
       ),
       lag_stats AS (
         SELECT
-          at,
+          date_bin(make_interval(secs => :step), at, TIMESTAMP 'epoch') AS at,
           percentile_disc(0.50) WITHIN GROUP (ORDER BY lag)   AS p50_lag_ms,
           percentile_disc(0.99) WITHIN GROUP (ORDER BY lag)   AS p99_lag_ms
         FROM cable_samples, unnest(lags) AS lag
         WHERE run_id = :run_id AND source = 'client'
-        GROUP BY at
+        GROUP BY 1
       )
       SELECT
         buckets.at,
@@ -42,7 +42,7 @@ class CableSample < ApplicationRecord
       ORDER BY buckets.at
     SQL
 
-    sanitized = sanitize_sql_array([sql, { run_id: run_id }])
+    sanitized = sanitize_sql_array([sql, { run_id: run_id, step: step }])
     rows = connection.exec_query(sanitized, 'CableSample').to_a
 
     finished = rows.any? && rows.last['at'] < 5.minutes.ago
