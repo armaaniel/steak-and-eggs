@@ -1,5 +1,6 @@
 module CpuLog
   SAMPLE = /\A\d+\.\d+ \d+ \d+( |\z)/
+  MEGABYTE = 1024.0 * 1024
 
   def self.read(path)
     lines = File.readlines(path, chomp: true).map { |line| line.delete("\r") }
@@ -23,6 +24,11 @@ module CpuLog
                       old_limit: after[8].to_i,
                       major_by: [after[9], before[10]].find { |reason| reason != '-' },
                       yjit_ms: (after[11].to_f - before[11].to_f) / 1e6 / elapsed)
+      end
+
+      if after.size >= 15
+        second.merge!(puma_mb: after[13].to_f / MEGABYTE,
+                      container_mb: after[14].to_f / MEGABYTE)
       end
 
       second

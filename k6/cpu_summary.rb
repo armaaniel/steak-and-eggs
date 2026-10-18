@@ -1,14 +1,16 @@
 require_relative 'cpu_log'
 
 CAP_MS = 250.0
+LIMIT_MB = 512.0
 BASELINE_WINDOW = 15
 
 log = CpuLog.read(ARGV.fetch(0))
 seconds = log[:seconds]
 runtime = seconds.any? { |second| second.key?(:gc_ms) }
+memory = seconds.any? { |second| second.key?(:container_mb) }
 
-puts("cpu part #{log[:part] || 'unknown'}, cap #{CAP_MS.round} ms of cpu per second")
-puts("minute  cpu ms/s avg  max   % of cap  pressure ms/s avg  max#{'  gc ms/s  majors  yjit ms/s' if runtime}")
+puts("cpu part #{log[:part] || 'unknown'}, cap #{CAP_MS.round} ms of cpu per second#{", memory limit #{LIMIT_MB.round} MB" if memory}")
+puts("minute  cpu ms/s avg  max   % of cap  pressure ms/s avg  max#{'  gc ms/s  majors  yjit ms/s' if runtime}#{'  puma MB max  container MB max  % of limit' if memory}")
 
 seconds.group_by { |second| second[:at].strftime('%H:%M') }.each do |minute, group|
   cpu = group.map { |second| second[:cpu] }
@@ -17,6 +19,13 @@ seconds.group_by { |second| second[:at].strftime('%H:%M') }.each do |minute, gro
 
   printf('%s   %8.1f  %6.1f  %6.1f%%  %13.1f  %6.1f', minute, cpu_avg, cpu.max, cpu_avg / CAP_MS * 100, pressure.sum / pressure.size, pressure.max)
   printf('  %7.1f  %6d  %9.1f', group.sum { |second| second[:gc_ms].to_f } / group.size, group.sum { |second| second[:majors].to_i }, group.sum { |second| second[:yjit_ms].to_f } / group.size) if runtime
+
+  if memory
+    container = group.map { |second| second[:container_mb].to_f }.max
+
+    printf('  %11.0f  %16.0f  %9.1f%%', group.map { |second| second[:puma_mb].to_f }.max, container, container / LIMIT_MB * 100)
+  end
+
   puts
 end
 
