@@ -3,7 +3,7 @@ require 'net/http'
 require_relative 'cpu_log'
 
 BATCH_SIZE = 1000
-METRICS = { 'cpu_used' => :cpu, 'cpu_pressure' => :pressure, 'gc_time' => :gc_ms, 'gc_major' => :majors, 'yjit_compile' => :yjit_ms }.freeze
+METRICS = { 'cpu_used' => :cpu, 'cpu_pressure' => :pressure, 'gc_time' => :gc_ms, 'gc_major' => :majors, 'yjit_compile' => :yjit_ms, 'memory_used' => :container_mb }.freeze
 
 path, run_id = ARGV
 uri = URI("#{ENV.fetch('API', 'https://www.steakneggs.art')}/run_metrics")

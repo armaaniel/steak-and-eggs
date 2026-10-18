@@ -9,7 +9,7 @@ class MetricService
   METRICS = {'cpu' => 'CPUUtilization', 'memory' => 'MemoryUtilization'}.freeze
   STATS = {'minimum' => 'Minimum', 'maximum' => 'Maximum', 'average' => 'Average'}.freeze
   SAMPLES = {'load' => LoadSample, 'cable' => CableSample}.freeze
-  SAMPLED = %w[cpu_used cpu_pressure gc_time gc_major yjit_compile].freeze
+  SAMPLED = %w[cpu_used cpu_pressure gc_time gc_major yjit_compile memory_used].freeze
 
   def self.for_run(run_id:, kind:, metric: 'cpu', step: nil)
     return [] unless SAMPLES.key?(kind)
