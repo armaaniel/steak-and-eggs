@@ -1,0 +1,447 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg version="1.1" viewBox="0 0 1060 420" xmlns="http://www.w3.org/2000/svg">
+  <defs
+     id="defs1">
+    <marker
+       id="arrow"
+       markerHeight="6"
+       markerWidth="6"
+       orient="auto-start-reverse"
+       refX="8"
+       refY="5"
+       viewBox="0 0 10 10">
+      <path
+         d="m2 1 6 4-6 4"
+         fill="none"
+         stroke="#9c9a92"
+         stroke-linecap="round"
+         stroke-linejoin="round"
+         stroke-width="1.5"
+         id="path1" />
+    </marker>
+  </defs>
+  <!-- ===== BACKGROUND ===== -->
+  <rect x="0" y="0" width="1060" height="420" fill="rgb(25,25,25)" id="bg" />
+  <!-- ===== TIER LABEL ===== -->
+  <text
+     x="600"
+     y="48.645161"
+     fill="#c2c0b6"
+     font-family="-apple-system, system-ui, 'Segoe UI', sans-serif"
+     font-size="12px"
+     text-anchor="middle"
+     id="text1">AWS VPC (us-west-1)</text>
+  <!-- ===== ROW 1: y=70 ===== -->
+  <!-- Vercel -->
+  <rect
+     x="30"
+     y="90"
+     width="130"
+     height="56"
+     rx="8"
+     fill="#3c3489"
+     stroke="#afa9ec"
+     stroke-width=".5"
+     id="rect1" />
+  <text
+     x="95"
+     y="110"
+     dominant-baseline="central"
+     fill="rgb(206, 203, 246)"
+     font-family="-apple-system, system-ui, 'Segoe UI', sans-serif"
+     font-size="14px"
+     font-weight="500"
+     text-anchor="middle"
+     id="text2">Vercel</text>
+  <text
+     x="95"
+     y="130"
+     dominant-baseline="central"
+     fill="rgb(175, 169, 236)"
+     font-family="-apple-system, system-ui, 'Segoe UI', sans-serif"
+     font-size="12px"
+     text-anchor="middle"
+     id="text3">Static hosting</text>
+  <!-- ElastiCache Valkey -->
+  <rect
+     x="510"
+     y="70"
+     width="180"
+     height="56"
+     rx="8"
+     fill="#633806"
+     stroke="#ef9f27"
+     stroke-width=".5"
+     id="rect11" />
+  <text
+     x="600"
+     y="90"
+     dominant-baseline="central"
+     fill="rgb(250, 199, 117)"
+     font-family="-apple-system, system-ui, 'Segoe UI', sans-serif"
+     font-size="14px"
+     font-weight="500"
+     text-anchor="middle"
+     id="text12">ElastiCache Valkey</text>
+  <text
+     x="600"
+     y="110"
+     dominant-baseline="central"
+     fill="rgb(239, 159, 39)"
+     font-family="-apple-system, system-ui, 'Segoe UI', sans-serif"
+     font-size="12px"
+     text-anchor="middle"
+     id="text13">Cache + pub/sub</text>
+  <!-- Polygon.io -->
+  <rect
+     x="750"
+     y="70"
+     width="180"
+     height="56"
+     rx="8"
+     fill="#72243e"
+     stroke="#ed93b1"
+     stroke-width=".5"
+     id="rect17" />
+  <text
+     x="840"
+     y="90"
+     dominant-baseline="central"
+     fill="rgb(244, 192, 209)"
+     font-family="-apple-system, system-ui, 'Segoe UI', sans-serif"
+     font-size="14px"
+     font-weight="500"
+     text-anchor="middle"
+     id="text18">Polygon.io</text>
+  <text
+     x="840"
+     y="110"
+     dominant-baseline="central"
+     fill="rgb(237, 147, 177)"
+     font-family="-apple-system, system-ui, 'Segoe UI', sans-serif"
+     font-size="12px"
+     text-anchor="middle"
+     id="text19">Market data provider</text>
+  <!-- ===== ROW 2: y=170 ===== -->
+  <!-- Browser (SPA) -->
+  <rect
+     x="30"
+     y="170"
+     width="130"
+     height="44"
+     rx="8"
+     fill="#444441"
+     stroke="#b4b2a9"
+     stroke-width=".5"
+     id="rect3" />
+  <text
+     x="95"
+     y="192"
+     dominant-baseline="central"
+     fill="rgb(211, 209, 199)"
+     font-family="-apple-system, system-ui, 'Segoe UI', sans-serif"
+     font-size="14px"
+     font-weight="500"
+     text-anchor="middle"
+     id="text4">Browser (SPA)</text>
+  <!-- ALB -->
+  <rect
+     x="310"
+     y="164"
+     width="160"
+     height="56"
+     rx="8"
+     fill="#0c447c"
+     stroke="#85b7eb"
+     stroke-width=".5"
+     id="rect5" />
+  <text
+     x="390"
+     y="184"
+     dominant-baseline="central"
+     fill="rgb(181, 212, 244)"
+     font-family="-apple-system, system-ui, 'Segoe UI', sans-serif"
+     font-size="14px"
+     font-weight="500"
+     text-anchor="middle"
+     id="text6">ALB</text>
+  <text
+     x="390"
+     y="204"
+     dominant-baseline="central"
+     fill="rgb(133, 183, 235)"
+     font-family="-apple-system, system-ui, 'Segoe UI', sans-serif"
+     font-size="12px"
+     text-anchor="middle"
+     id="text7">TLS termination</text>
+  <!-- ECS Fargate: Rails -->
+  <rect
+     x="510"
+     y="164"
+     width="180"
+     height="56"
+     rx="8"
+     fill="#085041"
+     stroke="#5dcaa5"
+     stroke-width=".5"
+     id="rect7" />
+  <text
+     x="600"
+     y="184"
+     dominant-baseline="central"
+     fill="rgb(159, 225, 203)"
+     font-family="-apple-system, system-ui, 'Segoe UI', sans-serif"
+     font-size="14px"
+     font-weight="500"
+     text-anchor="middle"
+     id="text8">ECS Fargate: Rails app</text>
+  <text
+     x="600"
+     y="204"
+     dominant-baseline="central"
+     fill="rgb(93, 202, 165)"
+     font-family="-apple-system, system-ui, 'Segoe UI', sans-serif"
+     font-size="12px"
+     text-anchor="middle"
+     id="text9">API + ActionCable</text>
+  <!-- ===== ROW 3: y=258 ===== -->
+  <!-- React Native app -->
+  <rect
+     x="30"
+     y="238"
+     width="130"
+     height="44"
+     rx="8"
+     fill="#444441"
+     stroke="#b4b2a9"
+     stroke-width=".5"
+     id="rect4" />
+  <text
+     x="95"
+     y="260"
+     dominant-baseline="central"
+     fill="rgb(211, 209, 199)"
+     font-family="-apple-system, system-ui, 'Segoe UI', sans-serif"
+     font-size="14px"
+     font-weight="500"
+     text-anchor="middle"
+     id="text5">React Native app</text>
+  <!-- RDS Postgres -->
+  <rect
+     x="510"
+     y="258"
+     width="180"
+     height="56"
+     rx="8"
+     fill="#0c447c"
+     stroke="#85b7eb"
+     stroke-width=".5"
+     id="rect9" />
+  <text
+     x="600"
+     y="278"
+     dominant-baseline="central"
+     fill="rgb(181, 212, 244)"
+     font-family="-apple-system, system-ui, 'Segoe UI', sans-serif"
+     font-size="14px"
+     font-weight="500"
+     text-anchor="middle"
+     id="text10">RDS Postgres</text>
+  <text
+     x="600"
+     y="298"
+     dominant-baseline="central"
+     fill="rgb(133, 183, 235)"
+     font-family="-apple-system, system-ui, 'Segoe UI', sans-serif"
+     font-size="12px"
+     text-anchor="middle"
+     id="text11">Persistent storage</text>
+  <!-- ECS Fargate: Ingester (aligned with Postgres) -->
+  <rect
+     x="750"
+     y="258"
+     width="180"
+     height="56"
+     rx="8"
+     fill="#712b13"
+     stroke="#f0997b"
+     stroke-width=".5"
+     id="rect15" />
+  <text
+     x="840"
+     y="278"
+     dominant-baseline="central"
+     fill="rgb(245, 196, 179)"
+     font-family="-apple-system, system-ui, 'Segoe UI', sans-serif"
+     font-size="14px"
+     font-weight="500"
+     text-anchor="middle"
+     id="text16">ECS Fargate: Ingester</text>
+  <text
+     x="840"
+     y="298"
+     dominant-baseline="central"
+     fill="rgb(240, 153, 123)"
+     font-family="-apple-system, system-ui, 'Segoe UI', sans-serif"
+     font-size="12px"
+     text-anchor="middle"
+     id="text17">Price streaming</text>
+  <!-- ===== ARROWS ===== -->
+  <g
+     stroke="#9c9a92"
+     stroke-width="1.5"
+     id="g20">
+    <!-- Vercel → Browser (down) -->
+    <line
+       x1="95"
+       x2="95"
+       y1="146"
+       y2="168"
+       marker-end="url(#arrow)"
+       id="line19" />
+    <!-- Browser → ALB -->
+    <path
+       d="m160 192h148"
+       fill="none"
+       marker-end="url(#arrow)"
+       id="path19" />
+    <!-- React Native → ALB -->
+    <path
+       d="m160 260h132v-68h16"
+       fill="none"
+       marker-end="url(#arrow)"
+       id="path20" />
+  </g>
+  <text
+     x="226"
+     y="253.99998"
+     fill="#c2c0b6"
+     font-family="-apple-system, system-ui, 'Segoe UI', sans-serif"
+     font-size="11px"
+     text-anchor="middle"
+     id="text20">HTTPS + WSS</text>
+  <!-- ALB → ECS Rails -->
+  <line
+     x1="470"
+     x2="508"
+     y1="192"
+     y2="192"
+     marker-end="url(#arrow)"
+     stroke="#9c9a92"
+     stroke-width="1.5"
+     id="line20" />
+  <text
+     x="489"
+     y="185"
+     fill="rgb(194, 192, 182)"
+     font-family="-apple-system, system-ui, 'Segoe UI', sans-serif"
+     font-size="11px"
+     text-anchor="middle"
+     id="text21">HTTP</text>
+  <text
+     x="488.6778"
+     y="207.44002"
+     fill="#c2c0b6"
+     font-family="-apple-system, system-ui, 'Segoe UI', sans-serif"
+     font-size="11px"
+     text-anchor="middle"
+     id="text21-4">WS</text>
+  <!-- ECS Rails → Redis (up) -->
+  <line
+     x1="600"
+     x2="600"
+     y1="164"
+     y2="128"
+     marker-end="url(#arrow)"
+     stroke="#9c9a92"
+     stroke-width="1.5"
+     id="line21" />
+  <!-- ECS Rails → Postgres (down) -->
+  <line
+     x1="600"
+     x2="600"
+     y1="220"
+     y2="256"
+     marker-end="url(#arrow)"
+     stroke="#9c9a92"
+     stroke-width="1.5"
+     id="line22" />
+  <!-- Ingester → Redis (diagonal up-left) -->
+  <line
+     x1="772"
+     x2="672"
+     y1="258"
+     y2="128"
+     marker-end="url(#arrow)"
+     stroke="#9c9a92"
+     stroke-width="1.5"
+     id="line24" />
+  <text
+     x="781.08234"
+     y="226.36797"
+     fill="#c2c0b6"
+     font-family="-apple-system, system-ui, 'Segoe UI', sans-serif"
+     font-size="11px"
+     text-anchor="middle"
+     id="text24"
+     style="font-size:10.6667px">SET + PUB</text>
+  <!-- Ingester → Postgres (left) -->
+  <line
+     x1="750"
+     x2="692"
+     y1="286"
+     y2="286"
+     marker-start="url(#arrow)"
+     marker-end="url(#arrow)"
+     stroke="#9c9a92"
+     stroke-width="1.5"
+     id="path24" />
+  <text
+     x="721"
+     y="279"
+     fill="rgb(194, 192, 182)"
+     font-family="-apple-system, system-ui, 'Segoe UI', sans-serif"
+     font-size="11px"
+     text-anchor="middle"
+     id="text25">Tickers</text>
+  <text
+     x="721"
+     y="301"
+     fill="rgb(194, 192, 182)"
+     font-family="-apple-system, system-ui, 'Segoe UI', sans-serif"
+     font-size="11px"
+     text-anchor="middle">Samples</text>
+  <!-- Rails → Polygon (REST, right then up) -->
+  <path
+     d="m690 180h40v-82h18"
+     fill="none"
+     marker-end="url(#arrow)"
+     stroke="#9c9a92"
+     stroke-width="1.5"
+     id="path25" />
+  <text
+     x="745.35962"
+     y="152.55673"
+     fill="#c2c0b6"
+     font-family="-apple-system, system-ui, 'Segoe UI', sans-serif"
+     font-size="11px"
+     text-anchor="middle"
+     id="text26">GET</text>
+  <!-- Polygon → Ingester (down) -->
+  <line
+     x1="840"
+     x2="840"
+     y1="126"
+     y2="256"
+     marker-end="url(#arrow)"
+     stroke="#9c9a92"
+     stroke-width="1.5"
+     id="line26" />
+  <text
+     x="848.96777"
+     y="195"
+     fill="#c2c0b6"
+     font-family="-apple-system, system-ui, 'Segoe UI', sans-serif"
+     font-size="11px"
+     id="text27">WebSocket</text>
+</svg>
