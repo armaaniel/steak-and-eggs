@@ -14,7 +14,7 @@ Price ingestion: [steak-and-eggs-ingester](https://github.com/armaaniel/steak-an
 
 ## Architecture
 
-- **Decoupled streaming pipeline.** A standalone Ruby process (the ingester) holds a WebSocket to Polygon.io and writes prices to Valkey. Rails reads Valkey on demand for REST endpoints and pushes live updates to clients through ActionCable. The two have independent failure domains, scale independently, and the pipeline is push-based end to end.
+- **Decoupled streaming pipeline.** A standalone Ruby process (the ingester) holds a WebSocket to Polygon.io and writes prices to Valkey. Rails reads Valkey on demand for REST endpoints and pushes live updates to clients through ActionCable. The two fail and deploy independently, and the pipeline is push-based end to end.
 - **Financial integrity in five layers.** Database transactions, pessimistic row locks, consistent lock ordering, model validations and database check constraints overlap, so if one layer fails, another catches it. Transactions track cost basis and realized P&L.
 - **Resilience by design.** Service-layer fallbacks return structured JSON so the frontend renders placeholders instead of breaking. `RedisService.safe_*` wrappers rescue every Redis error. Timeouts bound every external call (Polygon, Redis, Postgres). The ingester reconnects on its own when its connection goes stale or drops. Every error goes to Sentry.
 - **Built-in monitoring (DataCat).** Every request writes a trace, which is written off the request path. A canary walks a full user journey every 5 minutes against a 99.5% SLO. CloudWatch metrics cover every dependency, and the ingester reports its own health. k6 load tests are joined to the server's traces by request ID. No external APM.
@@ -42,7 +42,7 @@ DataCat exists to answer real questions about the app. Here's what I measured.
 
 **Polygon.io → Ingester → Valkey → ActionCable → Frontend.** Polygon pushes 15-minute-delayed per-second bars over a WebSocket, for every ticker in the `tickers` table. For each bar, the ingester runs one Redis pipeline that sets `price:<symbol>` and `open:<symbol>` (6-day TTL) and publishes to `price_channel:<symbol>`. ActionCable streams each channel to the clients subscribed to it.
 
-The ingester runs as its own ECS task, so Rails restarts don't drop the Polygon connection, and an ingester crash doesn't affect API requests. Polygon allows one WebSocket per API key, so the ingester deploys with `minimum_healthy_percent = 0`. The old task stops before the new one starts, which costs a few seconds of feed per deploy, and Valkey still holds the last prices.
+The ingester runs as its own ECS task, so Rails restarts don't drop the Polygon connection, and an ingester crash doesn't affect API requests. Polygon allows one WebSocket per API key, so the ingester deploys with `minimum_healthy_percent = 0`. The old task stops before the new one starts, which has cost 63–80 seconds of feed per deploy, and Valkey still holds the last prices.
 
 The ingester knows the market calendar, including holidays and early closes. During trading hours, it checks once a minute for silence, and more than 55 seconds without a message counts as a stale connection and triggers a reconnect. Outside trading hours, silence is expected.
 
@@ -131,7 +131,7 @@ These choices keep a demo app cheap. They're the first things I'd change for rea
 
 - **No redundancy.** There's one task per service, a single-AZ RDS instance (7-day backups) and a single Valkey node. If one fails, that part is down until AWS or ECS replaces it.
 - **Tasks run in public subnets** with public IPs, behind security groups, to avoid paying for a NAT gateway.
-- **Ingester deploys cost a few seconds of prices,** because Polygon allows one socket per key. Valkey keeps serving the last prices meanwhile.
+- **Ingester deploys cost about a minute of prices,** because Polygon allows one socket per key. Valkey keeps serving the last prices meanwhile.
 - **The trace queue lives in memory,** so a crash loses up to a second of traces.
 - **The traffic is mostly mine:** the canary, the load tests and me. The numbers above come from deliberate load, not real users.
 
