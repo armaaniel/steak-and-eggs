@@ -31,6 +31,7 @@ Separate Fargate services: Rails behind the ALB, and the ingester on its own wit
 - Every deploy pulls the full ~292 MB image, because Fargate keeps no image cache.
 - Compute spans two zones, but Postgres (1c) and Valkey (1a) don't, so a zone outage still takes the app down.
 - If Rails scales out, the next limit is Postgres connections on a `db.t4g.micro`.
+- DataCat's dependency panels read CloudWatch metrics for the ALB, ECS and ElastiCache, so moving to one box would blank them until they get a new source.
 
 ## Revisit when
 
