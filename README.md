@@ -24,6 +24,8 @@ Price ingestion: [steak-and-eggs-ingester](https://github.com/armaaniel/steak-an
 - **GitHub Actions CI/CD** runs Brakeman and a 355-example RSpec suite on every PR. A merge to `main` deploys to ECS.
 - **All AWS infrastructure is provisioned with Terraform.** That covers the VPC, ECS Fargate on ARM64 (the app and the ingester), RDS Postgres 17, ElastiCache Valkey 8.2, the ALB, ECR and EventBridge Scheduler.
 
+**Why Fargate.** Rails runs two copies during every deploy, and the ingester can never run two (Polygon allows one socket per key), so they're separate services with different deploy rules. That also leaves room to run more Rails tasks without managing servers. One EC2 box would cost about half as much. The full comparison is in [docs/decisions/0001-compute.md](docs/decisions/0001-compute.md).
+
 ## What DataCat Found
 
 DataCat exists to answer real questions about the app. Here's what I measured.
