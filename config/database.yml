@@ -1,7 +1,7 @@
 default: &default
   adapter: postgresql
   encoding: unicode
-  pool: 15
+  pool: <%= ENV.fetch("RAILS_MAX_THREADS", 5).to_i + 5 %>
   connect_timeout: 2
   # consider lock_timeout (kill query that takes longer than N to acqure lock)
   # and statement_timeout (kill query that takes longer than N)
