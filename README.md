@@ -18,10 +18,10 @@ Price ingestion: [steak-and-eggs-ingester](https://github.com/armaaniel/steak-an
 - **Financial integrity in five layers.** Database transactions, pessimistic row locks, consistent lock ordering, model validations and database check constraints overlap, so if one layer fails, another catches it. Transactions track cost basis and realized P&L.
 - **Resilience by design.** Service-layer fallbacks return structured JSON so the frontend renders placeholders instead of breaking. `RedisService.safe_*` wrappers rescue every Redis error. Timeouts bound every external call (Polygon, Redis, Postgres). The ingester reconnects on its own when its connection goes stale or drops. Every error goes to Sentry.
 - **Built-in monitoring (DataCat).** Every request writes a trace, which is written off the request path. A canary walks a full user journey every 5 minutes against a 99.5% SLO. CloudWatch metrics cover every dependency, and the ingester reports its own health. k6 load tests are joined to the server's traces by request ID. No external APM.
-- **Layered caching with three freshness models.** Continuous overwrite for streaming prices, TTL-only for data the user can't change, and explicit invalidation for state the user can change. On top of that, an in-memory `Rails.cache` serves the user hot path, and `MGET` batches multi-position reads.
+- **Layered caching with three freshness models.** Continuous overwrite for streaming prices, TTL-only for data the user can't change, and explicit invalidation for state the user can change. On top of that, `Rails.cache` (Valkey in production) holds the signed-in user, and `MGET` batches multi-position reads.
 - **Cross-platform clients.** The React/TypeScript web app and the React Native mobile app hit the same Rails API. Header-based JWT auth works the same for both.
 - **Scheduled jobs.** EventBridge Scheduler starts three Fargate tasks a night (ticker sync, portfolio snapshots, trace pruning), each reusing the app's task definition with a different command.
-- **GitHub Actions CI/CD** runs Brakeman and a 355-example RSpec suite on every PR. A merge to `main` deploys to ECS.
+- **GitHub Actions CI/CD** runs Brakeman and a ~334-example RSpec suite on every PR. A merge to `main` deploys to ECS.
 - **All AWS infrastructure is provisioned with Terraform.** That covers the VPC, ECS Fargate on ARM64 (the app and the ingester), RDS Postgres 17, ElastiCache Valkey 8.2, the ALB, ECR and EventBridge Scheduler.
 
 **Why Fargate.** Rails runs two copies during every deploy, and the ingester can never run two (Polygon allows one socket per key), so they're separate services with different deploy rules. That also leaves room to run more Rails tasks without managing servers. One EC2 box would cost about half as much. The full comparison is in [docs/decisions/0001-compute.md](docs/decisions/0001-compute.md).
@@ -70,7 +70,7 @@ Cache-aside everywhere, with three deliberately different freshness models:
 2. **TTL-only** (data the user can't directly affect): market snapshots (5 min), company descriptions (3 days), chart bars (24 h), ticker metadata (1 month). There's no invalidation logic. The next request after expiry refetches.
 3. **Explicit invalidation** (user-affected state): positions, portfolio history, activity feed. `CacheService.invalidate_user` clears the affected keys synchronously after every write.
 
-An in-memory `Rails.cache` holds the decoded user object after JWT verification. It's the hottest path, with no network latency. `MGET` batching fetches all position prices in a single Redis round trip for the AUM calculation.
+`Rails.cache`, backed by Valkey in production, holds the user record for up to 24 hours after JWT verification, so authenticating a request is one Valkey read instead of a Postgres query. `MGET` batching fetches all position prices in a single Redis round trip for the AUM calculation.
 
 Every Redis call goes through `RedisService.safe_*`, which rescues errors and returns `nil`. Callers then fall through to Postgres or the upstream API, so a Redis outage degrades to slower reads, not 500s.
 
@@ -117,7 +117,7 @@ Controller actions rescue all exceptions and return structured fallback JSON mat
 
 ### Testing
 
-RSpec covers models, services, requests and channels, with 355 examples across 19 spec files. The tests cover:
+RSpec covers models, services, requests and channels, with ~334 examples across 19 spec files. The tests cover:
 - buy and sell correctness: balance debits, position creation and removal, weighted-average recalculation, and realized P&L including losses
 - domain error mapping
 - Redis cache behavior: hits, misses, TTLs and invalidation
