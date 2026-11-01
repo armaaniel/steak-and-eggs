@@ -128,9 +128,20 @@ RSpec.describe(DependencyHealthService) do
       end
 
       it "only degrades the alb when its targets fail, leaving down to rails" do
-        stub_series(series("alb_healthy", [0.0]), series("alb_unhealthy", [1.0]))
+        stub_series(series("alb_healthy", [0.0]))
 
         expect(health_for("alb")[:status]).to(eq("warn"))
+      end
+
+      it "reads the lowest healthy target count, since fewer is worse" do
+        stub_series(series("alb_healthy", [1.0, 0.0, 1.0]), series("rails_cpu", [10.0]))
+
+        healthy = health_for("alb")[:readings].find { |r| r[:key] == "healthy" }
+        cpu = health_for("rails")[:readings].find { |r| r[:key] == "cpu" }
+
+        expect(healthy[:now]).to(eq(1.0))
+        expect(healthy[:low]).to(eq(0.0))
+        expect(cpu[:low]).to(be_nil)
       end
 
       it "flags any 5xx the alb returned itself" do

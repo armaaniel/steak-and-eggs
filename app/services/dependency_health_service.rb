@@ -82,7 +82,6 @@ class DependencyHealthService
       target_group = {name: 'TargetGroup', value: ENV['TARGET_GROUP_METRIC_ID']}
 
       specs << spec(dependency: 'alb', key: 'healthy', label: 'Healthy targets', unit: 'count', namespace: 'AWS/ApplicationELB', metric: 'HealthyHostCount', dimensions: [target_group, load_balancer], stat: 'Minimum')
-      specs << spec(dependency: 'alb', key: 'unhealthy', label: 'Unhealthy targets', unit: 'count', namespace: 'AWS/ApplicationELB', metric: 'UnHealthyHostCount', dimensions: [target_group, load_balancer], stat: 'Maximum')
       specs << spec(dependency: 'alb', key: 'errors', label: 'ALB 5xx', unit: 'count', namespace: 'AWS/ApplicationELB', metric: 'HTTPCode_ELB_5XX_Count', dimensions: [load_balancer], stat: 'Sum')
     end
 
@@ -115,7 +114,7 @@ class DependencyHealthService
   def self.spec(dependency:, key:, label:, unit:, namespace:, metric:, dimensions:, stat:)
     metric_stat = {metric: {namespace: namespace, metric_name: metric, dimensions: dimensions}, stat: stat}
 
-    {id: "#{dependency}_#{key}", dependency: dependency, key: key, label: label, unit: unit, counter: stat == 'Sum', metric_stat: metric_stat}
+    {id: "#{dependency}_#{key}", dependency: dependency, key: key, label: label, unit: unit, counter: stat == 'Sum', minimum: stat == 'Minimum', metric_stat: metric_stat}
   end
 
   def self.fetch(specs, window:, period:)
@@ -135,6 +134,7 @@ class DependencyHealthService
      unit: spec[:unit],
      now: values.last,
      peak: values.max,
+     low: spec[:minimum] ? values.min : nil,
      total: spec[:counter] ? values.sum : nil,
      points: points}
   end
@@ -144,7 +144,7 @@ class DependencyHealthService
 
     case dependency
     when 'alb'
-      return 'warn' if above.('unhealthy', :now, 0) || above.('errors', :total, 0)
+      return 'warn' if healthy_targets&.zero? || above.('errors', :total, 0)
     when 'rails'
       return 'critical' if healthy_targets&.zero?
       return 'warn' if above.('memory', :peak, MEMORY_WARN)
