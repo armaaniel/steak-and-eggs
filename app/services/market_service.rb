@@ -142,9 +142,12 @@ class MarketService
       raise ApiError unless response.code == '200'
 
       body = JSON.parse(response.body)
+      result = body['results'][0]
+      session = result['session']
 
-      data = {open: body['results'][0]['session']['open'], high: body['results'][0]['session']['high'],
-        low:body['results'][0]['session']['low'], volume:body['results'][0]['session']['volume']}
+      Rails.logger.warn("polygon snapshot for #{symbol} has no open: #{result.to_json}") unless session['open'].to_f.positive?
+
+      data = {open: session['open'], high: session['high'], low: session['low'], volume: session['volume']}
 
       RedisService.safe_setex("market:#{symbol}", 5.minutes.to_i, data.to_json)
       data

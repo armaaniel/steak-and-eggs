@@ -230,6 +230,25 @@ RSpec.describe(MarketService) do
       expect(RedisService).to(have_received(:safe_setex).with("market:TSLA", 300, anything))
     end
 
+    it("logs what polygon sent when the snapshot has no open") do
+      allow(RedisService).to(receive(:safe_get).with("market:TSLA").and_return(nil))
+      allow(RedisService).to(receive(:safe_setex))
+      allow(Rails.logger).to(receive(:warn))
+
+      body = { "results" => [{ "ticker" => "TSLA", "session" => { "open" => nil, "previous_close" => 100 } }] }.to_json
+      response = instance_double(Net::HTTPResponse, code: "200", body: body)
+      http = instance_double(Net::HTTP)
+      allow(http).to(receive(:use_ssl=))
+      allow(http).to(receive(:open_timeout=))
+      allow(http).to(receive(:read_timeout=))
+      allow(http).to(receive(:request).and_return(response))
+      allow(Net::HTTP).to(receive(:new).and_return(http))
+
+      MarketService.marketdata(symbol: "TSLA")
+
+      expect(Rails.logger).to(have_received(:warn).with(a_string_including("TSLA has no open", '"previous_close":100')))
+    end
+
     it("raises ApiError on non-200 response") do
       allow(RedisService).to(receive(:safe_get).with("market:TSLA").and_return(nil))
 
