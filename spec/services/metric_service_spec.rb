@@ -34,5 +34,16 @@ RSpec.describe(MetricService) do
     it('returns nothing for an unknown kind') do
       expect(MetricService.for_run(run_id: run_id, kind: 'nope', metric: 'cpu_used')).to(eq([]))
     end
+
+    it('returns only the seconds that had a major gc') do
+      rows = [[0, 0.0], [1, 1.0], [2, 0.0], [3, 2.0]].map do |offset, value|
+        { run_id: run_id, metric: 'gc_major', at: start + offset, minimum: value, maximum: value, average: value }
+      end
+      RunMetric.insert_all(rows)
+
+      metrics = MetricService.for_run(run_id: run_id, kind: 'load', metric: 'gc_major')
+
+      expect(metrics.map { |metric| [metric.at, metric.average] }).to(eq([[start + 1, 1.0], [start + 3, 2.0]]))
+    end
   end
 end
