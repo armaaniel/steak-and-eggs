@@ -30,6 +30,13 @@ RSpec.describe('Samples', type: :request) do
       expect(RunMetric.where(run_id: run_id, metric: 'cpu_pressure').pluck(:average)).to(eq([900.0]))
     end
 
+    it('accepts the reason for a major gc') do
+      post_metrics([{ metric: 'gc_major', at: at, value: 1 }, { metric: 'gc_major_nofree', at: at, value: 1 }])
+
+      expect(response).to(have_http_status(201))
+      expect(RunMetric.where(run_id: run_id).pluck(:metric)).to(contain_exactly('gc_major', 'gc_major_nofree'))
+    end
+
     it('rejects a batch with a metric that is not sampled per second') do
       post_metrics([{ metric: 'cpu_used', at: at, value: 1 }, { metric: 'cpu', at: at, value: 1 }])
 

@@ -9,8 +9,9 @@ class MetricService
   METRICS = {'cpu' => 'CPUUtilization', 'memory' => 'MemoryUtilization'}.freeze
   STATS = {'minimum' => 'Minimum', 'maximum' => 'Maximum', 'average' => 'Average'}.freeze
   SAMPLES = {'load' => LoadSample, 'cable' => CableSample}.freeze
-  SAMPLED = %w[cpu_used cpu_pressure gc_time gc_major yjit_compile memory_used].freeze
-  EVENT_COUNTS = %w[gc_major].freeze
+  GC_MAJOR_REASONS = %w[gc_major_nofree gc_major_oldgen gc_major_shady gc_major_force gc_major_oldmalloc].freeze
+  SAMPLED = [*%w[cpu_used cpu_pressure gc_time gc_major yjit_compile memory_used], *GC_MAJOR_REASONS].freeze
+  EVENT_COUNTS = ['gc_major', *GC_MAJOR_REASONS].freeze
 
   def self.for_run(run_id:, kind:, metric: 'cpu', step: nil)
     return [] unless SAMPLES.key?(kind)

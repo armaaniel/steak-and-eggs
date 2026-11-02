@@ -10,9 +10,13 @@ uri = URI("#{ENV.fetch('API', 'https://www.steakneggs.art')}/run_metrics")
 headers = { 'Content-Type' => 'application/json', 'Synthetic-Key' => ENV.fetch('SYNTHETIC_KEY') }
 
 samples = CpuLog.read(path)[:seconds].flat_map do |second|
-  METRICS.filter_map do |metric, field|
-    { metric: metric, at: (second[:at].to_f * 1000).round, value: second[field] } if second.key?(field)
+  at = (second[:at].to_f * 1000).round
+  metrics = METRICS.filter_map do |metric, field|
+    { metric: metric, at: at, value: second[field] } if second.key?(field)
   end
+
+  metrics << { metric: "gc_major_#{second[:major_by]}", at: at, value: 1 } if second[:majors].to_i.positive? && second[:major_by]
+  metrics
 end
 
 samples.each_slice(BATCH_SIZE) do |batch|

@@ -45,5 +45,16 @@ RSpec.describe(MetricService) do
 
       expect(metrics.map { |metric| [metric.at, metric.average] }).to(eq([[start + 1, 1.0], [start + 3, 2.0]]))
     end
+
+    it('returns only the seconds that had a major gc for that reason') do
+      rows = [[0, 'gc_major_nofree'], [3, 'gc_major_oldmalloc'], [7, 'gc_major_nofree']].map do |offset, metric|
+        { run_id: run_id, metric: metric, at: start + offset, minimum: 1.0, maximum: 1.0, average: 1.0 }
+      end
+      RunMetric.insert_all(rows)
+
+      metrics = MetricService.for_run(run_id: run_id, kind: 'load', metric: 'gc_major_nofree')
+
+      expect(metrics.map(&:at)).to(eq([start, start + 7]))
+    end
   end
 end
