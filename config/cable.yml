@@ -8,3 +8,4 @@ test:
 production:
   adapter: redis
   url: <%= ENV['REDIS_URL'] %>
+  reconnect_attempts: [1, 2, 5, 10, 30]
