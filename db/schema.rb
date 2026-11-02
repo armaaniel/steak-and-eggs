@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_10_12_194556) do
+ActiveRecord::Schema[8.0].define(version: 2026_11_02_230652) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -46,6 +46,15 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_12_194556) do
     t.index ["boot_id", "at"], name: "index_ingester_samples_on_boot_id_and_at"
     t.index ["connection_id", "at"], name: "index_ingester_samples_on_connection_id_and_at"
     t.index ["kind", "at"], name: "index_ingester_samples_on_kind_and_at"
+  end
+
+  create_table "job_runs", force: :cascade do |t|
+    t.string "name", null: false
+    t.datetime "started_at", null: false
+    t.datetime "finished_at"
+    t.string "error_class"
+    t.string "sentry_event_id"
+    t.index ["name", "started_at"], name: "index_job_runs_on_name_and_started_at"
   end
 
   create_table "load_samples", force: :cascade do |t|

@@ -84,6 +84,17 @@ module Types
       argument(:run_id, ID)
       description('every request made by one run, in the order it made them')
     end
+
+    field(:job_buckets, [Types::JobBucketType], null: false) do
+      description('each nightly job by utc day over the last 30 days: runs started, completed and failed, and whether one was due')
+    end
+
+    field(:job_runs, [Types::JobRunType], null: false) do
+      argument(:name, String)
+      argument(:bucket, GraphQL::Types::ISO8601DateTime)
+      argument(:bucket_end, GraphQL::Types::ISO8601DateTime)
+      description('runs of one nightly job in a day bucket')
+    end
     
     field(:ingester_spans, [Types::IngesterSpanType], null: false) do
       argument(:from, GraphQL::Types::ISO8601DateTime)
@@ -223,6 +234,14 @@ module Types
 
     def synthetic_run_traces(run_id:)
       Trace.synthetic_run_traces(run_id: run_id)
+    end
+
+    def job_buckets
+      JobRun.buckets
+    end
+
+    def job_runs(name:, bucket:, bucket_end:)
+      JobRun.runs(name: name, bucket: bucket, bucket_end: bucket_end)
     end
 
     def ingester_spans(from:, to:)
