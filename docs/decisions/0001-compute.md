@@ -8,7 +8,7 @@ Status: accepted. Written down 2026-10-31.
 2. **The ingester can never run 2 copies.** Polygon allows one WebSocket per API key, so it deploys stop-first and loses 63–80 s of prices each time. It can't share a deploy unit with Rails.
 3. **I want the option to run Rails on more than one machine** without a redesign.
 4. **I don't want to manage servers:** OS updates, disks, placing containers.
-5. **Cost matters.** About $83/month as built.
+5. **Cost matters.** About $90/month as built.
 
 ## Options
 
@@ -18,7 +18,7 @@ Status: accepted. Written down 2026-10-31.
 | Separate fates | ❌ | ❌ one box, one zone | ✅ | ✅ |
 | Rails can scale out (3) | ❌ scaling copies the ingester | ❌ needs Valkey moved out and a load balancer | ✅ | ✅ `desired_count` |
 | Server upkeep (4) | none | one box | several | none |
-| Cost (5), rough | less than now | ~$40–55/month | in between | ~$83/month |
+| Cost (5), rough | less than now | ~$40–55/month | in between | ~$90/month |
 
 ## Decision
 
@@ -26,7 +26,7 @@ Separate Fargate services: Rails behind the ALB, and the ingester on its own wit
 
 ## Consequences
 
-- About $30–45/month more than one box, and 42 Terraform resources.
+- About $35–50/month more than one box, and 42 Terraform resources.
 - The scale-out option is unused: Rails runs `desired_count = 1`.
 - Every deploy pulls the full ~292 MB image, because Fargate keeps no image cache.
 - Compute spans two zones, but Postgres (1c) and Valkey (1a) don't, so a zone outage still takes the app down.
