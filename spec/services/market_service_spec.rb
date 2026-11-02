@@ -9,6 +9,22 @@ RSpec.describe(MarketService) do
   end
 
   describe("buy") do
+    before do
+      Ticker.create!(symbol: "TSLA", name: "Tesla, Inc.", ticker_type: "CS", exchange: "NASDAQ", currency: "USD")
+    end
+
+    it("refuses a delisted ticker without touching the balance") do
+      Ticker.create!(symbol: "TSE", name: "Trinseo PLC", ticker_type: "CS", exchange: "XNYS", currency: "usd", delisted_at: 1.day.ago)
+      allow(RedisService).to(receive(:safe_get).with("price:TSE").and_return("5"))
+
+      expect {
+        MarketService.buy(symbol: "TSE", quantity: 1, user_id: user.id)
+      }.to(raise_error(MarketService::NotFoundError))
+
+      expect(user.reload.balance).to(eq(10000))
+      expect(Position.find_by(user_id: user.id, symbol: "TSE")).to(be_nil)
+    end
+
     it("creates a position and deducts balance") do
       result = MarketService.buy(symbol: "TSLA", quantity: 10, user_id: user.id)
 

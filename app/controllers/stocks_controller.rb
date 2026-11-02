@@ -18,6 +18,9 @@ class StocksController < ApplicationController
   rescue MarketService::InsufficientFundsError => e
     report_error(e)
     render(json: {error: "Insufficient funds for this transaction"}, status: 402)
+  rescue MarketService::NotFoundError => e
+    record_error(e)
+    render(json: {error: "This stock is no longer listed"}, status: 404)
   rescue => e
     report_error(e)
     render(json:{error: "Service temporarily unavailable"}, status:503)

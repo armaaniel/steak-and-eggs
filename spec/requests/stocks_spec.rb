@@ -15,8 +15,21 @@ RSpec.describe("Stocks", type: :request) do
 
   describe "POST /stocks/:symbol/buy" do
     before do
+      Ticker.create!(symbol: "TSLA", name: "Tesla, Inc.", ticker_type: "CS", exchange: "NASDAQ", currency: "USD")
       allow(RedisService).to(receive(:safe_get).with("price:TSLA").and_return("100"))
       allow(CacheService).to(receive(:invalidate_user))
+    end
+
+    it "returns 404 without reporting for a delisted ticker" do
+      Ticker.create!(symbol: "TSE", name: "Trinseo PLC", ticker_type: "CS", exchange: "XNYS", currency: "usd", delisted_at: 1.day.ago)
+      allow(RedisService).to(receive(:safe_get).with("price:TSE").and_return("5"))
+      allow(Sentry).to(receive(:capture_exception))
+
+      post "/stocks/TSE/buy", params: { quantity: 1 }, headers: headers
+
+      expect(response).to(have_http_status(404))
+      expect(JSON.parse(response.body)["error"]).to(eq("This stock is no longer listed"))
+      expect(Sentry).not_to(have_received(:capture_exception))
     end
 
     it "returns 201 with trade data" do

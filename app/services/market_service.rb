@@ -28,6 +28,8 @@ class MarketService
 
   def self.buy(symbol:, quantity:, user_id:)
     ActiveSupport::Notifications.instrument("MarketService.buy.datacat") do
+      raise NotFoundError unless Ticker.exists?(symbol: symbol, delisted_at: nil)
+
       stock_string = RedisService.safe_get("price:#{symbol}")
       stock_price = BigDecimal(stock_string || "0")
       raise(StandardError) if stock_price <=0

@@ -57,6 +57,7 @@ RSpec.describe("Request errors", type: :request) do
   end
 
   it "records the class, location and sentry event of a reported error" do
+    Ticker.create!(symbol: "TSLA", name: "Tesla, Inc.", ticker_type: "CS", exchange: "NASDAQ", currency: "USD")
     allow(RedisService).to(receive(:safe_get).and_return(nil))
     allow(Sentry).to(receive(:capture_exception).and_return(instance_double(Sentry::ErrorEvent, event_id: "abc123")))
 
