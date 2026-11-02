@@ -42,7 +42,7 @@ DataCat exists to answer real questions about the app. Here's what I measured.
 
 ### Market Data Pipeline
 
-**Polygon.io → Ingester → Valkey → ActionCable → Frontend.** Polygon pushes 15-minute-delayed per-second bars over a WebSocket, for every ticker in the `tickers` table. For each bar, the ingester runs one Redis pipeline that sets `price:<symbol>` and `open:<symbol>` (6-day TTL) and publishes to `price_channel:<symbol>`. ActionCable streams each channel to the clients subscribed to it.
+**Polygon.io → Ingester → Valkey → ActionCable → Frontend.** Polygon pushes 15-minute-delayed per-second bars over a WebSocket, for every ticker in the `tickers` table that isn't marked delisted. For each bar, the ingester runs one Redis pipeline that sets `price:<symbol>` and `open:<symbol>` (6-day TTL) and publishes to `price_channel:<symbol>`. ActionCable streams each channel to the clients subscribed to it.
 
 The ingester runs as its own ECS task, so Rails restarts don't drop the Polygon connection, and an ingester crash doesn't affect API requests. Polygon allows one WebSocket per API key, so the ingester deploys with `minimum_healthy_percent = 0`. The old task stops before the new one starts, which has cost 63–80 seconds of feed per deploy, and Valkey still holds the last prices.
 
