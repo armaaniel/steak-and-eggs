@@ -144,12 +144,10 @@ class MarketService
       raise ApiError unless response.code == '200'
 
       body = JSON.parse(response.body)
-      result = body['results'][0]
-      session = result['session']
-
-      Rails.logger.warn("polygon snapshot for #{symbol} has no open: #{result.to_json}") unless session['open'].to_f.positive?
-
+      session = body['results'][0]['session']
       data = {open: session['open'], high: session['high'], low: session['low'], volume: session['volume']}
+
+      data = previous_session(symbol) || data unless session['open'].to_f.positive?
 
       RedisService.safe_setex("market:#{symbol}", 5.minutes.to_i, data.to_json)
       data
@@ -288,4 +286,23 @@ class MarketService
     by_day[by_day.keys.max]
   end
   private_class_method :latest_session
+
+  def self.previous_session(symbol)
+    uri=URI("https://api.polygon.io/v2/aggs/ticker/#{symbol}/prev?adjusted=true&apiKey=#{ENV['API_KEY']}")
+
+    http = Net::HTTP.new(uri.host, uri.port)
+    http.use_ssl = true
+    http.open_timeout = 1
+    http.read_timeout = 2
+
+    response = http.request(Net::HTTP::Get.new(uri))
+    return unless response.code == '200'
+
+    bar = JSON.parse(response.body)['results']&.first
+    {open: bar['o'], high: bar['h'], low: bar['l'], volume: bar['v']} if bar
+  rescue => e
+    Sentry.capture_exception(e)
+    nil
+  end
+  private_class_method :previous_session
 end
