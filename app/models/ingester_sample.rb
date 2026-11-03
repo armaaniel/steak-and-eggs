@@ -119,12 +119,12 @@ class IngesterSample < ApplicationRecord
     sql = <<~SQL
       WITH bucketed AS (
         SELECT
-          to_timestamp(floor(extract(epoch FROM at) / :bucket) * :bucket) AS bucket,
+          to_timestamp(floor((extract(epoch FROM at) - :sample) / :bucket) * :bucket) AS bucket,
           sum_lag_ms,
           sampled_events,
           symbols
         FROM ingester_samples
-        WHERE at >= :from AND at < :to
+        WHERE at >= :written_from AND at < :written_to
           AND kind = 'tick'
           AND sampled_events > 0
       )
@@ -138,7 +138,7 @@ class IngesterSample < ApplicationRecord
       ORDER BY bucket
     SQL
 
-    sanitized = sanitize_sql_array([sql, { from: from, to: to, bucket: bucket_seconds(from, to) }])
+    sanitized = sanitize_sql_array([sql, { written_from: from + SAMPLE_SECONDS, written_to: to + SAMPLE_SECONDS, sample: SAMPLE_SECONDS, bucket: bucket_seconds(from, to) }])
 
     connection.exec_query(sanitized, 'IngesterSample').to_a
   end
@@ -264,19 +264,19 @@ class IngesterSample < ApplicationRecord
                ELSE sum_idle_ms - lag(sum_idle_ms) OVER w END AS d_idle_ms,
           EXTRACT(epoch FROM at - lag(at) OVER w) AS d_seconds
         FROM ingester_samples
-        WHERE at >= :from AND at < :to AND kind = 'tick'
+        WHERE at >= :from AND at < :written_to AND kind = 'tick'
         WINDOW w AS (PARTITION BY boot_id ORDER BY at, id)
       ),
       bucketed AS (
         SELECT
-          to_timestamp(floor(extract(epoch FROM at) / :bucket) * :bucket) AS bucket,
+          to_timestamp(floor((extract(epoch FROM at) - :sample) / :bucket) * :bucket) AS bucket,
           d_events,
           d_frames,
           d_process_ms,
           d_idle_ms,
           d_seconds
         FROM deltas
-        WHERE d_seconds >= #{MIN_RATE_GAP} AND d_events >= 0
+        WHERE at >= :written_from AND d_seconds >= #{MIN_RATE_GAP} AND d_events >= 0
       )
       SELECT
         bucket AS at,
@@ -289,7 +289,7 @@ class IngesterSample < ApplicationRecord
       ORDER BY bucket
     SQL
 
-    sanitized = sanitize_sql_array([sql, { from: from, to: to, bucket: bucket_seconds(from, to) }])
+    sanitized = sanitize_sql_array([sql, { from: from, written_from: from + SAMPLE_SECONDS, written_to: to + SAMPLE_SECONDS, sample: SAMPLE_SECONDS, bucket: bucket_seconds(from, to) }])
     connection.exec_query(sanitized, 'IngesterSample').to_a
   end
 

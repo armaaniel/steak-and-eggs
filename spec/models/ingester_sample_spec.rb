@@ -63,13 +63,22 @@ RSpec.describe(IngesterSample) do
       expect(rate.first['at']).to(eq(bucket_start))
       expect(rate.first['events_per_sec'].to_f).to(eq(5.0))
     end
+
+    it("labels each point with the minute before its sample was written, the minute the sample covers") do
+      tick(at: noon + 12.seconds, events: 0)
+      tick(at: noon + 72.seconds, events: 600)
+
+      rate = IngesterSample.rate(from: noon, to: noon + 1.hour)
+
+      expect(rate.map { |point| point['at'] }).to(eq([noon]))
+    end
   end
 
   describe(".lag") do
     it("weights each tick's lag by its sampled events within a bucket") do
       bucket_start = Time.at(840 * 2_100_000).utc
-      tick(at: bucket_start, sampled_events: 1, sum_lag_ms: IngesterSample::BASE_LAG_MS + 100, symbols: 3)
-      tick(at: bucket_start + 1.minute, sampled_events: 9, sum_lag_ms: 9 * (IngesterSample::BASE_LAG_MS + 10), symbols: 5)
+      tick(at: bucket_start + 1.minute, sampled_events: 1, sum_lag_ms: IngesterSample::BASE_LAG_MS + 100, symbols: 3)
+      tick(at: bucket_start + 2.minutes, sampled_events: 9, sum_lag_ms: 9 * (IngesterSample::BASE_LAG_MS + 10), symbols: 5)
 
       to = bucket_start + 1.hour
       lag = IngesterSample.lag(from: to - 7.days, to: to)
@@ -78,6 +87,14 @@ RSpec.describe(IngesterSample) do
       expect(lag.first['mean_excess_ms']).to(eq(19.0))
       expect(lag.first['sampled_events']).to(eq(10))
       expect(lag.first['symbols']).to(eq(5))
+    end
+
+    it("labels each point with the minute before its sample was written, the minute the sample covers") do
+      tick(at: noon + 72.seconds, sampled_events: 1, sum_lag_ms: IngesterSample::BASE_LAG_MS + 100)
+
+      lag = IngesterSample.lag(from: noon, to: noon + 1.hour)
+
+      expect(lag.map { |point| point['at'] }).to(eq([noon]))
     end
   end
 end
