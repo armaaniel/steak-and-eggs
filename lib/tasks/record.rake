@@ -1,5 +1,8 @@
 task record: :environment do
   JobRun.track('record') do
+    failed_batches = 0
+    failed_users = 0
+
     User.in_batches(of: 1000) do |batch|
       users = batch.index_by { |user| user.id }
       user_ids = users.keys
@@ -10,7 +13,8 @@ task record: :environment do
 
       all_symbols = positions_by_user.values.flatten.map { |position| position.symbol }.uniq
 
-      all_prices = RedisService.safe_mget(*all_symbols.map { |symbol| "price:#{symbol}" })
+      all_prices = []
+      all_prices = REDIS.mget(*all_symbols.map { |symbol| "price:#{symbol}" }) if all_symbols.any?
       price_hash = all_symbols.zip(all_prices).to_h
 
       records = user_ids.map do |user_id|
@@ -27,6 +31,7 @@ task record: :environment do
 
       rescue => e
         Sentry.capture_exception(e)
+        failed_users += 1
         nil
       end.compact
 
@@ -34,6 +39,11 @@ task record: :environment do
       RedisService.safe_del(*user_ids.map { |id| "portfolio:#{id}" })
     rescue => e
       Sentry.capture_exception(e)
+      failed_batches += 1
+    end
+
+    if failed_batches > 0 || failed_users > 0
+      raise JobRun::PartialFailure, "#{failed_batches} batches and #{failed_users} users weren't recorded"
     end
   end
 end

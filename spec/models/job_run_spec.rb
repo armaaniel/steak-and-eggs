@@ -57,8 +57,8 @@ RSpec.describe(JobRun) do
       JobRun.create!(name: 'tickers:sync', started_at: Time.utc(2026, 11, 8, 4, 1), finished_at: Time.utc(2026, 11, 8, 4, 1, 20))
 
       expect(day('record', Time.utc(2026, 11, 7))).to(include(expected: 0))
-      expect(day('tickers:sync', Time.utc(2026, 11, 8))).to(include(expected: 1, started: 1, completed: 1, failures: 0))
-      expect(day('record', Time.utc(2026, 11, 9))).to(include(expected: 1, started: 0))
+      expect(day('tickers:sync', Time.utc(2026, 11, 8))).to(include(expected: 1, started: 1, completed: 1, failures: 0, due_at: Time.utc(2026, 11, 8, 4)))
+      expect(day('record', Time.utc(2026, 11, 9))).to(include(expected: 1, started: 0, due_at: Time.utc(2026, 11, 9, 5)))
       expect(day('tickers:sync', Time.utc(2026, 11, 10))).to(include(expected: 1, started: 0))
       expect(day('record', Time.utc(2026, 11, 10))).to(include(expected: 0))
     end

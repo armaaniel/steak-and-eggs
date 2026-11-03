@@ -722,10 +722,10 @@ RSpec.describe(Types::QueryType) do
     it("returns a missed day as expected with no runs, and a day's runs with their status") do
       JobRun.create!(name: 'record', started_at: Time.utc(2026, 11, 9, 5, 1), finished_at: Time.utc(2026, 11, 9, 5, 1, 40))
 
-      buckets = SteakAndEggsSchema.execute('{ jobBuckets { name bucket started completed failures expected } }').to_h.dig("data", "jobBuckets")
+      buckets = SteakAndEggsSchema.execute('{ jobBuckets { name bucket dueAt started completed failures expected } }').to_h.dig("data", "jobBuckets")
       runs = SteakAndEggsSchema.execute('{ jobRuns(name: "record", bucket: "2026-11-09T00:00:00Z", bucketEnd: "2026-11-10T00:00:00Z") { name startedAt finishedAt status } }').to_h.dig("data", "jobRuns")
 
-      expect(buckets.find { |b| b["name"] == "record" && b["bucket"] == "2026-11-10T00:00:00Z" }).to(include("expected" => 1, "started" => 0))
+      expect(buckets.find { |b| b["name"] == "record" && b["bucket"] == "2026-11-10T00:00:00Z" }).to(include("expected" => 1, "started" => 0, "dueAt" => "2026-11-10T05:00:00Z"))
       expect(runs.map { |run| [run["name"], Time.iso8601(run["startedAt"]), Time.iso8601(run["finishedAt"]), run["status"]] }).to(eq([["record", Time.utc(2026, 11, 9, 5, 1), Time.utc(2026, 11, 9, 5, 1, 40), "succeeded"]]))
     end
   end

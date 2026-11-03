@@ -48,6 +48,7 @@ RSpec.describe("tickers:sync") do
     expect(delisted).to(eq(["TSE"]))
     expect(Ticker.find_by(symbol: "NEWCO").delisted_at).to(be_nil)
     expect(RedisService).to(have_received(:safe_delete_matching).with("search:*"))
+    expect(JobRun.last).to(have_attributes(name: "tickers:sync", status: "succeeded"))
   end
 
   it("brings a delisted ticker back when Polygon lists it again") do
@@ -77,7 +78,7 @@ RSpec.describe("tickers:sync") do
     expect(delisted.size).to(eq(11))
   end
 
-  it("only prints what it would do on a dry run") do
+  it("only prints what it would do on a dry run, and records no run") do
     stub_polygon(listed)
     with_env("DRY_RUN" => "1")
     task = Rake::Task["tickers:sync"]
@@ -86,5 +87,6 @@ RSpec.describe("tickers:sync") do
     expect { task.invoke }.to(output(/Gone: TSE.*Dry run, nothing written/m).to_stdout)
     expect(delisted).to(eq([]))
     expect(RedisService).not_to(have_received(:safe_delete_matching))
+    expect(JobRun.count).to(eq(0))
   end
 end

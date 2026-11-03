@@ -4,7 +4,9 @@ require "json"
 namespace :tickers do
   desc "Sync tickers with Polygon: upsert the active ones and mark the rest delisted. DRY_RUN=1 previews"
   task sync: :environment do
-    JobRun.track('tickers:sync') do
+    dry_run = ENV["DRY_RUN"].present?
+
+    sync = lambda do
       fetched = %w[CS ETF ETV ADRC UNIT FUND].flat_map { |type| fetch_polygon_tickers(type) }.uniq { |t| t[:symbol] }
       symbols = fetched.map { |t| t[:symbol] }
       complete, incomplete = fetched.partition { |t| t.values.all?(&:present?) }
@@ -16,7 +18,7 @@ namespace :tickers do
       puts "Polygon lists #{fetched.size} active tickers; #{missing.size} of #{listed.count} listed here are gone, #{returning} come back"
       puts "Gone: #{missing.join(', ')}" if missing.any?
       puts "Skipping #{incomplete.size} with missing fields: #{incomplete.map { |t| t[:symbol] }.join(', ')}" if incomplete.any?
-      next puts("Dry run, nothing written") if ENV["DRY_RUN"].present?
+      next puts("Dry run, nothing written") if dry_run
 
       ActiveRecord::Base.transaction do
         Ticker.upsert_all(complete.map { |t| t.merge(delisted_at: nil) }, unique_by: :symbol)
@@ -25,6 +27,12 @@ namespace :tickers do
 
       cleared = RedisService.safe_delete_matching("search:*")
       puts "Upserted #{complete.size}, marked #{missing.size} delisted, cleared #{cleared || 0} cached searches"
+    end
+
+    if dry_run
+      sync.call
+    else
+      JobRun.track('tickers:sync', &sync)
     end
   end
 end

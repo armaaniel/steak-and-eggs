@@ -1,4 +1,6 @@
 class JobRun < ApplicationRecord
+  class PartialFailure < StandardError; end
+
   SCHEDULE = {'tickers:sync' => 4, 'record' => 5, 'prune_traces' => 6}.freeze
   GRACE = 1.hour
   DAY = 1.day.to_i
@@ -57,6 +59,7 @@ class JobRun < ApplicationRecord
         { name:       name,
           bucket:     bucket,
           bucket_end: bucket + DAY,
+          due_at:     bucket + hour.hours,
           started:    row['started'].to_i,
           completed:  row['completed'].to_i,
           failures:   row['failures'].to_i,
