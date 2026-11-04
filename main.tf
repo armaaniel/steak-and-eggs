@@ -609,7 +609,7 @@ resource "aws_ecs_service" "ingester" {
 	deployment_maximum_percent = 100
 
   network_configuration {
-    subnets          = [aws_subnet.alb_ecs_public.id, aws_subnet.alb_ecs_public_b.id]
+    subnets          = [aws_subnet.alb_ecs_public.id]
     security_groups  = [aws_security_group.ecs.id]
     assign_public_ip = true
   }
