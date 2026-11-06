@@ -556,6 +556,7 @@ resource "aws_ecs_task_definition" "ingester" {
 				},					
         { name = "API_KEY", value = var.api_key },
         { name = "SENTRY_DSN", value = var.sentry_dsn },
+        { name = "RUBY_YJIT_ENABLE", value = "1" },
       ]
 
       logConfiguration = {
