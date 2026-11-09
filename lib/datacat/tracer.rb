@@ -2,7 +2,7 @@ module Datacat
   class Tracer
     STORED_SPANS = 500
 
-    attr_reader :spans, :breakdown
+    attr_reader :spans
 
     def self.current
       ActiveSupport::IsolatedExecutionState[:datacat_tracer]
@@ -24,7 +24,6 @@ module Datacat
       @started = Tracer.now
       @spans = []
       @open = []
-      @breakdown = {}
     end
 
     def open(name, category)

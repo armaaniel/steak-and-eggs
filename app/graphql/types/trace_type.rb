@@ -3,11 +3,9 @@ module Types
    field(:id, ID)
    field(:endpoint, String)
    field(:duration, Float)
-   field(:db_runtime, Float)
    field(:status, Integer)
    field(:controller, String)
    field(:action, String)
-   field(:breakdown, GraphQL::Types::JSON)
    field(:spans, [Types::SpanType]) do
      description('the waterfall, loaded only by trace(id:), since trace lists leave it out')
    end

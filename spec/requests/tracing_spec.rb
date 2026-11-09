@@ -32,8 +32,6 @@ RSpec.describe("Tracing", type: :request) do
     expect(row).to(include(endpoint: 'POST /stocks/TSLA/buy', status: 201, controller: 'StocksController', action: 'buy', user_id: user.id, source: 'user'))
     expect(row[:spans].first.values_at(:name, :parent)).to(eq(['StocksController#buy', nil]))
     expect(children(row[:spans], 'StocksController#buy')).to(include('MarketService.buy'))
-    expect(row[:db_runtime]).to(be > 0)
-    expect(row[:breakdown].keys).to(eq(['MarketService.buy']))
   end
 
   it("records the buy's queries, with the ten inside MarketService.buy and nine of them inside its transaction") do

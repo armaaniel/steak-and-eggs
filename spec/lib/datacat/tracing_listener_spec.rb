@@ -47,17 +47,9 @@ RSpec.describe(Datacat::TracingListener) do
       request(payload) { call_service(symbol: 'AAPL') }
 
       row = rows.sole
-      expect(row).to(include(endpoint: 'GET /stocks/AAPL/stockprice', status: 200, db_runtime: 0.0, controller: 'StocksController', action: 'get_stock_price', source: 'user'))
+      expect(row).to(include(endpoint: 'GET /stocks/AAPL/stockprice', status: 200, controller: 'StocksController', action: 'get_stock_price', source: 'user'))
       expect(row[:spans].map { |span| span.values_at(:name, :category, :parent) }).to(eq([['StocksController#get_stock_price', 'app', nil], ['MarketService.marketprice', 'app', 0]]))
       expect(row[:duration]).to(eq(row[:spans].first[:duration]))
-    end
-
-    it("keeps the breakdown as today, with the service's payload and duration, and no exception objects") do
-      request(payload) { call_service(symbol: 'AAPL', exception: ['ArgumentError', 'boom'], exception_object: ArgumentError.new) }
-
-      entry = rows.sole[:breakdown]['MarketService.marketprice']
-      expect(entry).to(include(symbol: 'AAPL', used_redis: true, duration: be_a(Float)))
-      expect(entry.keys).not_to(include(:exception, :exception_object))
     end
 
     it("stores the time spent in app code as app_ms, all of the duration while every span is app") do

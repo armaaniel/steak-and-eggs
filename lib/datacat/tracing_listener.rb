@@ -43,15 +43,10 @@ module Datacat
       tracer = Tracer.current or return
       return finish_trace(tracer, payload) if name == ROOT
 
-      span =
-        case name
-        when QUERY then tracer.close { query_details(payload) }
-        when REDIS then tracer.close { redis_details(payload) }
-        else tracer.close
-        end
-
-      if name.end_with?('.datacat')
-        tracer.breakdown[span[:name]] = payload.except(:exception_object, :exception).merge(duration: span[:duration])
+      case name
+      when QUERY then tracer.close { query_details(payload) }
+      when REDIS then tracer.close { redis_details(payload) }
+      else tracer.close
       end
     rescue => e
       Sentry.capture_exception(e)
@@ -125,7 +120,6 @@ module Datacat
       {
         endpoint: "#{payload[:method]} #{payload[:path].split('?').first}",
         duration: root[:duration],
-        db_runtime: payload[:db_runtime],
         app_ms: times['app'],
         sql_ms: times['sql'],
         redis_ms: times['redis'],
@@ -145,7 +139,6 @@ module Datacat
         error_class: payload[:error_class] || payload[:exception]&.first,
         error_location: payload[:error_location],
         sentry_event_id: payload[:sentry_event_id],
-        breakdown: tracer.breakdown.presence,
         spans: tracer.stored_spans,
         created_at: now,
         updated_at: now
