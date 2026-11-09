@@ -1,5 +1,7 @@
 module Datacat
   class Tracer
+    STORED_SPANS = 500
+
     attr_reader :spans, :breakdown
 
     def self.current
@@ -71,6 +73,17 @@ module Datacat
         totals[category] += span[:duration] - children[position]
       end
       totals.transform_values { |ms| ms.round(2) }
+    end
+
+    def stored_spans
+      return @spans if @spans.size <= STORED_SPANS
+
+      kept = @spans.first(STORED_SPANS).map(&:dup)
+      kept.each do |span|
+        span[:parent] = @spans[span[:parent]][:parent] while span[:parent] && span[:parent] >= STORED_SPANS
+      end
+      kept.first[:dropped] = @spans.size - STORED_SPANS
+      kept
     end
 
     def cache_counts(excluding:)

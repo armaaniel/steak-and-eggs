@@ -204,6 +204,62 @@ RSpec.describe(Datacat::Tracer) do
     end
   end
 
+  describe("#stored_spans") do
+    def traced(children:, category: 'sql')
+      tracer = Datacat::Tracer.create
+      tracer.open('GraphqlController#execute', 'app')
+      children.times do
+        tracer.open('Trace Load', category)
+        tracer.close
+      end
+      tracer
+    end
+
+    it("stores every span when there are 500 or fewer") do
+      tracer = traced(children: 499)
+
+      expect(tracer.stored_spans).to(be(tracer.spans))
+    end
+
+    it("stores only the first 500, and notes on the root how many were left out") do
+      stored = traced(children: 600).stored_spans
+
+      expect(stored.size).to(eq(500))
+      expect(stored.first).to(include(name: 'GraphqlController#execute', dropped: 101))
+    end
+
+    it("leaves the recorded spans whole, so the summary columns still count every one") do
+      tracer = traced(children: 499)
+      tracer.open('GET price:?', 'redis')
+      tracer.close
+      tracer.close_root
+
+      tracer.stored_spans
+
+      expect(tracer.spans.size).to(eq(501))
+      expect(tracer.spans.first).not_to(have_key(:dropped))
+      expect(tracer.self_times).to(have_key('redis'))
+    end
+
+    it("points a stored span whose parent was cut at its nearest stored ancestor, as when a transaction lands past the cut") do
+      tracer = traced(children: 497)
+      tracer.open('MarketService.buy', 'app')
+      tracer.open('User Load', 'sql')
+      tracer.open('BEGIN', 'sql')
+      tracer.close
+      tracer.wrap_innermost('transaction', 'sql')
+      tracer.close
+      tracer.close
+      tracer.close
+
+      stored = tracer.stored_spans
+
+      expect(stored[499].values_at(:name, :parent)).to(eq(['User Load', 498]))
+      expect(stored.filter_map { |span| span[:parent] }).to(all(be < 500))
+      expect(tracer.spans[499][:parent]).to(eq(501))
+    end
+  end
+
   describe("#cache_counts") do
     it("counts hits and misses, leaving out lookups anywhere inside the excluded category") do
       tracer = Datacat::Tracer.create

@@ -155,6 +155,19 @@ RSpec.describe(Datacat::TracingListener) do
       expect(spans[2]).to(include(category: 'sql', sql: 'SELECT a.attname FROM pg_attribute a WHERE a.attrelid = ?::regclass'))
     end
 
+    it("stores at most 500 spans, but counts every query in sql_ms") do
+      request(payload) do
+        call_service do
+          600.times { run_query('Trace Load', 'SELECT "traces".* FROM "traces" WHERE "traces"."id" = 1') }
+        end
+      end
+
+      row = rows.sole
+      expect(row[:spans].size).to(eq(500))
+      expect(row[:spans].first[:dropped]).to(eq(102))
+      expect(row[:sql_ms]).to(be >= row[:spans].select { |span| span[:category] == 'sql' }.sum { |span| span[:duration] })
+    end
+
     it("stores query time as sql_ms, with app_ms and sql_ms adding up to the duration") do
       request(payload) { call_service { run_query('User Load', 'SELECT "users".* FROM "users" WHERE "users"."id" = 42 LIMIT 1') { sleep(0.002) } } }
 

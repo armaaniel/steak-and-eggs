@@ -146,7 +146,7 @@ module Datacat
         error_location: payload[:error_location],
         sentry_event_id: payload[:sentry_event_id],
         breakdown: tracer.breakdown.presence,
-        spans: tracer.spans,
+        spans: tracer.stored_spans,
         created_at: now,
         updated_at: now
       }

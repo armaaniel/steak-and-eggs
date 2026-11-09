@@ -49,6 +49,7 @@ One row per trace, as today.
 - **Columns:** anything filtered, sorted or charted across traces. That's today's fields, plus self time per category (`app_ms`, `sql_ms`, `redis_ms`, `http_ms`, `callbacks_ms`, `render_ms`), plus `cache_hits` and `cache_misses`. Those last two count the Redis GETs and MGETs outside `before_action`, by whether Redis returned a value. An MGET is one lookup, and it's a hit only if every key came back. A command that raised counts as neither.
 - **`duration`** keeps today's meaning: the controller action's time.
 - **`spans`:** a `json` list of span objects, in the order they were opened. A transaction is opened during its first query, so it comes after that query in the list. It's read only when someone opens one trace. The row is the trace, and a span's position in the list is its ID.
+- **At most 500 spans are stored per trace,** so one runaway request can't make a huge row. The tracer still records every span in memory, so the summary columns count all of them, and the root notes how many were left out (`dropped`). A transaction is opened after its first query, so if the cut falls between them, the stored query points to its nearest stored ancestor instead.
 
 | field | example | present |
 |---|---|---|
@@ -60,6 +61,7 @@ One row per trace, as today.
 | `sql` | `SELECT "users".* FROM "users" WHERE "users"."id" = ? LIMIT ? FOR UPDATE` | SQL spans |
 | `cached` | `true` | SQL spans answered by Rails' query cache |
 | `hit` | `true` | Redis GETs and MGETs that didn't raise |
+| `dropped` | `102`, spans past the first 500 that weren't stored | the root, only when spans were left out |
 
 Names: SQL uses Rails' query name, with the statement in `sql`. Rails' `SCHEMA` lookups are spans too. A process runs them the first time it touches each table, to learn the table's columns and primary key, and they made up 18 queries and about 35 ms of a cold local buy. `BEGIN`, `COMMIT` and savepoints are named by their statement, since Rails names them all `TRANSACTION`. A transaction itself is `transaction`, and its queries are its children. Redis is the command plus the key's shape (`GET price:?`). A command with several keys lists each distinct shape (`MGET price:? open:?`), and a command with no key is just its name (`SCAN`). HTTP is the method plus the host (`GET api.polygon.io`). Services use the event name without `.datacat`. The root is `Controller#action`.
 
