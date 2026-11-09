@@ -1,6 +1,6 @@
 class PositionService
   def self.find_position(symbol:, user_id:)
-    ActiveSupport::Notifications.instrument("PositionService.find_position.datacat", used_db: true) do
+    ActiveSupport::Notifications.instrument("PositionService.find_position.datacat") do
       position = Position.find_by(user_id: user_id, symbol: symbol)
 
       if position
@@ -10,14 +10,10 @@ class PositionService
   end
 
   def self.get_aum(user_id:, balance:)
-    payload = {used_redis: false}
-    
-    ActiveSupport::Notifications.instrument("PositionService.get_aum.datacat", payload) do
+    ActiveSupport::Notifications.instrument("PositionService.get_aum.datacat") do
       positions = PositionService.find_positions(user_id:user_id)
       return {aum:balance, balance:balance} if positions.empty?
-      
-      payload[:used_redis] = true
-      
+
       price_keys = positions.map do |position|
         "price:#{position[:symbol]}"
       end
@@ -44,17 +40,12 @@ class PositionService
   end
 
   def self.portfolio_records(user_id:)
-    payload = {used_redis: false, used_db: false}
-
-    ActiveSupport::Notifications.instrument("PositionService.portfolio_records.datacat", payload) do
+    ActiveSupport::Notifications.instrument("PositionService.portfolio_records.datacat") do
       cached = RedisService.safe_get("portfolio:#{user_id}")
 
       if cached
-        payload[:used_redis] = true
         return cached
       end
-
-      payload[:used_db] = true
 
       data = PortfolioRecord.where(user_id:user_id).order(:date).pluck(:date, :portfolio_value)
 
@@ -75,17 +66,13 @@ class PositionService
   private
 
   def self.find_positions(user_id:)
-    payload = {used_redis: false, used_db:false}
-    
-    ActiveSupport::Notifications.instrument("PositionService.find_positions.datacat", payload) do
+    ActiveSupport::Notifications.instrument("PositionService.find_positions.datacat") do
       cached = RedisService.safe_get("positions:#{user_id}")
       
       if cached
-        payload[:used_redis] = true
         next JSON.parse(cached, symbolize_names:true)
       end
       
-      payload[:used_db] = true
       position = Position.where(user_id: user_id)
         .joins("LEFT JOIN tickers ON tickers.symbol = positions.symbol")
         .pluck("positions.symbol", "positions.shares", "tickers.name", "positions.average_price")

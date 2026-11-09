@@ -120,17 +120,12 @@ class MarketService
   end
 
   def self.marketdata(symbol:)
-    payload = {symbol: symbol, used_redis:false, used_api:false}
-
-    ActiveSupport::Notifications.instrument('MarketService.marketdata.datacat', payload) do
+    ActiveSupport::Notifications.instrument('MarketService.marketdata.datacat', symbol: symbol) do
       cached = RedisService.safe_get("market:#{symbol}")
 
       if cached
-        payload[:used_redis] = true
         return cached
       end
-
-      payload[:used_api] = true
 
       uri=URI("https://api.polygon.io/v3/snapshot?ticker=#{symbol}&apiKey=#{ENV['API_KEY']}")
       
@@ -155,17 +150,12 @@ class MarketService
   end
 
   def self.companydata(symbol:)
-    payload = {symbol: symbol, used_redis: false, used_api: false}
-
-    ActiveSupport::Notifications.instrument("MarketService.companydata.datacat", payload) do
+    ActiveSupport::Notifications.instrument("MarketService.companydata.datacat", symbol: symbol) do
       cached = RedisService.safe_get("company:#{symbol}")
 
       if cached
-        payload[:used_redis] = true
         return cached
       end
-
-      payload[:used_api] = true
 
       uri=URI("https://api.polygon.io/v3/reference/tickers/#{symbol}?apiKey=#{ENV['API_KEY']}")
       
@@ -188,16 +178,12 @@ class MarketService
 
   def self.chartdata(symbol:, range: DEFAULT_CHART_RANGE)
     config = CHART_RANGES.fetch(range)
-    payload = {symbol: symbol, range: range, used_redis: false, used_api: false}
 
-    ActiveSupport::Notifications.instrument("MarketService.chartdata.datacat", payload) do
+    ActiveSupport::Notifications.instrument("MarketService.chartdata.datacat", symbol: symbol, range: range) do
       cached = RedisService.safe_get("chart:#{symbol}:#{range}")
       if cached
-        payload[:used_redis] = true
         return cached
       end
-
-      payload[:used_api] = true
 
       from = config[:from].call
       uri=URI("https://api.polygon.io/v2/aggs/ticker/#{symbol}/range/#{config[:multiplier]}/#{config[:timespan]}/#{from}/#{Date.current}?adjusted=true&sort=asc&limit=50000&apiKey=#{ENV['API_KEY']}")
@@ -233,16 +219,11 @@ class MarketService
   end
 
   def self.livedata(symbol:)
-    payload = {symbol: symbol, used_redis: false, used_api: false}
-
-    ActiveSupport::Notifications.instrument("MarketService.livedata.datacat", payload) do
+    ActiveSupport::Notifications.instrument("MarketService.livedata.datacat", symbol: symbol) do
       cached = RedisService.safe_get("live:#{symbol}")
       if cached
-        payload[:used_redis] = true
         return cached
       end
-
-      payload[:used_api] = true
 
       window_end = (Time.current.to_f * 1000).to_i - LIVE_DELAY_MS
       to = window_end - SECOND_MS

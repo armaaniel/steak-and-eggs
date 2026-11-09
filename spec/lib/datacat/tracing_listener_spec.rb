@@ -26,7 +26,6 @@ RSpec.describe(Datacat::TracingListener) do
 
   def call_service(payload = {})
     listener.start(service, 'id', payload)
-    payload[:used_redis] = true
     yield if block_given?
     listener.finish(service, 'id', payload)
   end

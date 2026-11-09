@@ -14,17 +14,12 @@ class Transaction < ApplicationRecord
   })
 
   def self.get(user_id:)
-    payload = {used_redis:false, used_db:false}
-
-    ActiveSupport::Notifications.instrument("Transaction.get.datacat", payload) do
+    ActiveSupport::Notifications.instrument("Transaction.get.datacat") do
       cached = RedisService.safe_get("activity:#{user_id}")
 
       if cached
-        payload[:used_redis] = true
         return cached
       end
-
-      payload[:used_db] = true
 
       data = Transaction.where(user_id: user_id).order(created_at: :desc)
 

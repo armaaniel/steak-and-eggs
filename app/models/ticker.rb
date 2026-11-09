@@ -8,18 +8,15 @@ class Ticker < ApplicationRecord
 
     term_sanny = ActiveRecord::Base.sanitize_sql_like(term)
 
-    payload = {term: term_sanny, used_redis: false, used_db: false}
-    ActiveSupport::Notifications.instrument('Ticker.search.datacat', payload) do
+    ActiveSupport::Notifications.instrument('Ticker.search.datacat', term: term_sanny) do
       raise DemoError, "intentional error from searching #{DEMO_ERROR_TERM}" if term == DEMO_ERROR_TERM
 
       cached = RedisService.safe_get("search:#{term_sanny}")
 
       if cached
-        payload[:used_redis] = true
         return cached
       end
 
-      payload[:used_db] = true
       results = Ticker.where(delisted_at: nil).where("symbol ILIKE ? OR name ILIKE ?", "#{term_sanny}%", "#{term_sanny}%").limit(15)
 
       RedisService.safe_setex("search:#{term_sanny}", 3.days.to_i, results.to_json)
@@ -30,19 +27,15 @@ class Ticker < ApplicationRecord
   def self.query(symbol:)
     raise StandardError if symbol.blank?
 
-    payload = {term: symbol, used_redis: false, used_db: false}
-
-    ActiveSupport::Notifications.instrument("Ticker.query.datacat", payload) do
+    ActiveSupport::Notifications.instrument("Ticker.query.datacat", term: symbol) do
       cached = RedisService.safe_get("ticker:#{symbol}")
       if cached
-        payload[:used_redis] = true
         return cached
       end
 
       result = Ticker.find_by(symbol: symbol)
 
       if result
-        payload[:used_db] = true
         data = {ticker_type:result.ticker_type, name: result.name, exchange:result.exchange}
         RedisService.safe_setex("ticker:#{symbol}", 1.month.to_i, data.to_json)
         data
