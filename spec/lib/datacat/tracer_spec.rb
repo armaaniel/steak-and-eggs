@@ -77,4 +77,38 @@ RSpec.describe(Datacat::Tracer) do
       expect(tracer.spans.map { |span| span.values_at(:start, :duration) }).to(eq([[1.0, 9.0], [3.0, 3.0]]))
     end
   end
+
+  describe("#self_times") do
+    before do
+      allow(Process).to(receive(:clock_gettime).and_return(100.0, 100.0, 100.001, 100.002, 100.003, 100.004, 100.0045, 100.005, 100.007, 100.0085, 100.0085, 100.0095, 100.010))
+    end
+
+    def buy
+      tracer = Datacat::Tracer.create
+
+      tracer.open('StocksController#buy', 'app')
+      tracer.open('before_action', 'callbacks')
+      tracer.open('GET user_?', 'redis')
+      tracer.close
+      tracer.close
+      tracer.open('MarketService.buy', 'app')
+      tracer.open('User Load', 'sql')
+      tracer.close
+      tracer.close
+      tracer.open('render json', 'render')
+      tracer.close
+      tracer.close
+      tracer
+    end
+
+    it("gives each category its spans' durations minus their direct children's") do
+      expect(buy.self_times).to(eq('app' => 4.0, 'callbacks' => 2.0, 'redis' => 1.0, 'sql' => 2.0, 'render' => 1.0))
+    end
+
+    it("adds up to the root's duration, so every millisecond is counted once") do
+      tracer = buy
+
+      expect(tracer.self_times.values.sum).to(eq(tracer.spans.first[:duration]))
+    end
+  end
 end

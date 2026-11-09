@@ -33,6 +33,15 @@ module Datacat
       span
     end
 
+    def self_times
+      children = Hash.new(0.0)
+      @spans.each { |span| children[span[:parent]] += span[:duration] if span[:parent] }
+
+      totals = Hash.new(0.0)
+      @spans.each_with_index { |span, position| totals[span[:category]] += span[:duration] - children[position] }
+      totals.transform_values { |ms| ms.round(2) }
+    end
+
     private
 
     def elapsed

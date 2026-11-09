@@ -59,6 +59,7 @@ module Datacat
         endpoint: "#{payload[:method]} #{payload[:path].split('?').first}",
         duration: root[:duration],
         db_runtime: payload[:db_runtime],
+        app_ms: tracer.self_times['app'],
         status: payload[:status],
         controller: payload[:controller],
         action: payload[:action],

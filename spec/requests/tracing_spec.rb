@@ -23,15 +23,17 @@ RSpec.describe("Tracing", type: :request) do
     expect(row).to(include(endpoint: 'POST /stocks/TSLA/buy', status: 201, controller: 'StocksController', action: 'buy', user_id: user.id, source: 'user'))
     expect(row[:spans].map { |span| span.values_at(:name, :parent) }).to(eq([['StocksController#buy', nil], ['MarketService.buy', 0]]))
     expect(row[:db_runtime]).to(be > 0)
+    expect(row[:app_ms]).to(eq(row[:duration]))
     expect(row[:breakdown].keys).to(eq(['MarketService.buy']))
   end
 
-  it("stores the row, spans included, with the flush thread's insert") do
+  it("stores the row, spans and app_ms included, with the flush thread's insert") do
     rows = traced { post("/stocks/TSLA/buy", params: { quantity: 5 }, headers: auth_headers(user)) }
 
     Trace.insert_all(rows)
 
     expect(Trace.last.spans.map { |span| span['name'] }).to(eq(['StocksController#buy', 'MarketService.buy']))
+    expect(Trace.last.app_ms).to(eq(rows.sole[:app_ms]))
   end
 
   it("queues nothing for the health check") do

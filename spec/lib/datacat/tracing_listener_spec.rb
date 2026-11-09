@@ -48,6 +48,13 @@ RSpec.describe(Datacat::TracingListener) do
       expect(entry.keys).not_to(include(:exception, :exception_object))
     end
 
+    it("stores the time spent in app code as app_ms, all of the duration while every span is app") do
+      request(payload) { call_service(symbol: 'AAPL') }
+
+      row = rows.sole
+      expect(row[:app_ms]).to(eq(row[:duration]))
+    end
+
     it("strips the query string from the endpoint") do
       request(payload.merge(path: '/search?term=apple'))
 
