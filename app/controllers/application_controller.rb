@@ -8,7 +8,7 @@ class ApplicationController < ActionController::API
     decoded = JWT.decode(token, Rails.application.secret_key_base, true, algorithm: 'HS256')
     id = decoded[0]['user_id']
 
-    @current_user = Rails.cache.fetch("user_#{id}", {expires_in: 24.hours}) do
+    @current_user = Rails.cache.fetch("user:#{id}", {expires_in: 24.hours}) do
       User.find(id)
     end
 

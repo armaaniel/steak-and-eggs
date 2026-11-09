@@ -69,7 +69,7 @@ class UsersController < ApplicationController
   end
 
   def delete_account
-    Rails.cache.delete("user_#{@current_user.id}")
+    Rails.cache.delete("user:#{@current_user.id}")
     UserService.delete_account(user_id: @current_user.id)
     head(:ok)
 
