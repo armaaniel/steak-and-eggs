@@ -911,6 +911,32 @@ RSpec.describe(Types::QueryType) do
       expect(SteakAndEggsSchema.execute("{ trace(id: #{trace.id}) { endpoint duration } }").to_h.dig("data", "trace")).to(eq("endpoint" => "GET /users", "duration" => 12.0))
       expect(SteakAndEggsSchema.execute("{ trace(id: #{trace.id + 1}) { endpoint } }").to_h.dig("data", "trace")).to(be_nil)
     end
+
+    it("returns a trace's spans and where its time went, as they're stored") do
+      spans = [
+        {name: "StocksController#buy", category: "app", start: 0.0, parent: nil, duration: 12.5, dropped: 3},
+        {name: "User Load", category: "sql", start: 1.0, parent: 0, duration: 0.5, sql: 'SELECT "users".* FROM "users" WHERE "users"."id" = ? LIMIT ?', cached: true},
+        {name: "GET price:?", category: "redis", start: 2.0, parent: 0, duration: 0.2, hit: false}
+      ]
+      trace = Trace.create!(endpoint: "POST /stocks/AAPL/buy", duration: 12.5, status: 201, spans: spans, app_ms: 11.8, sql_ms: 0.5, redis_ms: 0.2)
+
+      result = SteakAndEggsSchema.execute("{ trace(id: #{trace.id}) { appMs sqlMs redisMs httpMs spans { name category start duration parent sql cached hit dropped } } }").to_h.dig("data", "trace")
+
+      expect(result.slice("appMs", "sqlMs", "redisMs", "httpMs")).to(eq("appMs" => 11.8, "sqlMs" => 0.5, "redisMs" => 0.2, "httpMs" => nil))
+      expect(result["spans"].map { |span| span.values_at("name", "parent", "cached", "hit", "dropped") }).to(eq([["StocksController#buy", nil, nil, nil, 3], ["User Load", 0, true, nil, nil], ["GET price:?", 0, nil, false, nil]]))
+      expect(result["spans"][1]["sql"]).to(eq('SELECT "users".* FROM "users" WHERE "users"."id" = ? LIMIT ?'))
+    end
+  end
+
+  describe("traces without their spans") do
+    it("leaves spans out of trace lists, so a list doesn't load every trace's waterfall") do
+      Trace.create!(endpoint: "GET /stocks/AAPL/stockprice", duration: 2.0, status: 200, created_at: 5.minutes.ago, spans: [{name: "StocksController#get_stock_price", category: "app", start: 0.0, parent: nil, duration: 2.0}])
+
+      listed = SteakAndEggsSchema.execute('{ traceList(range: "1h") { endpoint spans { name } } }').to_h.dig("data", "traceList")
+
+      expect(listed).to(eq([{"endpoint" => "GET /stocks/AAPL/stockprice", "spans" => nil}]))
+      expect(Trace.list(range: "1h").first.has_attribute?(:spans)).to(be(false))
+    end
   end
 
   describe("ingester_resources") do

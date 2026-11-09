@@ -99,8 +99,13 @@ class Trace < ApplicationRecord
 
     traces.where(source: %w[user canary])
       .where(created_at: window)
+      .without_spans
       .order(column, id: direction)
       .limit((limit || LIST_LIMIT).clamp(0, LIST_LIMIT))
+  end
+
+  def self.without_spans
+    select(column_names - ['spans'])
   end
 
   def self.stats(endpoint:, range: nil, status: nil, cache: nil)
@@ -215,7 +220,7 @@ class Trace < ApplicationRecord
   end
 
   def self.synthetic_run_traces(run_id:)
-    where(run_id: run_id).order(created_at: :asc)
+    where(run_id: run_id).without_spans.order(created_at: :asc)
   end
 
   def self.service_timeseries(range:, endpoint: nil, include_partial: false, status: nil, cache: nil)
