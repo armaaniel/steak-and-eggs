@@ -4,7 +4,8 @@ module Datacat
     QUERY = 'sql.active_record'
     TRANSACTION = 'transaction.active_record'
     REDIS = 'command.redis'
-    PATTERN = /\.datacat\z|\Aprocess_action\.action_controller\z|\A(sql|transaction)\.active_record\z|\Acommand\.redis\z/
+    HTTP = 'request.http'
+    PATTERN = /\.datacat\z|\A#{Regexp.union(ROOT, QUERY, TRANSACTION, REDIS, HTTP)}\z/
 
     TRACKED_ROUTES = [
       '/stocks/',
@@ -62,6 +63,7 @@ module Datacat
       when QUERY then tracer.open(payload[:name].presence || 'SQL', 'sql')
       when TRANSACTION then open_transaction(tracer)
       when REDIS then tracer.open(RedisShape.call(payload[:command]), 'redis')
+      when HTTP then tracer.open("#{payload[:method]} #{payload[:host]}", 'http')
       else tracer.open(name.delete_suffix('.datacat'), 'app')
       end
     end
@@ -110,6 +112,7 @@ module Datacat
         app_ms: times['app'],
         sql_ms: times['sql'],
         redis_ms: times['redis'],
+        http_ms: times['http'],
         cache_hits: hits,
         cache_misses: misses,
         status: payload[:status],

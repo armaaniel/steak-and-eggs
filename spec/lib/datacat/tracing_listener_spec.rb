@@ -241,6 +241,32 @@ RSpec.describe(Datacat::TracingListener) do
     end
   end
 
+  describe("http") do
+    it("records a request as an http span named by its method and host, and stores the time as http_ms") do
+      request(payload) do
+        call_service do
+          http_payload = { method: 'GET', host: 'api.polygon.io' }
+          listener.start('request.http', 'id', http_payload)
+          listener.finish('request.http', 'id', http_payload)
+        end
+      end
+
+      row = rows.sole
+      expect(row[:spans].last).to(include(name: 'GET api.polygon.io', category: 'http', parent: 1))
+      expect(row[:http_ms]).to(be_a(Float))
+    end
+  end
+
+  describe("PATTERN") do
+    it("matches every event the listener handles, and nothing that only looks like one") do
+      handled = ['process_action.action_controller', 'sql.active_record', 'transaction.active_record', 'command.redis', 'request.http', 'MarketService.buy.datacat']
+      lookalikes = ['start_processing.action_controller', 'sql.active_record.extra', 'instantiation.active_record', 'xcommand.redis', 'request.http2', 'datacat']
+
+      expect(handled).to(all(match(Datacat::TracingListener::PATTERN)))
+      expect(lookalikes).to(all(satisfy { |name| !name.match?(Datacat::TracingListener::PATTERN) }))
+    end
+  end
+
   describe("transactions") do
     let(:transaction) { 'transaction.active_record' }
 
