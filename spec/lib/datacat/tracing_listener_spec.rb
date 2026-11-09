@@ -259,8 +259,8 @@ RSpec.describe(Datacat::TracingListener) do
 
   describe("PATTERN") do
     it("matches every event the listener handles, and nothing that only looks like one") do
-      handled = ['process_action.action_controller', 'sql.active_record', 'transaction.active_record', 'command.redis', 'request.http', 'MarketService.buy.datacat']
-      lookalikes = ['start_processing.action_controller', 'sql.active_record.extra', 'instantiation.active_record', 'xcommand.redis', 'request.http2', 'datacat']
+      handled = ['process_action.action_controller', 'sql.active_record', 'transaction.active_record', 'command.redis', 'request.http', 'before_action.action_controller', 'render.action_controller', 'MarketService.buy.datacat']
+      lookalikes = ['start_processing.action_controller', 'sql.active_record.extra', 'instantiation.active_record', 'xcommand.redis', 'request.http2', 'render_template.action_view', 'datacat']
 
       expect(handled).to(all(match(Datacat::TracingListener::PATTERN)))
       expect(lookalikes).to(all(satisfy { |name| !name.match?(Datacat::TracingListener::PATTERN) }))

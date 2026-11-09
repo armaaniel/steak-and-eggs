@@ -39,7 +39,7 @@ RSpec.describe("Tracing", type: :request) do
   it("records the buy's queries, with the ten inside MarketService.buy and nine of them inside its transaction") do
     spans = buy.sole[:spans]
 
-    expect(children(spans, 'MarketService.buy')).to(eq(['Ticker Exists?', 'transaction']))
+    expect(children(spans, 'MarketService.buy')).to(eq(['Ticker Exists?', 'transaction', 'DEL positions:?']))
     expect(children(spans, 'transaction')).to(eq(['User Load', 'Position Load', 'User Exists?', 'User Update', 'User Load', 'Position Exists?', 'Position Create', 'User Load', 'Transaction Create', 'RELEASE SAVEPOINT active_record_1']))
   end
 
@@ -61,11 +61,34 @@ RSpec.describe("Tracing", type: :request) do
     expect(spans.to_json).not_to(include(user.username, 'TSLA'))
   end
 
-  it("splits the duration into app_ms and sql_ms") do
+  it("splits the duration into categories that add up to it") do
     row = buy.sole
 
-    expect(row[:sql_ms]).to(be > 0)
-    expect(row[:app_ms] + row[:sql_ms]).to(be_within(0.02).of(row[:duration]))
+    expect(row.values_at(:sql_ms, :callbacks_ms, :render_ms)).to(all(be > 0))
+    expect(row.values_at(:app_ms, :sql_ms, :redis_ms, :http_ms, :callbacks_ms, :render_ms).sum(&:to_f)).to(be_within(0.03).of(row[:duration]))
+  end
+
+  it("puts verify_token's work inside a before_action span, and the response's JSON in a render span") do
+    spans = buy.sole[:spans]
+
+    expect(children(spans, 'StocksController#buy')).to(eq(['before_action', 'MarketService.buy', 'render json']))
+    expect(children(spans, 'before_action')).to(eq(['User Load']))
+    expect(spans.select { |span| span[:name].in?(['before_action', 'render json']) }.map { |span| span[:category] }).to(eq(['callbacks', 'render']))
+  end
+
+  it("closes before_action when verify_token stops the request, with its 401 rendered inside it") do
+    row = traced { post("/stocks/TSLA/buy", params: { quantity: 5 }) }.sole
+
+    expect(row[:status]).to(eq(401))
+    expect(children(row[:spans], 'StocksController#buy')).to(eq(['before_action']))
+    expect(children(row[:spans], 'before_action')).to(eq(['render json']))
+  end
+
+  it("records no before_action for a controller that has no before callbacks") do
+    row = traced { post("/graphql", params: { query: '{ __typename }' }) }.sole
+
+    expect(row[:spans].map { |span| span[:name] }).to(eq(['GraphqlController#execute', 'GraphQL.execute', 'render json']))
+    expect(row[:callbacks_ms]).to(be_nil)
   end
 
   it("stores the row, spans and summary columns included, with the flush thread's insert") do

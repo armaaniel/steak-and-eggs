@@ -1,4 +1,9 @@
 Rails.application.config.after_initialize do
+  RedisClient.register(Datacat::RedisEvents)
+  Net::HTTP.prepend(Datacat::HttpEvents)
+  AbstractController::Callbacks.prepend(Datacat::CallbackEvents)
+  ActionController::Renderers.prepend(Datacat::RenderEvents)
+
   next if Rails.env.test?
 
   Thread.new do
@@ -22,6 +27,4 @@ Rails.application.config.after_initialize do
   end
 
   ActiveSupport::Notifications.subscribe(Datacat::TracingListener::PATTERN, Datacat::TracingListener.new)
-  RedisClient.register(Datacat::RedisEvents)
-  Net::HTTP.prepend(Datacat::HttpEvents)
 end
