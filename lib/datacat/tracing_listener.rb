@@ -3,7 +3,8 @@ module Datacat
     ROOT = 'process_action.action_controller'
     QUERY = 'sql.active_record'
     TRANSACTION = 'transaction.active_record'
-    PATTERN = /\.datacat\z|\Aprocess_action\.action_controller\z|\A(sql|transaction)\.active_record\z/
+    REDIS = 'command.redis'
+    PATTERN = /\.datacat\z|\Aprocess_action\.action_controller\z|\A(sql|transaction)\.active_record\z|\Acommand\.redis\z/
 
     TRACKED_ROUTES = [
       '/stocks/',
@@ -36,7 +37,12 @@ module Datacat
 
     def finish(name, id, payload)
       tracer = Tracer.current or return
-      span = name == QUERY ? tracer.close { query_details(payload) } : tracer.close
+      span =
+        case name
+        when QUERY then tracer.close { query_details(payload) }
+        when REDIS then tracer.close { redis_details(payload) }
+        else tracer.close
+        end
 
       if name == ROOT
         TRACE_QUEUE.push(trace(tracer, span, payload))
@@ -55,7 +61,18 @@ module Datacat
       case name
       when QUERY then tracer.open(payload[:name].presence || 'SQL', 'sql')
       when TRANSACTION then open_transaction(tracer)
+      when REDIS then tracer.open(RedisShape.call(payload[:command]), 'redis')
       else tracer.open(name.delete_suffix('.datacat'), 'app')
+      end
+    end
+
+    def redis_details(payload)
+      return {} if payload[:exception]
+
+      case payload[:command][0].to_s.upcase
+      when 'GET' then { hit: !payload[:reply].nil? }
+      when 'MGET' then { hit: payload[:reply].none?(&:nil?) }
+      else {}
       end
     end
 

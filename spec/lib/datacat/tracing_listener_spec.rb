@@ -165,13 +165,47 @@ RSpec.describe(Datacat::TracingListener) do
   end
 
   describe("redis") do
-    let(:redis) { Class.new(RedisClient::BasicMiddleware) { include Datacat::RedisSpans }.new(nil) }
+    def run_redis(*command, reply: 'OK', exception: nil)
+      redis_payload = { command: command }
+      listener.start('command.redis', 'id', redis_payload)
+      exception ? redis_payload[:exception] = exception : redis_payload[:reply] = reply
+      listener.finish('command.redis', 'id', redis_payload)
+    end
+
+    it("records a command as a redis span named by its key's prefix") do
+      request(payload) { call_service { run_redis('set', 'user:8675309', 'secret', 'PX', 86_400_000) } }
+
+      spans = rows.sole[:spans]
+      expect(spans.last).to(include(name: 'SET user:?', category: 'redis', parent: 1))
+      expect(spans.to_json).not_to(include('secret', '8675309'))
+    end
+
+    it("marks a GET by whether it found a value, and an MGET as a hit only when every key came back") do
+      request(payload) do
+        run_redis('get', 'price:AAPL', reply: '246.91')
+        run_redis('get', 'company:AAPL', reply: nil)
+        run_redis('mget', 'price:AAPL', 'open:AAPL', reply: ['246.91', '244.10'])
+        run_redis('mget', 'price:AAPL', 'open:AAPL', reply: ['246.91', nil])
+        run_redis('del', 'portfolio:42', reply: 1)
+      end
+
+      expect(rows.sole[:spans].drop(1).map { |span| span[:hit] }).to(eq([true, false, true, false, nil]))
+    end
+
+    it("gives a command that raised no hit, and keeps the next span's parent right") do
+      request(payload) do
+        run_redis('get', 'price:AAPL', exception: ['RedisClient::ConnectionError', 'down'])
+        run_redis('get', 'open:AAPL', reply: '244.10')
+      end
+
+      expect(rows.sole[:spans].drop(1).map { |span| span.slice(:name, :parent, :hit) }).to(eq([{ name: 'GET price:?', parent: 0 }, { name: 'GET open:?', parent: 0, hit: true }]))
+    end
 
     it("stores redis time as redis_ms and counts the cache hits and misses") do
       request(payload) do
         call_service do
-          redis.call(['mget', 'price:AAPL', 'open:AAPL'], nil) { ['246.91', '244.10'] }
-          redis.call(['get', 'company:AAPL'], nil) { nil }
+          run_redis('mget', 'price:AAPL', 'open:AAPL', reply: ['246.91', '244.10'])
+          run_redis('get', 'company:AAPL', reply: nil)
         end
       end
 
@@ -179,6 +213,25 @@ RSpec.describe(Datacat::TracingListener) do
       expect(parents(row[:spans]).drop(2)).to(eq([['MGET price:? open:?', 'MarketService.marketprice'], ['GET company:?', 'MarketService.marketprice']]))
       expect(row).to(include(cache_hits: 1, cache_misses: 1, redis_ms: be_a(Float)))
       expect(row[:app_ms] + row[:redis_ms]).to(be_within(0.02).of(row[:duration]))
+    end
+
+    it("gets its events from the redis-client middleware, and never breaks a command when the tracer does") do
+      redis = Class.new(RedisClient::BasicMiddleware) { include Datacat::RedisEvents }.new(nil)
+      replies = []
+
+      ActiveSupport::Notifications.subscribed(listener, Datacat::TracingListener::PATTERN) do
+        ActiveSupport::Notifications.instrument(root, payload) do |event_payload|
+          replies << redis.call(['get', 'price:AAPL'], nil) { '246.91' }
+          event_payload[:status] = 200
+        end
+
+        allow(Datacat::Tracer).to(receive(:current).and_raise(NoMethodError))
+        replies << redis.call(['get', 'open:AAPL'], nil) { '244.10' }
+      end
+
+      expect(replies).to(eq(['246.91', '244.10']))
+      expect(rows.sole[:spans].last).to(include(name: 'GET price:?', hit: true))
+      expect(Sentry).to(have_received(:capture_exception).with(be_a(NoMethodError)).twice)
     end
 
     it("stores zero hits and misses for a request that looked nothing up") do
