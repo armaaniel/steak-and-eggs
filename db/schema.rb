@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_11_09_011211) do
+ActiveRecord::Schema[8.0].define(version: 2026_11_09_043000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -116,13 +116,11 @@ ActiveRecord::Schema[8.0].define(version: 2026_11_09_011211) do
   create_table "traces", force: :cascade do |t|
     t.string "endpoint", null: false
     t.float "duration"
-    t.float "db_runtime"
     t.integer "status"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.string "controller"
     t.string "action"
-    t.json "breakdown"
     t.bigint "user_id"
     t.boolean "synthetic", default: false, null: false
     t.string "source", default: "user", null: false
