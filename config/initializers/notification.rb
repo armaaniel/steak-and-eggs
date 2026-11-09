@@ -22,4 +22,5 @@ Rails.application.config.after_initialize do
   end
 
   ActiveSupport::Notifications.subscribe(Datacat::TracingListener::PATTERN, Datacat::TracingListener.new)
+  RedisClient.register(Datacat::RedisSpans)
 end

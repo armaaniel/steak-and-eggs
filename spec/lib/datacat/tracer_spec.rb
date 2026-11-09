@@ -164,6 +164,28 @@ RSpec.describe(Datacat::Tracer) do
     end
   end
 
+  describe("#cache_counts") do
+    it("counts hits and misses, leaving out lookups anywhere inside the excluded category") do
+      tracer = Datacat::Tracer.create
+
+      tracer.open('StocksController#buy', 'app')
+      tracer.open('before_action', 'callbacks')
+      tracer.open('verify_token', 'app')
+      tracer.open('GET user:?', 'redis')
+      tracer.close { { hit: true } }
+      tracer.close
+      tracer.close
+      tracer.open('GET price:?', 'redis')
+      tracer.close { { hit: true } }
+      tracer.open('GET search:?', 'redis')
+      tracer.close { { hit: false } }
+      tracer.open('DEL portfolio:?', 'redis')
+      tracer.close
+
+      expect(tracer.cache_counts(excluding: 'callbacks')).to(eq([1, 1]))
+    end
+  end
+
   describe("#self_times with a transaction") do
     before do
       allow(Datacat::Tracer).to(receive(:now).and_return(100.0, 100.0, 100.001, 100.002, 100.0025, 100.003, 100.004, 100.006, 100.010))

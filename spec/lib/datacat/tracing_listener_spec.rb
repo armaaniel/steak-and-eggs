@@ -164,6 +164,30 @@ RSpec.describe(Datacat::TracingListener) do
     end
   end
 
+  describe("redis") do
+    let(:redis) { Class.new(RedisClient::BasicMiddleware) { include Datacat::RedisSpans }.new(nil) }
+
+    it("stores redis time as redis_ms and counts the cache hits and misses") do
+      request(payload) do
+        call_service do
+          redis.call(['mget', 'price:AAPL', 'open:AAPL'], nil) { ['246.91', '244.10'] }
+          redis.call(['get', 'company:AAPL'], nil) { nil }
+        end
+      end
+
+      row = rows.sole
+      expect(parents(row[:spans]).drop(2)).to(eq([['MGET price:? open:?', 'MarketService.marketprice'], ['GET company:?', 'MarketService.marketprice']]))
+      expect(row).to(include(cache_hits: 1, cache_misses: 1, redis_ms: be_a(Float)))
+      expect(row[:app_ms] + row[:redis_ms]).to(be_within(0.02).of(row[:duration]))
+    end
+
+    it("stores zero hits and misses for a request that looked nothing up") do
+      request(payload)
+
+      expect(rows.sole).to(include(cache_hits: 0, cache_misses: 0, redis_ms: nil))
+    end
+  end
+
   describe("transactions") do
     let(:transaction) { 'transaction.active_record' }
 

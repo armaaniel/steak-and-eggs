@@ -61,10 +61,26 @@ module Datacat
       totals.transform_values { |ms| ms.round(2) }
     end
 
+    def cache_counts(excluding:)
+      lookups = @spans.reject { |span| span[:hit].nil? || inside?(span, excluding) }
+      [lookups.count { |span| span[:hit] }, lookups.count { |span| !span[:hit] }]
+    end
+
     private
 
     def elapsed
       ((Tracer.now - @started) * 1000).round(2)
+    end
+
+    def inside?(span, category)
+      parent = span[:parent]
+
+      while parent
+        return true if @spans[parent][:category] == category
+        parent = @spans[parent][:parent]
+      end
+
+      false
     end
   end
 end

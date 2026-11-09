@@ -84,6 +84,7 @@ module Datacat
     def trace(tracer, root, payload)
       now = Time.current
       times = tracer.self_times
+      hits, misses = tracer.cache_counts(excluding: 'callbacks')
 
       {
         endpoint: "#{payload[:method]} #{payload[:path].split('?').first}",
@@ -91,6 +92,9 @@ module Datacat
         db_runtime: payload[:db_runtime],
         app_ms: times['app'],
         sql_ms: times['sql'],
+        redis_ms: times['redis'],
+        cache_hits: hits,
+        cache_misses: misses,
         status: payload[:status],
         controller: payload[:controller],
         action: payload[:action],
