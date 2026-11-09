@@ -20,8 +20,8 @@ class Trace < ApplicationRecord
   LIST_LIMIT = 1000
 
   CACHE_CONDITIONS = {
-    'cached' => ['breakdown::text LIKE ?', '%"used_redis":true%'],
-    'uncached' => ['breakdown::text LIKE ? OR breakdown::text LIKE ?', '%"used_api":true%', '%"used_db":true%']
+    'cached' => ['cache_hits > 0'],
+    'uncached' => ['cache_misses > 0']
   }.freeze
 
   ROUTE_PATTERNS = {
@@ -55,8 +55,8 @@ class Trace < ApplicationRecord
       SELECT #{route_case} as route,
         COUNT(*) as total_requests,
         PERCENTILE_DISC(0.99) WITHIN GROUP (ORDER BY duration) as p99,
-        COUNT(*) FILTER (WHERE breakdown::text LIKE '%"used_redis":true%') as cache_hits,
-        COUNT(*) FILTER (WHERE breakdown IS NOT NULL AND breakdown::text != '{}') as with_breakdown
+        COUNT(*) FILTER (WHERE cache_hits > 0) as cache_hits,
+        COUNT(*) FILTER (WHERE cache_hits + cache_misses > 0) as with_lookups
       FROM traces
       WHERE source IN ('user', 'canary')
         AND endpoint <> 'POST /graphql'
@@ -68,8 +68,8 @@ class Trace < ApplicationRecord
     results = connection.execute(sanitize_sql_array([sql, start]))
     results.map do |row|
       route = row['route']
-      with_breakdown = row['with_breakdown'].to_i
-      rate = (row['cache_hits'].to_f / with_breakdown * 100).round(1) unless with_breakdown.zero?
+      with_lookups = row['with_lookups'].to_i
+      rate = (row['cache_hits'].to_f / with_lookups * 100).round(1) unless with_lookups.zero?
       
       {
         route: route,
@@ -118,8 +118,8 @@ class Trace < ApplicationRecord
         PERCENTILE_DISC(0.95) WITHIN GROUP (ORDER BY duration) AS p95,
         PERCENTILE_DISC(0.99) WITHIN GROUP (ORDER BY duration) AS p99,
         COUNT(*) FILTER (WHERE status >= 500) AS error_count,
-        bool_or(breakdown::text LIKE '%"used_redis"%') AS used_redis,
-        bool_or(breakdown::text LIKE '%"used_api"%')   AS used_api
+        bool_or(cache_hits + cache_misses > 0) AS used_redis,
+        bool_or(http_ms > 0)                   AS used_api
       FROM traces
       WHERE source IN ('user', 'canary')
         AND endpoint ILIKE ?
@@ -308,11 +308,12 @@ class Trace < ApplicationRecord
                traces.error_class IS NOT NULL
                  AND traces.error_class <> 'MarketService::NotFoundError' AS failed
         FROM traces
-        CROSS JOIN LATERAL json_each(traces.breakdown) AS span
+        CROSS JOIN LATERAL json_array_elements(traces.spans) AS span
         WHERE traces.source IN ('user', 'canary')
           AND traces.created_at >= ?
-          AND traces.breakdown::text LIKE '%"used_api":true%'
-          AND span.value->>'used_api' = 'true'
+          AND traces.http_ms > 0
+          AND span->>'category' = 'http'
+          AND span->>'name' = 'GET api.polygon.io'
       )
       SELECT COUNT(*) FILTER (WHERE recent)            AS calls,
              COUNT(*) FILTER (WHERE recent AND failed) AS failures,

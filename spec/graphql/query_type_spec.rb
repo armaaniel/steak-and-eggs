@@ -94,11 +94,10 @@ RSpec.describe(Types::QueryType) do
       expect(marketdata["totalRequests"]).to(eq(5))
     end
 
-    it("computes cache_hit_rate from breakdown data") do
-      Trace.create!(endpoint: "GET /users", duration: 50.0, status: 200,
-        breakdown: { used_redis: true })
-      Trace.create!(endpoint: "GET /users", duration: 60.0, status: 200,
-        breakdown: { used_redis: false })
+    it("computes cache_hit_rate from the traces that looked up the cache") do
+      Trace.create!(endpoint: "GET /users", duration: 50.0, status: 200, cache_hits: 1, cache_misses: 0)
+      Trace.create!(endpoint: "GET /users", duration: 60.0, status: 200, cache_hits: 0, cache_misses: 1)
+      Trace.create!(endpoint: "GET /users", duration: 70.0, status: 200, cache_hits: 0, cache_misses: 0)
 
       result = execute_query
       summary = result.dig("data", "traceSummary")
@@ -107,7 +106,7 @@ RSpec.describe(Types::QueryType) do
       expect(users["cacheHitRate"]).to(eq(50.0))
     end
 
-    it("returns null cache_hit_rate when no breakdown data exists") do
+    it("returns null cache_hit_rate when no trace looked up the cache") do
       Trace.create!(endpoint: "GET /users", duration: 50.0, status: 200)
 
       result = execute_query
@@ -296,11 +295,11 @@ RSpec.describe(Types::QueryType) do
     end
 
     it("keeps only cached or only uncached traces when cache is given") do
-      Trace.create!(endpoint: "GET /users", duration: 10.0, status: 200, breakdown: { "Ticker.search" => { "used_redis" => true, "duration" => 1.0 } })
-      Trace.create!(endpoint: "GET /users", duration: 20.0, status: 200, breakdown: { "Ticker.search" => { "used_redis" => false, "used_db" => true, "duration" => 2.0 } })
-      Trace.create!(endpoint: "GET /users", duration: 30.0, status: 200, breakdown: { "MarketService.marketdata" => { "used_api" => true, "duration" => 3.0 } })
-      Trace.create!(endpoint: "GET /users", duration: 40.0, status: 401, breakdown: {})
-      Trace.create!(endpoint: "GET /users", duration: 50.0, status: 200, breakdown: nil)
+      Trace.create!(endpoint: "GET /users", duration: 10.0, status: 200, cache_hits: 1, cache_misses: 0)
+      Trace.create!(endpoint: "GET /users", duration: 20.0, status: 200, cache_hits: 0, cache_misses: 1)
+      Trace.create!(endpoint: "GET /users", duration: 30.0, status: 200, cache_hits: 0, cache_misses: 1, http_ms: 3.0)
+      Trace.create!(endpoint: "GET /users", duration: 40.0, status: 401, cache_hits: 0, cache_misses: 0)
+      Trace.create!(endpoint: "GET /users", duration: 50.0, status: 200)
 
       cached = SteakAndEggsSchema.execute('{ traceList(endpoint: "GET /users", cache: CACHED) { duration } }').to_h
       uncached = SteakAndEggsSchema.execute('{ traceList(endpoint: "GET /users", cache: UNCACHED) { duration } }').to_h
@@ -401,9 +400,8 @@ RSpec.describe(Types::QueryType) do
       expect(stats["totalRequests"]).to(eq(2))
     end
 
-    it("flags used_redis when a nested breakdown records the key") do
-      Trace.create!(endpoint: "GET /users", duration: 50.0, status: 200,
-        breakdown: { "PositionService#find_positions" => { used_redis: false, used_db: true } })
+    it("flags used_redis when a request looked up the cache, even on a miss") do
+      Trace.create!(endpoint: "GET /users", duration: 50.0, status: 200, cache_hits: 0, cache_misses: 1)
 
       result = execute_query(endpoint: "GET /users")
       stats = result.dig("data", "traceStats")
@@ -412,9 +410,9 @@ RSpec.describe(Types::QueryType) do
       expect(stats["usedApi"]).to(be(false))
     end
 
-    it("flags used_api when a nested breakdown records the key") do
-      Trace.create!(endpoint: "GET /stocks/TSLA/marketdata", duration: 30.0, status: 200,
-        breakdown: { "MarketService#quote" => { used_redis: true, used_api: false } })
+    it("flags used_api when a request on the route called out over http") do
+      Trace.create!(endpoint: "GET /stocks/TSLA/marketdata", duration: 3.0, status: 200, cache_hits: 1, cache_misses: 0)
+      Trace.create!(endpoint: "GET /stocks/TSLA/marketdata", duration: 300.0, status: 200, cache_hits: 0, cache_misses: 1, http_ms: 280.0)
 
       result = execute_query(endpoint: "GET /stocks/symbol/marketdata")
       stats = result.dig("data", "traceStats")
@@ -423,9 +421,8 @@ RSpec.describe(Types::QueryType) do
       expect(stats["usedApi"]).to(be(true))
     end
 
-    it("does not flag used_redis for a route with no cache instrumentation") do
-      Trace.create!(endpoint: "GET /users", duration: 50.0, status: 200,
-        breakdown: { "UserService#index" => { used_db: true } })
+    it("does not flag used_redis for a route that never looks up the cache") do
+      Trace.create!(endpoint: "GET /users", duration: 50.0, status: 200, cache_hits: 0, cache_misses: 0, sql_ms: 5.0)
 
       result = execute_query(endpoint: "GET /users")
       stats = result.dig("data", "traceStats")
@@ -434,10 +431,9 @@ RSpec.describe(Types::QueryType) do
       expect(stats["usedApi"]).to(be(false))
     end
 
-    it("flags used_redis when any trace on the route records the key") do
+    it("flags used_redis when any trace on the route looked up the cache") do
       Trace.create!(endpoint: "GET /users", duration: 50.0, status: 200)
-      Trace.create!(endpoint: "GET /users", duration: 60.0, status: 200,
-        breakdown: { "PositionService#find_positions" => { used_redis: true } })
+      Trace.create!(endpoint: "GET /users", duration: 60.0, status: 200, cache_hits: 1, cache_misses: 0)
 
       result = execute_query(endpoint: "GET /users")
       stats = result.dig("data", "traceStats")
@@ -466,8 +462,8 @@ RSpec.describe(Types::QueryType) do
     end
 
     it("keeps only cached or only uncached requests when cache is given") do
-      Trace.create!(endpoint: "GET /users", duration: 2.0, status: 200, breakdown: { "Ticker.search" => { "used_redis" => true } })
-      Trace.create!(endpoint: "GET /users", duration: 400.0, status: 200, breakdown: { "Ticker.search" => { "used_db" => true } })
+      Trace.create!(endpoint: "GET /users", duration: 2.0, status: 200, cache_hits: 1, cache_misses: 0)
+      Trace.create!(endpoint: "GET /users", duration: 400.0, status: 200, cache_hits: 0, cache_misses: 1)
 
       cached = SteakAndEggsSchema.execute('{ traceStats(endpoint: "GET /users", cache: CACHED) { totalRequests p99 } }').to_h.dig("data", "traceStats")
       uncached = SteakAndEggsSchema.execute('{ traceStats(endpoint: "GET /users", cache: UNCACHED) { totalRequests p99 } }').to_h.dig("data", "traceStats")
@@ -611,9 +607,13 @@ RSpec.describe(Types::QueryType) do
       SteakAndEggsSchema.execute(query).to_h.dig("data", "polygonCalls")
     end
 
+    def http_spans(host, duration)
+      [{name: "MarketService.marketdata", category: "app", start: 0.0, duration: duration + 1, parent: nil},
+       {name: "GET #{host}", category: "http", start: 1.0, duration: duration, parent: 0}]
+    end
+
     def polygon_call(duration:, failed: false, at: 10.minutes.ago, source: "user")
-      span = {symbol: "AAPL", used_redis: false, used_api: true, duration: duration}
-      Trace.create!(endpoint: "GET /stocks/AAPL/marketdata", duration: duration + 5, status: failed ? 500 : 200, source: source, breakdown: {"MarketService.marketdata" => span}, error_class: ("MarketService::ApiError" if failed), created_at: at)
+      Trace.create!(endpoint: "GET /stocks/AAPL/marketdata", duration: duration + 5, status: failed ? 500 : 200, source: source, http_ms: duration, spans: http_spans("api.polygon.io", duration), error_class: ("MarketService::ApiError" if failed), created_at: at)
     end
 
     it("returns no calls and no last success when nothing called polygon") do
@@ -634,7 +634,7 @@ RSpec.describe(Types::QueryType) do
 
     it("counts a 404 as a call polygon answered, not a failure") do
       Trace.create!(endpoint: "GET /stocks/TSE/companydata", duration: 210.0, status: 404, created_at: 5.minutes.ago, error_class: "MarketService::NotFoundError",
-        breakdown: {"MarketService.companydata" => {symbol: "TSE", used_redis: false, used_api: true, duration: 200.0}})
+        http_ms: 200.0, spans: http_spans("api.polygon.io", 200.0))
 
       calls = execute_query
 
@@ -654,7 +654,13 @@ RSpec.describe(Types::QueryType) do
     end
 
     it("ignores cache hits") do
-      Trace.create!(endpoint: "GET /stocks/AAPL/marketdata", duration: 3.0, status: 200, breakdown: {"MarketService.marketdata" => {used_redis: true, used_api: false, duration: 1.0}}, created_at: 10.minutes.ago)
+      Trace.create!(endpoint: "GET /stocks/AAPL/marketdata", duration: 3.0, status: 200, cache_hits: 1, cache_misses: 0, created_at: 10.minutes.ago)
+
+      expect(execute_query["calls"]).to(eq(0))
+    end
+
+    it("ignores http calls to other hosts") do
+      Trace.create!(endpoint: "GET /stocks/AAPL/marketdata", duration: 60.0, status: 200, http_ms: 50.0, spans: http_spans("example.com", 50.0), created_at: 10.minutes.ago)
 
       expect(execute_query["calls"]).to(eq(0))
     end
@@ -795,9 +801,9 @@ RSpec.describe(Types::QueryType) do
     end
 
     it("only counts cached or uncached requests when cache is given") do
-      Trace.create!(endpoint: "GET /users", duration: 10.0, status: 200, created_at: Time.utc(2026, 9, 30, 12, 2), breakdown: { "Ticker.search" => { "used_redis" => true } })
-      Trace.create!(endpoint: "GET /users", duration: 30.0, status: 200, created_at: Time.utc(2026, 9, 30, 12, 3), breakdown: { "Ticker.search" => { "used_db" => true } })
-      Trace.create!(endpoint: "GET /users", duration: 50.0, status: 401, created_at: Time.utc(2026, 9, 30, 12, 4), breakdown: {})
+      Trace.create!(endpoint: "GET /users", duration: 10.0, status: 200, created_at: Time.utc(2026, 9, 30, 12, 2), cache_hits: 1, cache_misses: 0)
+      Trace.create!(endpoint: "GET /users", duration: 30.0, status: 200, created_at: Time.utc(2026, 9, 30, 12, 3), cache_hits: 0, cache_misses: 1)
+      Trace.create!(endpoint: "GET /users", duration: 50.0, status: 401, created_at: Time.utc(2026, 9, 30, 12, 4), cache_hits: 0, cache_misses: 0)
 
       cached = SteakAndEggsSchema.execute('{ serviceTimeseries(range: "1h", cache: CACHED) { requests p50 } }').to_h.dig("data", "serviceTimeseries").last
       uncached = SteakAndEggsSchema.execute('{ serviceTimeseries(range: "1h", cache: UNCACHED) { requests p50 } }').to_h.dig("data", "serviceTimeseries").last
@@ -881,8 +887,8 @@ RSpec.describe(Types::QueryType) do
     end
 
     it("keeps only cached or only uncached requests when cache is given") do
-      Trace.create!(endpoint: "GET /users", duration: 2.0, status: 200, created_at: Time.utc(2026, 9, 30, 12, 0), breakdown: { "Ticker.search" => { "used_redis" => true } })
-      Trace.create!(endpoint: "GET /users", duration: 400.0, status: 200, created_at: Time.utc(2026, 9, 30, 12, 0), breakdown: { "Ticker.search" => { "used_db" => true } })
+      Trace.create!(endpoint: "GET /users", duration: 2.0, status: 200, created_at: Time.utc(2026, 9, 30, 12, 0), cache_hits: 1, cache_misses: 0)
+      Trace.create!(endpoint: "GET /users", duration: 400.0, status: 200, created_at: Time.utc(2026, 9, 30, 12, 0), cache_hits: 0, cache_misses: 1)
 
       expect(scatter('endpoint: "GET /users", range: "1h", cache: CACHED').map { |point| point["duration"] }).to(eq([2.0]))
       expect(scatter('endpoint: "GET /users", range: "1h", cache: UNCACHED').map { |point| point["duration"] }).to(eq([400.0]))

@@ -17,6 +17,8 @@ module Types
    field(:http_ms, Float)
    field(:callbacks_ms, Float)
    field(:render_ms, Float)
+   field(:cache_hits, Integer)
+   field(:cache_misses, Integer)
    field(:error_class, String)
    field(:error_location, String)
    field(:sentry_event_id, String)
