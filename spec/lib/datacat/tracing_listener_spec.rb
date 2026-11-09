@@ -142,15 +142,17 @@ RSpec.describe(Datacat::TracingListener) do
       expect(rows.sole[:spans].drop(1).map { |span| span.slice(:name, :sql) }).to(eq([{ name: 'BEGIN' }, { name: 'COMMIT' }]))
     end
 
-    it("skips SCHEMA queries at both ends, so the next span's parent is still right") do
+    it("records Rails' SCHEMA lookups as sql spans like any other query") do
       request(payload) do
         call_service do
-          run_query('SCHEMA', 'SELECT a.attname FROM pg_attribute a')
+          run_query('SCHEMA', %q(SELECT a.attname FROM pg_attribute a WHERE a.attrelid = '"users"'::regclass))
           run_query('User Load', 'SELECT "users".* FROM "users" WHERE "users"."id" = 42 LIMIT 1')
         end
       end
 
-      expect(parents(rows.sole[:spans])).to(eq([['StocksController#get_stock_price', nil], ['MarketService.marketprice', 'StocksController#get_stock_price'], ['User Load', 'MarketService.marketprice']]))
+      spans = rows.sole[:spans]
+      expect(parents(spans).drop(2)).to(eq([['SCHEMA', 'MarketService.marketprice'], ['User Load', 'MarketService.marketprice']]))
+      expect(spans[2]).to(include(category: 'sql', sql: 'SELECT a.attname FROM pg_attribute a WHERE a.attrelid = ?::regclass'))
     end
 
     it("stores query time as sql_ms, with app_ms and sql_ms adding up to the duration") do

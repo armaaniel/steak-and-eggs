@@ -7,6 +7,7 @@ RSpec.describe("Tracing", type: :request) do
     Ticker.create!(symbol: "TSLA", name: "Tesla, Inc.", ticker_type: "CS", exchange: "NASDAQ", currency: "USD")
     allow(RedisService).to(receive(:safe_get).with("price:TSLA").and_return("100"))
     allow(CacheService).to(receive(:invalidate_user))
+    [User, Ticker, Position, Transaction].each { |model| [model.table_exists?, model.columns_hash, model.primary_key] }
   end
 
   after { Datacat::TRACE_QUEUE.clear }
@@ -40,6 +41,17 @@ RSpec.describe("Tracing", type: :request) do
 
     expect(children(spans, 'MarketService.buy')).to(eq(['Ticker Exists?', 'transaction']))
     expect(children(spans, 'transaction')).to(eq(['User Load', 'Position Load', 'User Exists?', 'User Update', 'User Load', 'Position Exists?', 'Position Create', 'User Load', 'Transaction Create', 'RELEASE SAVEPOINT active_record_1']))
+  end
+
+  it("records the schema lookups a process makes the first time it touches a table") do
+    Position.reset_column_information
+    Position.connection.schema_cache.clear_data_source_cache!('positions')
+
+    spans = buy.sole[:spans]
+
+    lookups = spans.select { |span| span[:name] == 'SCHEMA' }
+    expect(lookups).not_to(be_empty)
+    expect(lookups.map { |span| span[:sql] }).to(all(include('?')))
   end
 
   it("keeps the user's values out of every statement") do

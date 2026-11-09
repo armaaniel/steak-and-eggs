@@ -24,7 +24,7 @@ module Datacat
     def start(name, id, payload)
       if name != ROOT
         tracer = Tracer.current
-        open_span(tracer, name, payload) if tracer && !skipped?(name, payload)
+        open_span(tracer, name, payload) if tracer
       elsif traced?(payload)
         Tracer.create.open("#{payload[:controller]}##{payload[:action]}", 'app')
       else
@@ -35,8 +35,6 @@ module Datacat
     end
 
     def finish(name, id, payload)
-      return if skipped?(name, payload)
-
       tracer = Tracer.current or return
       span = name == QUERY ? tracer.close { query_details(payload) } : tracer.close
 
@@ -52,10 +50,6 @@ module Datacat
     end
 
     private
-
-    def skipped?(name, payload)
-      name == QUERY && payload[:name] == 'SCHEMA'
-    end
 
     def open_span(tracer, name, payload)
       case name
