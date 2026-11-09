@@ -342,6 +342,35 @@ RSpec.describe(Datacat::TracingListener) do
     end
   end
 
+  describe("spans that don't nest back to the root") do
+    before { allow(Rails.logger).to(receive(:warn)) }
+
+    it("stores the row without spans or summary columns when a span never finished") do
+      request(payload) { listener.start(service, 'id', {}) }
+
+      row = rows.sole
+      expect(row).to(include(endpoint: 'GET /stocks/AAPL/stockprice', status: 200, duration: be_a(Float)))
+      expect(row.values_at(*Datacat::TracingListener::SPAN_FIELDS)).to(all(be_nil))
+      expect(Rails.logger).to(have_received(:warn).with(include("GET /stocks/AAPL/stockprice's spans didn't nest")))
+      expect(Datacat::Tracer.current).to(be_nil)
+    end
+
+    it("stores the row without spans when an extra finish closed the root early") do
+      request(payload) { listener.finish(service, 'id', {}) }
+
+      row = rows.sole
+      expect(row[:spans]).to(be_nil)
+      expect(row[:duration]).to(be_a(Float))
+    end
+
+    it("keeps the spans of a request that nested properly") do
+      request(payload) { call_service }
+
+      expect(rows.sole[:spans].size).to(eq(2))
+      expect(Rails.logger).not_to(have_received(:warn))
+    end
+  end
+
   describe("its own errors") do
     it("reports them to Sentry instead of raising, and still clears the tracer") do
       allow(Datacat::TRACE_QUEUE).to(receive(:push).and_raise(ThreadError))

@@ -49,6 +49,18 @@ module Datacat
       span
     end
 
+    def balanced?
+      @open == [0]
+    end
+
+    def close_root
+      close while @open.size > 1
+      @open.clear
+      root = @spans.first
+      root[:duration] = (elapsed - root[:start]).round(2)
+      root
+    end
+
     def self_times
       children = Hash.new(0.0)
       @spans.each { |span| children[span[:parent]] += span[:duration] if span[:parent] }

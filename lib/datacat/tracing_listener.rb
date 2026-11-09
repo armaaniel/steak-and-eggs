@@ -8,6 +8,7 @@ module Datacat
     CALLBACKS = 'before_action.action_controller'
     RENDER = 'render.action_controller'
     PATTERN = /\.datacat\z|\A#{Regexp.union(ROOT, QUERY, TRANSACTION, REDIS, HTTP, CALLBACKS, RENDER)}\z/
+    SPAN_FIELDS = %i[spans app_ms sql_ms redis_ms http_ms callbacks_ms render_ms cache_hits cache_misses].freeze
 
     TRACKED_ROUTES = [
       '/stocks/',
@@ -40,6 +41,8 @@ module Datacat
 
     def finish(name, id, payload)
       tracer = Tracer.current or return
+      return finish_trace(tracer, payload) if name == ROOT
+
       span =
         case name
         when QUERY then tracer.close { query_details(payload) }
@@ -47,9 +50,7 @@ module Datacat
         else tracer.close
         end
 
-      if name == ROOT
-        TRACE_QUEUE.push(trace(tracer, span, payload))
-      elsif name.end_with?('.datacat')
+      if name.end_with?('.datacat')
         tracer.breakdown[span[:name]] = payload.except(:exception_object, :exception).merge(duration: span[:duration])
       end
     rescue => e
@@ -102,6 +103,18 @@ module Datacat
 
     def traced?(payload)
       payload[:action] != 'not_found' && TRACKED_ROUTES.any? { |route| payload[:path]&.start_with?(route) }
+    end
+
+    def finish_trace(tracer, payload)
+      balanced = tracer.balanced?
+      row = trace(tracer, tracer.close_root, payload)
+
+      unless balanced
+        row.merge!(SPAN_FIELDS.index_with(nil))
+        Rails.logger.warn("datacat: #{row[:endpoint]}'s spans didn't nest back to the root, so its row is stored without them")
+      end
+
+      TRACE_QUEUE.push(row)
     end
 
     def trace(tracer, root, payload)

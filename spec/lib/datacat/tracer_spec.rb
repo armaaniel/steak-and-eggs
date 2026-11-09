@@ -54,6 +54,46 @@ RSpec.describe(Datacat::Tracer) do
     end
   end
 
+  describe("#balanced?") do
+    it("is true only when the root is the one span still open") do
+      tracer = Datacat::Tracer.create
+      tracer.open('StocksController#buy', 'app')
+      expect(tracer.balanced?).to(be(true))
+
+      tracer.open('MarketService.buy', 'app')
+      expect(tracer.balanced?).to(be(false))
+
+      tracer.close
+      tracer.close
+      expect(tracer.balanced?).to(be(false))
+    end
+  end
+
+  describe("#close_root") do
+    it("closes anything left open, then the root, so the root's duration runs to now") do
+      allow(Datacat::Tracer).to(receive(:now).and_return(100.0, 100.0, 100.002, 100.005, 100.005))
+      tracer = Datacat::Tracer.create
+
+      tracer.open('StocksController#buy', 'app')
+      tracer.open('MarketService.buy', 'app')
+      root = tracer.close_root
+
+      expect(root[:name]).to(eq('StocksController#buy'))
+      expect(tracer.spans.map { |span| span[:duration] }).to(eq([5.0, 3.0]))
+      expect(tracer.innermost).to(be_nil)
+    end
+
+    it("still gives the root its full duration when an extra close took it off the stack early") do
+      allow(Datacat::Tracer).to(receive(:now).and_return(100.0, 100.0, 100.001, 100.005))
+      tracer = Datacat::Tracer.create
+
+      tracer.open('StocksController#buy', 'app')
+      tracer.close
+
+      expect(tracer.close_root[:duration]).to(eq(5.0))
+    end
+  end
+
   describe("#wrap_innermost") do
     it("puts the new span between the innermost open span and its parent, starting when that span started") do
       tracer = Datacat::Tracer.create
