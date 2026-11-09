@@ -1,7 +1,9 @@
 module Datacat
   class TracingListener
     ROOT = 'process_action.action_controller'
-    PATTERN = /\.datacat\z|\Aprocess_action\.action_controller\z/
+    QUERY = 'sql.active_record'
+    TRANSACTION = 'transaction.active_record'
+    PATTERN = /\.datacat\z|\Aprocess_action\.action_controller\z|\A(sql|transaction)\.active_record\z/
 
     TRACKED_ROUTES = [
       '/stocks/',
@@ -21,7 +23,8 @@ module Datacat
 
     def start(name, id, payload)
       if name != ROOT
-        Tracer.current&.open(name.delete_suffix('.datacat'), 'app')
+        tracer = Tracer.current
+        open_span(tracer, name, payload) if tracer && !skipped?(name, payload)
       elsif traced?(payload)
         Tracer.create.open("#{payload[:controller]}##{payload[:action]}", 'app')
       else
@@ -32,12 +35,14 @@ module Datacat
     end
 
     def finish(name, id, payload)
+      return if skipped?(name, payload)
+
       tracer = Tracer.current or return
-      span = tracer.close
+      span = name == QUERY ? tracer.close { query_details(payload) } : tracer.close
 
       if name == ROOT
         TRACE_QUEUE.push(trace(tracer, span, payload))
-      else
+      elsif name.end_with?('.datacat')
         tracer.breakdown[span[:name]] = payload.except(:exception_object, :exception).merge(duration: span[:duration])
       end
     rescue => e
@@ -48,18 +53,50 @@ module Datacat
 
     private
 
+    def skipped?(name, payload)
+      name == QUERY && payload[:name] == 'SCHEMA'
+    end
+
+    def open_span(tracer, name, payload)
+      case name
+      when QUERY then tracer.open(payload[:name].presence || 'SQL', 'sql')
+      when TRANSACTION then open_transaction(tracer)
+      else tracer.open(name.delete_suffix('.datacat'), 'app')
+      end
+    end
+
+    def query_details(payload)
+      if payload[:name] == 'TRANSACTION'
+        { name: SqlShape.call(payload[:sql]) || 'TRANSACTION' }
+      else
+        { sql: SqlShape.call(payload[:sql]), cached: payload[:cached] }.compact
+      end
+    end
+
+    def open_transaction(tracer)
+      inner = tracer.innermost
+
+      if inner && inner[:category] == 'sql' && inner[:name] != 'transaction'
+        tracer.wrap_innermost('transaction', 'sql')
+      else
+        tracer.open('transaction', 'sql')
+      end
+    end
+
     def traced?(payload)
       payload[:action] != 'not_found' && TRACKED_ROUTES.any? { |route| payload[:path]&.start_with?(route) }
     end
 
     def trace(tracer, root, payload)
       now = Time.current
+      times = tracer.self_times
 
       {
         endpoint: "#{payload[:method]} #{payload[:path].split('?').first}",
         duration: root[:duration],
         db_runtime: payload[:db_runtime],
-        app_ms: tracer.self_times['app'],
+        app_ms: times['app'],
+        sql_ms: times['sql'],
         status: payload[:status],
         controller: payload[:controller],
         action: payload[:action],

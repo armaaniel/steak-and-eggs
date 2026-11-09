@@ -16,24 +16,53 @@ RSpec.describe("Tracing", type: :request) do
     Array.new(Datacat::TRACE_QUEUE.size) { Datacat::TRACE_QUEUE.pop }
   end
 
-  it("queues a buy's row with the controller action as the root and MarketService.buy inside it") do
-    rows = traced { post("/stocks/TSLA/buy", params: { quantity: 5 }, headers: auth_headers(user)) }
+  def children(spans, name)
+    position = spans.index { |span| span[:name] == name }
+    spans.select { |span| span[:parent] == position }.map { |span| span[:name] }
+  end
 
-    row = rows.sole
+  def buy
+    traced { post("/stocks/TSLA/buy", params: { quantity: 5 }, headers: auth_headers(user)) }
+  end
+
+  it("queues a buy's row with the controller action as the root and MarketService.buy inside it") do
+    row = buy.sole
+
     expect(row).to(include(endpoint: 'POST /stocks/TSLA/buy', status: 201, controller: 'StocksController', action: 'buy', user_id: user.id, source: 'user'))
-    expect(row[:spans].map { |span| span.values_at(:name, :parent) }).to(eq([['StocksController#buy', nil], ['MarketService.buy', 0]]))
+    expect(row[:spans].first.values_at(:name, :parent)).to(eq(['StocksController#buy', nil]))
+    expect(children(row[:spans], 'StocksController#buy')).to(include('MarketService.buy'))
     expect(row[:db_runtime]).to(be > 0)
-    expect(row[:app_ms]).to(eq(row[:duration]))
     expect(row[:breakdown].keys).to(eq(['MarketService.buy']))
   end
 
-  it("stores the row, spans and app_ms included, with the flush thread's insert") do
-    rows = traced { post("/stocks/TSLA/buy", params: { quantity: 5 }, headers: auth_headers(user)) }
+  it("records the buy's queries, with the ten inside MarketService.buy and nine of them inside its transaction") do
+    spans = buy.sole[:spans]
+
+    expect(children(spans, 'MarketService.buy')).to(eq(['Ticker Exists?', 'transaction']))
+    expect(children(spans, 'transaction')).to(eq(['User Load', 'Position Load', 'User Exists?', 'User Update', 'User Load', 'Position Exists?', 'Position Create', 'User Load', 'Transaction Create', 'RELEASE SAVEPOINT active_record_1']))
+  end
+
+  it("keeps the user's values out of every statement") do
+    spans = buy.sole[:spans]
+
+    expect(spans.filter_map { |span| span[:sql] }.size).to(be >= 11)
+    expect(spans.to_json).not_to(include(user.username, 'TSLA'))
+  end
+
+  it("splits the duration into app_ms and sql_ms") do
+    row = buy.sole
+
+    expect(row[:sql_ms]).to(be > 0)
+    expect(row[:app_ms] + row[:sql_ms]).to(be_within(0.02).of(row[:duration]))
+  end
+
+  it("stores the row, spans and summary columns included, with the flush thread's insert") do
+    rows = buy
 
     Trace.insert_all(rows)
 
-    expect(Trace.last.spans.map { |span| span['name'] }).to(eq(['StocksController#buy', 'MarketService.buy']))
-    expect(Trace.last.app_ms).to(eq(rows.sole[:app_ms]))
+    expect(Trace.last.spans.first['name']).to(eq('StocksController#buy'))
+    expect(Trace.last.attributes.slice('app_ms', 'sql_ms')).to(eq(rows.sole.slice(:app_ms, :sql_ms).stringify_keys))
   end
 
   it("queues nothing for the health check") do

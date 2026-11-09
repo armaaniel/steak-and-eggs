@@ -14,8 +14,12 @@ module Datacat
       ActiveSupport::IsolatedExecutionState.delete(:datacat_tracer)
     end
 
+    def self.now
+      Process.clock_gettime(Process::CLOCK_MONOTONIC)
+    end
+
     def initialize
-      @started = now
+      @started = Tracer.now
       @spans = []
       @open = []
       @breakdown = {}
@@ -27,9 +31,21 @@ module Datacat
       @spans.push(span)
     end
 
+    def wrap_innermost(name, category)
+      inner = @open.pop
+      @spans.push({ name: name, category: category, start: @spans[inner][:start], parent: @spans[inner][:parent] })
+      @spans[inner][:parent] = @spans.size - 1
+      @open.push(@spans.size - 1, inner)
+    end
+
+    def innermost
+      @spans[@open.last] if @open.any?
+    end
+
     def close
       span = @spans[@open.pop]
       span[:duration] = (elapsed - span[:start]).round(2)
+      span.merge!(yield) if block_given?
       span
     end
 
@@ -38,18 +54,17 @@ module Datacat
       @spans.each { |span| children[span[:parent]] += span[:duration] if span[:parent] }
 
       totals = Hash.new(0.0)
-      @spans.each_with_index { |span, position| totals[span[:category]] += span[:duration] - children[position] }
+      @spans.each_with_index do |span, position|
+        category = span[:name] == 'transaction' ? 'app' : span[:category]
+        totals[category] += span[:duration] - children[position]
+      end
       totals.transform_values { |ms| ms.round(2) }
     end
 
     private
 
     def elapsed
-      ((now - @started) * 1000).round(2)
-    end
-
-    def now
-      Process.clock_gettime(Process::CLOCK_MONOTONIC)
+      ((Tracer.now - @started) * 1000).round(2)
     end
   end
 end
