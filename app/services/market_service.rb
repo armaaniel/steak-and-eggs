@@ -131,7 +131,7 @@ class MarketService
       
       http = Net::HTTP.new(uri.host, uri.port)
       http.use_ssl = true
-      http.open_timeout = 1
+      http.open_timeout = 1.5
       http.read_timeout = 2
       
       response = http.request(Net::HTTP::Get.new(uri))
@@ -161,7 +161,7 @@ class MarketService
       
       http = Net::HTTP.new(uri.host, uri.port)
       http.use_ssl = true
-      http.open_timeout = 1
+      http.open_timeout = 1.5
       http.read_timeout = 2
       
       response = http.request(Net::HTTP::Get.new(uri))
@@ -190,7 +190,7 @@ class MarketService
 
       http = Net::HTTP.new(uri.host, uri.port)
       http.use_ssl = true
-      http.open_timeout = 0.5
+      http.open_timeout = 1.5
       http.read_timeout = 2.5
 
       response = http.request(Net::HTTP::Get.new(uri))
@@ -273,7 +273,7 @@ class MarketService
 
     http = Net::HTTP.new(uri.host, uri.port)
     http.use_ssl = true
-    http.open_timeout = 1
+    http.open_timeout = 1.5
     http.read_timeout = 2
 
     response = http.request(Net::HTTP::Get.new(uri))
