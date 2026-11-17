@@ -127,7 +127,7 @@ class MarketService
         return cached
       end
 
-      uri=URI("https://api.polygon.io/v3/snapshot?ticker=#{symbol}&apiKey=#{ENV['API_KEY']}")
+      uri=URI("https://api.polygon.io/v2/snapshot/locale/us/markets/stocks/tickers/#{symbol}?apiKey=#{ENV['API_KEY']}")
       
       http = Net::HTTP.new(uri.host, uri.port)
       http.use_ssl = true
@@ -138,11 +138,14 @@ class MarketService
       raise NotFoundError if response.code == '404'
       raise ApiError unless response.code == '200'
 
-      body = JSON.parse(response.body)
-      session = body['results'][0]['session']
-      data = {open: session['open'], high: session['high'], low: session['low'], volume: session['volume']}
+      ticker = JSON.parse(response.body)['ticker']
+      bar = ticker['day']
 
-      data = previous_session(symbol) || data unless session['open'].to_f.positive?
+      unless bar['o'].to_f.positive?
+        bar = ticker['prevDay']
+      end
+
+      data = {open: bar['o'], high: bar['h'], low: bar['l'], volume: bar['v']}
 
       RedisService.safe_setex("market:#{symbol}", 5.minutes.to_i, data.to_json)
       data
@@ -267,23 +270,4 @@ class MarketService
     by_day[by_day.keys.max]
   end
   private_class_method :latest_session
-
-  def self.previous_session(symbol)
-    uri=URI("https://api.polygon.io/v2/aggs/ticker/#{symbol}/prev?adjusted=true&apiKey=#{ENV['API_KEY']}")
-
-    http = Net::HTTP.new(uri.host, uri.port)
-    http.use_ssl = true
-    http.open_timeout = 1.5
-    http.read_timeout = 2
-
-    response = http.request(Net::HTTP::Get.new(uri))
-    return unless response.code == '200'
-
-    bar = JSON.parse(response.body)['results']&.first
-    {open: bar['o'], high: bar['h'], low: bar['l'], volume: bar['v']} if bar
-  rescue => e
-    Sentry.capture_exception(e)
-    nil
-  end
-  private_class_method :previous_session
 end

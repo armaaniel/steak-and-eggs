@@ -216,7 +216,7 @@ RSpec.describe(MarketService) do
 
   describe("marketdata") do
     let(:api_response_body) do
-      { "results" => [{ "session" => { "open" => 95, "high" => 110, "low" => 90, "volume" => 50000 } }] }.to_json
+      { "ticker" => { "day" => { "o" => 95, "h" => 110, "l" => 90, "c" => 100, "v" => 50000 }, "prevDay" => { "o" => 98, "h" => 104, "l" => 97, "c" => 100, "v" => 900000 } } }.to_json
     end
 
     it("returns cached data on cache hit") do
@@ -246,46 +246,23 @@ RSpec.describe(MarketService) do
       expect(RedisService).to(have_received(:safe_setex).with("market:TSLA", 300, anything))
     end
 
-    it("uses the previous session when the snapshot has no open yet") do
+    it("uses the previous day in the same call when today has no open yet") do
       allow(RedisService).to(receive(:safe_get).with("market:TSLA").and_return(nil))
       allow(RedisService).to(receive(:safe_setex))
 
-      snapshot = { "results" => [{ "session" => { "previous_close" => 100, "volume" => 4000 } }] }.to_json
-      previous = { "results" => [{ "o" => 98, "h" => 104, "l" => 97, "c" => 100, "v" => 900000 }] }.to_json
+      snapshot = { "ticker" => { "day" => { "o" => 0, "h" => 0, "l" => 0, "c" => 0, "v" => 0 }, "prevDay" => { "o" => 98, "h" => 104, "l" => 97, "c" => 100, "v" => 900000 } } }.to_json
       http = instance_double(Net::HTTP)
       allow(http).to(receive(:use_ssl=))
       allow(http).to(receive(:open_timeout=))
       allow(http).to(receive(:read_timeout=))
-      allow(http).to(receive(:request).and_return(
-        instance_double(Net::HTTPResponse, code: "200", body: snapshot),
-        instance_double(Net::HTTPResponse, code: "200", body: previous)
-      ))
+      allow(http).to(receive(:request).and_return(instance_double(Net::HTTPResponse, code: "200", body: snapshot)))
       allow(Net::HTTP).to(receive(:new).and_return(http))
 
       result = MarketService.marketdata(symbol: "TSLA")
 
       expect(result).to(eq({ open: 98, high: 104, low: 97, volume: 900000 }))
+      expect(http).to(have_received(:request).once)
       expect(RedisService).to(have_received(:safe_setex).with("market:TSLA", 300, result.to_json))
-    end
-
-    it("keeps the snapshot when the previous session can't be fetched") do
-      allow(RedisService).to(receive(:safe_get).with("market:TSLA").and_return(nil))
-      allow(RedisService).to(receive(:safe_setex))
-
-      snapshot = { "results" => [{ "session" => { "previous_close" => 100, "volume" => 4000 } }] }.to_json
-      http = instance_double(Net::HTTP)
-      allow(http).to(receive(:use_ssl=))
-      allow(http).to(receive(:open_timeout=))
-      allow(http).to(receive(:read_timeout=))
-      allow(http).to(receive(:request).and_invoke(
-        ->(_) { instance_double(Net::HTTPResponse, code: "200", body: snapshot) },
-        ->(_) { raise(Net::ReadTimeout) }
-      ))
-      allow(Net::HTTP).to(receive(:new).and_return(http))
-
-      result = MarketService.marketdata(symbol: "TSLA")
-
-      expect(result).to(eq({ open: nil, high: nil, low: nil, volume: 4000 }))
     end
 
     it("raises ApiError on non-200 response") do
