@@ -70,7 +70,7 @@ RSpec.describe("Tracing", type: :request) do
     spans = buy.sole[:spans]
 
     expect(children(spans, 'StocksController#buy')).to(eq(['before_action', 'MarketService.buy', 'render json']))
-    expect(children(spans, 'before_action')).to(eq(['User Load']))
+    expect(children(spans, 'before_action')).to(eq(['Ticker Exists?', 'User Load']))
     expect(spans.select { |span| span[:name].in?(['before_action', 'render json']) }.map { |span| span[:category] }).to(eq(['callbacks', 'render']))
   end
 
@@ -79,7 +79,37 @@ RSpec.describe("Tracing", type: :request) do
 
     expect(row[:status]).to(eq(401))
     expect(children(row[:spans], 'StocksController#buy')).to(eq(['before_action']))
-    expect(children(row[:spans], 'before_action')).to(eq(['render json']))
+    expect(children(row[:spans], 'before_action')).to(eq(['Ticker Exists?', 'render json']))
+  end
+
+  it("records a symbol that isn't a ticker by its route, so whatever was typed into the url isn't stored") do
+    allow(RedisService).to(receive(:safe_get).with(start_with("ticker:")).and_return(nil))
+
+    rows = traced do
+      get("/stocks/BRUHH/tickerdata")
+      get("/stocks/BR%20UH/tickerdata")
+    end
+
+    expect(rows.map { |row| row[:endpoint] }).to(eq(['GET /stocks/:symbol/tickerdata', 'GET /stocks/:symbol/tickerdata']))
+    expect(rows.to_json).not_to(include('BRUHH', 'BR%20UH', 'BR UH'))
+  end
+
+  it("records the route when verify_token stops the request first") do
+    row = traced { get("/stocks/BRUHH/userdata") }.sole
+
+    expect(row[:status]).to(eq(401))
+    expect(row[:endpoint]).to(eq('GET /stocks/:symbol/userdata'))
+  end
+
+  it("records the route when the ticker check fails") do
+    allow(Ticker).to(receive(:exists?).and_raise(ActiveRecord::ConnectionNotEstablished))
+    allow(Sentry).to(receive(:capture_exception))
+    allow(RedisService).to(receive(:safe_get).with("ticker:TSLA").and_return(nil))
+
+    row = traced { get("/stocks/TSLA/tickerdata") }.sole
+
+    expect(row[:status]).to(eq(200))
+    expect(row[:endpoint]).to(eq('GET /stocks/:symbol/tickerdata'))
   end
 
   it("records no before_action for a controller that has no before callbacks") do

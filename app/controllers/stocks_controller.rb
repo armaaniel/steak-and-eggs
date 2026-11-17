@@ -1,4 +1,5 @@
 class StocksController < ApplicationController
+  before_action(:check_symbol)
   before_action(:verify_token, except: [:get_ticker_data,
     :get_chart_data,
     :get_live_data,
@@ -57,6 +58,8 @@ class StocksController < ApplicationController
   end
 
   def get_chart_data
+    raise MarketService::NotFoundError unless @known_symbol
+
     requested = params[:range].to_s.upcase
     range = MarketService::CHART_RANGES.key?(requested) ? requested : MarketService::DEFAULT_CHART_RANGE
 
@@ -72,6 +75,8 @@ class StocksController < ApplicationController
   end
 
   def get_live_data
+    raise MarketService::NotFoundError unless @known_symbol
+
     data = MarketService.livedata(symbol:params[:symbol])
     render(json:data)
 
@@ -84,6 +89,8 @@ class StocksController < ApplicationController
   end
 
   def get_company_data
+    raise MarketService::NotFoundError unless @known_symbol
+
     data = MarketService.companydata(symbol:params[:symbol])
     render(json: data)
 
@@ -96,6 +103,8 @@ class StocksController < ApplicationController
   end
 
   def get_market_data
+    raise MarketService::NotFoundError unless @known_symbol
+
     data = MarketService.marketdata(symbol:params[:symbol])
     render(json: data)
 
@@ -131,5 +140,21 @@ class StocksController < ApplicationController
   rescue => e
     report_error(e)
     render(json:{price:"N/A", open:"N/A"}, status:503)
+  end
+
+  private
+
+  def check_symbol
+    @known_symbol = Ticker.exists?(symbol: params[:symbol])
+  rescue => e
+    Sentry.capture_exception(e)
+    @known_symbol = false
+  end
+
+  def append_info_to_payload(payload)
+    super
+    return if @known_symbol
+
+    payload[:path] = request.route_uri_pattern.delete_suffix('(.:format)')
   end
 end

@@ -4,6 +4,11 @@ RSpec.describe("Stocks", type: :request) do
   let(:user) { create(:user) }
   let(:headers) { auth_headers(user) }
 
+  def list_tickers
+    Ticker.create!(symbol: "TSLA", name: "Tesla, Inc.", ticker_type: "CS", exchange: "NASDAQ", currency: "USD")
+    Ticker.create!(symbol: "TSE", name: "Trinseo PLC", ticker_type: "CS", exchange: "XNYS", currency: "usd", delisted_at: 1.day.ago)
+  end
+
   def polygon_answers(code)
     http = instance_double(Net::HTTP)
     allow(http).to(receive(:use_ssl=))
@@ -179,6 +184,8 @@ RSpec.describe("Stocks", type: :request) do
   end
 
   describe "GET /stocks/:symbol/chartdata" do
+    before { list_tickers }
+
     it "returns chart data from cache" do
       cached = [{ date: "2024-01-02 09:30", value: 200 }].to_json
       allow(RedisService).to(receive(:safe_get).with("chart:TSLA:1D").and_return(cached))
@@ -220,6 +227,17 @@ RSpec.describe("Stocks", type: :request) do
       expect(body.length).to(eq(2))
     end
 
+    it "returns 404 without calling polygon for a symbol that isn't a ticker" do
+      allow(RedisService).to(receive(:safe_get).with("chart:BRUHH:1D").and_return(nil))
+      allow(Net::HTTP).to(receive(:new))
+
+      get "/stocks/BRUHH/chartdata", headers: headers
+
+      expect(response).to(have_http_status(404))
+      expect(JSON.parse(response.body).length).to(eq(2))
+      expect(Net::HTTP).not_to(have_received(:new))
+    end
+
     it "returns 404 without reporting when polygon does not know the symbol" do
       allow(RedisService).to(receive(:safe_get).with("chart:TSE:1D").and_return(nil))
       polygon_answers("404")
@@ -234,6 +252,8 @@ RSpec.describe("Stocks", type: :request) do
   end
 
   describe "GET /stocks/:symbol/livedata" do
+    before { list_tickers }
+
     it "returns live data from cache without an auth token" do
       cached = [{ time: 1759865098000, value: 336.69 }].to_json
       allow(RedisService).to(receive(:safe_get).with("live:TSLA").and_return(cached))
@@ -255,6 +275,17 @@ RSpec.describe("Stocks", type: :request) do
       expect(JSON.parse(response.body)).to(eq([]))
     end
 
+    it "returns 404 without calling polygon for a symbol that isn't a ticker" do
+      allow(RedisService).to(receive(:safe_get).with("live:BRUHH").and_return(nil))
+      allow(Net::HTTP).to(receive(:new))
+
+      get "/stocks/BRUHH/livedata"
+
+      expect(response).to(have_http_status(404))
+      expect(JSON.parse(response.body)).to(eq([]))
+      expect(Net::HTTP).not_to(have_received(:new))
+    end
+
     it "returns 404 without reporting when polygon does not know the symbol" do
       allow(RedisService).to(receive(:safe_get).with("live:TSE").and_return(nil))
       polygon_answers("404")
@@ -268,6 +299,8 @@ RSpec.describe("Stocks", type: :request) do
   end
 
   describe "GET /stocks/:symbol/companydata" do
+    before { list_tickers }
+
     it "returns company data from cache" do
       cached = { market_cap: 800000000000, description: "Electric vehicles" }.to_json
       allow(RedisService).to(receive(:safe_get).with("company:TSLA").and_return(cached))
@@ -289,6 +322,17 @@ RSpec.describe("Stocks", type: :request) do
       body = JSON.parse(response.body)
       expect(body["market_cap"]).to(eq("N/A"))
       expect(body["description"]).to(eq("N/A"))
+    end
+
+    it "returns 404 without calling polygon for a symbol that isn't a ticker" do
+      allow(RedisService).to(receive(:safe_get).with("company:BRUHH").and_return(nil))
+      allow(Net::HTTP).to(receive(:new))
+
+      get "/stocks/BRUHH/companydata", headers: headers
+
+      expect(response).to(have_http_status(404))
+      expect(JSON.parse(response.body)).to(eq({"market_cap" => "N/A", "description" => "N/A"}))
+      expect(Net::HTTP).not_to(have_received(:new))
     end
 
     it "returns 404 without reporting when polygon does not know the symbol" do
@@ -316,6 +360,8 @@ RSpec.describe("Stocks", type: :request) do
   end
 
   describe "GET /stocks/:symbol/marketdata" do
+    before { list_tickers }
+
     it "returns market data from cache" do
       cached = { open: 95, high: 110, low: 90, volume: 50000 }.to_json
       allow(RedisService).to(receive(:safe_get).with("market:TSLA").and_return(cached))
@@ -339,6 +385,30 @@ RSpec.describe("Stocks", type: :request) do
       expect(body["high"]).to(eq("N/A"))
       expect(body["low"]).to(eq("N/A"))
       expect(body["volume"]).to(eq("N/A"))
+    end
+
+    it "returns 404 without calling polygon for a symbol that isn't a ticker" do
+      allow(RedisService).to(receive(:safe_get).with("market:BRUHH").and_return(nil))
+      allow(Net::HTTP).to(receive(:new))
+
+      get "/stocks/BRUHH/marketdata", headers: headers
+
+      expect(response).to(have_http_status(404))
+      expect(JSON.parse(response.body)["open"]).to(eq("N/A"))
+      expect(Net::HTTP).not_to(have_received(:new))
+    end
+
+    it "treats the symbol as unknown and reports it when the ticker check fails" do
+      allow(Ticker).to(receive(:exists?).and_raise(ActiveRecord::ConnectionNotEstablished))
+      allow(Sentry).to(receive(:capture_exception))
+      allow(Net::HTTP).to(receive(:new))
+
+      get "/stocks/TSLA/marketdata", headers: headers
+
+      expect(response).to(have_http_status(404))
+      expect(JSON.parse(response.body)["open"]).to(eq("N/A"))
+      expect(Sentry).to(have_received(:capture_exception).with(an_instance_of(ActiveRecord::ConnectionNotEstablished)))
+      expect(Net::HTTP).not_to(have_received(:new))
     end
 
     it "returns 404 without reporting when polygon does not know the symbol" do
