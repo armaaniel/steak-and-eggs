@@ -3,6 +3,7 @@ default: &default
   encoding: unicode
   pool: <%= ENV.fetch("RAILS_MAX_THREADS", 5).to_i + 5 %>
   connect_timeout: 2
+  idle_timeout: 0
   # consider lock_timeout (kill query that takes longer than N to acqure lock)
   # and statement_timeout (kill query that takes longer than N)
 
