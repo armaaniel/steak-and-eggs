@@ -28,6 +28,7 @@ class Trace < ApplicationRecord
     'GET /stocks/symbol/marketdata'  => 'GET /stocks/%/marketdata',
     'GET /stocks/symbol/companydata' => 'GET /stocks/%/companydata',
     'GET /stocks/symbol/chartdata'   => 'GET /stocks/%/chartdata%',
+    'GET /stocks/symbol/livedata'    => 'GET /stocks/%/livedata',
     'GET /stocks/symbol/tickerdata'  => 'GET /stocks/%/tickerdata',
     'GET /stocks/symbol/userdata'    => 'GET /stocks/%/userdata',
     'GET /stocks/symbol/stockprice'  => 'GET /stocks/%/stockprice',

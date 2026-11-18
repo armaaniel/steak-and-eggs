@@ -73,6 +73,8 @@ RSpec.describe(Types::QueryType) do
       Trace.create!(endpoint: "GET /stocks/TSLA/marketdata", duration: 30.0, status: 200)
       Trace.create!(endpoint: "GET /stocks/AAPL/marketdata", duration: 40.0, status: 200)
       Trace.create!(endpoint: "GET /stocks/GOOG/companydata", duration: 50.0, status: 200)
+      Trace.create!(endpoint: "GET /stocks/TSLA/livedata", duration: 20.0, status: 200)
+      Trace.create!(endpoint: "GET /stocks/AAPL/livedata", duration: 25.0, status: 200)
 
       result = execute_query
       summary = result.dig("data", "traceSummary")
@@ -80,7 +82,9 @@ RSpec.describe(Types::QueryType) do
 
       expect(routes).to(include("GET /stocks/symbol/marketdata"))
       expect(routes).to(include("GET /stocks/symbol/companydata"))
+      expect(routes).to(include("GET /stocks/symbol/livedata"))
       expect(routes).not_to(include("GET /stocks/TSLA/marketdata"))
+      expect(routes).not_to(include("GET /stocks/TSLA/livedata"))
     end
 
     it("aggregates total_requests across parameterized routes") do
