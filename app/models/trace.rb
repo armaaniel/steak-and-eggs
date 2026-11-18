@@ -152,17 +152,18 @@ class Trace < ApplicationRecord
     sql = <<~SQL
       WITH runs AS (
         SELECT run_id,
-               MIN(created_at)                           AS started_at,
+               MIN(created_at)                           AS finished_at,
                bool_or(result = 'pass')                  AS passed,
                bool_or(result = 'fail' OR status >= 500) AS failed
         FROM traces
         WHERE source = 'canary'
+          AND result IS NOT NULL
           AND run_id IS NOT NULL
           AND created_at > ?
         GROUP BY run_id
       )
       SELECT
-        floor(extract(epoch FROM started_at) / ?) * ? AS bucket,
+        floor(extract(epoch FROM finished_at) / ?) * ? AS bucket,
         COUNT(*)                                      AS started,
         COUNT(*) FILTER (WHERE passed)                AS completed,
         COUNT(*) FILTER (WHERE failed)                AS failures
@@ -365,6 +366,7 @@ class Trace < ApplicationRecord
                bool_or(result = 'fail' OR status >= 500) AS failed
         FROM traces
         WHERE source = 'canary'
+          AND result IS NOT NULL
           AND run_id IS NOT NULL
           AND created_at >= ?
           AND created_at <  ?

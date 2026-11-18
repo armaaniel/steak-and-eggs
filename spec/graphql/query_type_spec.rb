@@ -543,8 +543,8 @@ RSpec.describe(Types::QueryType) do
 
     def canary_run(result:, status: 200, at: 20.minutes.ago)
       run_id = SecureRandom.uuid
-      Trace.create!(endpoint: "GET /stocks/AAPL/stockprice", duration: 10.0, status: status, source: "canary", run_id: run_id, created_at: at)
-      Trace.create!(endpoint: "POST /record", duration: 5.0, status: 200, source: "canary", run_id: run_id, result: result, created_at: at) if result
+      Trace.create!(endpoint: "GET /stocks/AAPL/stockprice", duration: 10.0, status: 200, source: "canary", run_id: run_id, created_at: at)
+      Trace.create!(endpoint: "DELETE /delete_account", duration: 5.0, status: status, source: "canary", run_id: run_id, result: result, created_at: at) if result
     end
 
     it("expects two runs over the ten minute status window") do
@@ -711,15 +711,21 @@ RSpec.describe(Types::QueryType) do
       expect(buckets.last).to(include("started" => 2, "completed" => 1, "failures" => 1))
     end
 
-    it("counts a run that crosses into the next bucket once, in the bucket it started in") do
+    it("counts a run that crosses into the next bucket once, in the bucket it reported its result in") do
       run = SecureRandom.uuid
       Trace.create!(endpoint: "GET /users", duration: 10.0, status: 200, source: "canary", run_id: run, created_at: Time.utc(2026, 9, 30, 11, 59, 58))
       Trace.create!(endpoint: "GET /health", duration: 10.0, status: 200, source: "canary", run_id: run, result: "pass", created_at: Time.utc(2026, 9, 30, 12, 0, 2))
 
-      started_hour, current_hour = buckets.last(2)
+      previous_hour, current_hour = buckets.last(2)
 
-      expect(started_hour).to(include("bucket" => "2026-09-30T11:00:00Z", "started" => 1, "completed" => 1))
-      expect(current_hour).to(include("started" => 0, "completed" => 0))
+      expect(previous_hour).to(include("bucket" => "2026-09-30T11:00:00Z", "started" => 0, "completed" => 0))
+      expect(current_hour).to(include("started" => 1, "completed" => 1))
+    end
+
+    it("leaves out a run that never reported a result") do
+      Trace.create!(endpoint: "GET /users", duration: 10.0, status: 200, source: "canary", run_id: SecureRandom.uuid, created_at: Time.utc(2026, 9, 30, 12, 1))
+
+      expect(buckets.last).to(include("started" => 0, "completed" => 0, "failures" => 0))
     end
   end
 
