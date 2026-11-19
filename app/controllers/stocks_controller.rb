@@ -1,5 +1,5 @@
 class StocksController < ApplicationController
-  before_action(:check_symbol)
+  before_action(:check_symbol, except: [:get_stock_price])
   before_action(:verify_token, except: [:get_ticker_data,
     :get_chart_data,
     :get_live_data,
@@ -133,6 +133,7 @@ class StocksController < ApplicationController
 
   def get_stock_price
     data = MarketService.marketprice(symbol:params[:symbol])
+    @known_symbol = true
     render(json:data)
 
   rescue MarketService::NotFoundError => e

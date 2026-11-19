@@ -93,6 +93,21 @@ RSpec.describe("Tracing", type: :request) do
     expect(rows.to_json).not_to(include('BRUHH', 'BR%20UH', 'BR UH'))
   end
 
+  it("answers a stockprice from the cache without asking postgres, and records an unknown symbol's by its route") do
+    allow(RedisService).to(receive(:safe_mget).with("price:TSLA", "open:TSLA").and_return(["100", "95"]))
+    allow(RedisService).to(receive(:safe_mget).with("price:BRUHH", "open:BRUHH").and_return([nil, nil]))
+
+    known, unknown = traced do
+      get("/stocks/TSLA/stockprice")
+      get("/stocks/BRUHH/stockprice")
+    end
+
+    expect(known).to(include(status: 200, endpoint: 'GET /stocks/TSLA/stockprice', sql_ms: nil))
+    expect(known[:spans].map { |span| span[:category] }).not_to(include('sql'))
+    expect(unknown).to(include(status: 404, endpoint: 'GET /stocks/:symbol/stockprice'))
+    expect(unknown.to_json).not_to(include('BRUHH'))
+  end
+
   it("records the route when verify_token stops the request first") do
     row = traced { get("/stocks/BRUHH/userdata") }.sole
 
