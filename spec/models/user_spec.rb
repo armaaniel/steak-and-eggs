@@ -20,6 +20,25 @@ RSpec.describe(User, type: :model) do
       expect(duplicate).not_to(be_valid)
     end
 
+    it "checks the username is unique again when it changes" do
+      create(:user, username: "taken")
+      user.username = "TAKEN"
+
+      expect(user).not_to(be_valid)
+    end
+
+    it "doesn't check the username is unique when only the balance changes" do
+      balance = user.balance
+      checks = []
+      record = ->(event) { checks << event.payload[:sql] if event.payload[:name] == "User Exists?" }
+
+      ActiveSupport::Notifications.subscribed(record, "sql.active_record") do
+        user.update!(balance: balance + 100)
+      end
+
+      expect(checks).to(be_empty)
+    end
+
     it "requires username to be 20 characters or less" do
       user.username = "a" * 21
       expect(user).not_to(be_valid)
@@ -31,7 +50,7 @@ RSpec.describe(User, type: :model) do
     end
 
     it "rejects special characters in username" do
-      %w[test@user test.user test!user test user test-user].each do |bad_name|
+      ["test@user", "test.user", "test!user", "test user", "test-user"].each do |bad_name|
         user.username = bad_name
         expect(user).not_to(be_valid, "expected '#{bad_name}' to be invalid")
       end
