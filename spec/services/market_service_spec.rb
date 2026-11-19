@@ -203,6 +203,21 @@ RSpec.describe(MarketService) do
       { "ticker" => { "day" => { "o" => 95, "h" => 110, "l" => 90, "c" => 100, "v" => 50000 }, "prevDay" => { "o" => 98, "h" => 104, "l" => 97, "c" => 100, "v" => 900000 } } }.to_json
     end
 
+    it("waits a second for polygon to answer and retries once on a new connection, so a stuck call gives up in about two seconds") do
+      allow(RedisService).to(receive(:safe_get).with("market:TSLA").and_return(nil))
+      allow(RedisService).to(receive(:safe_setex))
+
+      http = instance_double(Net::HTTP)
+      allow(http).to(receive(:use_ssl=))
+      expect(http).to(receive(:open_timeout=).with(1.5))
+      expect(http).to(receive(:read_timeout=).with(1))
+      expect(http).to(receive(:max_retries=).with(1))
+      allow(http).to(receive(:request).and_return(instance_double(Net::HTTPResponse, code: "200", body: api_response_body)))
+      allow(Net::HTTP).to(receive(:new).and_return(http))
+
+      MarketService.marketdata(symbol: "TSLA")
+    end
+
     it("returns cached data on cache hit") do
       cached = { open: 95, high: 110, low: 90, volume: 50000 }.to_json
       allow(RedisService).to(receive(:safe_get).with("market:TSLA").and_return(cached))
@@ -221,6 +236,7 @@ RSpec.describe(MarketService) do
       allow(http).to(receive(:use_ssl=))
       allow(http).to(receive(:open_timeout=))
       allow(http).to(receive(:read_timeout=))
+      allow(http).to(receive(:max_retries=))
       allow(http).to(receive(:request).and_return(response))
       allow(Net::HTTP).to(receive(:new).and_return(http))
 
@@ -239,6 +255,7 @@ RSpec.describe(MarketService) do
       allow(http).to(receive(:use_ssl=))
       allow(http).to(receive(:open_timeout=))
       allow(http).to(receive(:read_timeout=))
+      allow(http).to(receive(:max_retries=))
       allow(http).to(receive(:request).and_return(instance_double(Net::HTTPResponse, code: "200", body: snapshot)))
       allow(Net::HTTP).to(receive(:new).and_return(http))
 
@@ -257,6 +274,7 @@ RSpec.describe(MarketService) do
       allow(http).to(receive(:use_ssl=))
       allow(http).to(receive(:open_timeout=))
       allow(http).to(receive(:read_timeout=))
+      allow(http).to(receive(:max_retries=))
       allow(http).to(receive(:request).and_return(response))
       allow(Net::HTTP).to(receive(:new).and_return(http))
 
@@ -289,6 +307,7 @@ RSpec.describe(MarketService) do
       allow(http).to(receive(:use_ssl=))
       allow(http).to(receive(:open_timeout=))
       allow(http).to(receive(:read_timeout=))
+      allow(http).to(receive(:max_retries=))
       allow(http).to(receive(:request).and_return(response))
       allow(Net::HTTP).to(receive(:new).and_return(http))
 
@@ -306,6 +325,7 @@ RSpec.describe(MarketService) do
       allow(http).to(receive(:use_ssl=))
       allow(http).to(receive(:open_timeout=))
       allow(http).to(receive(:read_timeout=))
+      allow(http).to(receive(:max_retries=))
       allow(http).to(receive(:request).and_return(response))
       allow(Net::HTTP).to(receive(:new).and_return(http))
 
@@ -339,6 +359,7 @@ RSpec.describe(MarketService) do
       allow(http).to(receive(:use_ssl=))
       allow(http).to(receive(:open_timeout=))
       allow(http).to(receive(:read_timeout=))
+      allow(http).to(receive(:max_retries=))
       allow(http).to(receive(:request).and_return(response))
       allow(Net::HTTP).to(receive(:new).and_return(http))
     end
@@ -431,6 +452,7 @@ RSpec.describe(MarketService) do
       allow(http).to(receive(:use_ssl=))
       allow(http).to(receive(:open_timeout=))
       allow(http).to(receive(:read_timeout=))
+      allow(http).to(receive(:max_retries=))
       allow(http).to(receive(:request).and_return(response))
       allow(Net::HTTP).to(receive(:new).and_return(http))
 
@@ -455,12 +477,28 @@ RSpec.describe(MarketService) do
       ] }.to_json
     end
 
+    it("gives polygon half a second to connect, so the live chart fails fast and catches up on its next poll") do
+      allow(RedisService).to(receive(:safe_get).with("live:TSLA").and_return(nil))
+      allow(RedisService).to(receive(:safe_setex))
+
+      http = instance_double(Net::HTTP)
+      allow(http).to(receive(:use_ssl=))
+      expect(http).to(receive(:open_timeout=).with(0.5))
+      expect(http).to(receive(:read_timeout=).with(1))
+      expect(http).to(receive(:max_retries=).with(1))
+      allow(http).to(receive(:request).and_return(instance_double(Net::HTTPResponse, code: "200", body: api_response_body)))
+      allow(Net::HTTP).to(receive(:new).and_return(http))
+
+      MarketService.livedata(symbol: "TSLA")
+    end
+
     def stub_polygon(body, code: "200")
       response = instance_double(Net::HTTPResponse, code: code, body: body)
       http = instance_double(Net::HTTP)
       allow(http).to(receive(:use_ssl=))
       allow(http).to(receive(:open_timeout=))
       allow(http).to(receive(:read_timeout=))
+      allow(http).to(receive(:max_retries=))
       allow(http).to(receive(:request).and_return(response))
       allow(Net::HTTP).to(receive(:new).and_return(http))
     end

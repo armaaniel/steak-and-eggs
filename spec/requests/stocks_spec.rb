@@ -14,6 +14,7 @@ RSpec.describe("Stocks", type: :request) do
     allow(http).to(receive(:use_ssl=))
     allow(http).to(receive(:open_timeout=))
     allow(http).to(receive(:read_timeout=))
+    allow(http).to(receive(:max_retries=))
     allow(http).to(receive(:request).and_return(instance_double(Net::HTTPResponse, code: code)))
     allow(Net::HTTP).to(receive(:new).and_return(http))
   end

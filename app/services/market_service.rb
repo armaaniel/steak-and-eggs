@@ -124,13 +124,7 @@ class MarketService
       end
 
       uri=URI("https://api.polygon.io/v2/snapshot/locale/us/markets/stocks/tickers/#{symbol}?apiKey=#{ENV['API_KEY']}")
-      
-      http = Net::HTTP.new(uri.host, uri.port)
-      http.use_ssl = true
-      http.open_timeout = 1.5
-      http.read_timeout = 2
-      
-      response = http.request(Net::HTTP::Get.new(uri))
+      response = polygon_get(uri)
       raise NotFoundError if response.code == '404'
       raise ApiError unless response.code == '200'
 
@@ -157,13 +151,7 @@ class MarketService
       end
 
       uri=URI("https://api.polygon.io/v3/reference/tickers/#{symbol}?apiKey=#{ENV['API_KEY']}")
-      
-      http = Net::HTTP.new(uri.host, uri.port)
-      http.use_ssl = true
-      http.open_timeout = 1.5
-      http.read_timeout = 2
-      
-      response = http.request(Net::HTTP::Get.new(uri))
+      response = polygon_get(uri)
       raise NotFoundError if response.code == '404'
       raise ApiError unless response.code == '200'
 
@@ -187,12 +175,7 @@ class MarketService
       from = config[:from].call
       uri=URI("https://api.polygon.io/v2/aggs/ticker/#{symbol}/range/#{config[:multiplier]}/#{config[:timespan]}/#{from}/#{Date.current}?adjusted=true&sort=asc&limit=50000&apiKey=#{ENV['API_KEY']}")
 
-      http = Net::HTTP.new(uri.host, uri.port)
-      http.use_ssl = true
-      http.open_timeout = 1.5
-      http.read_timeout = 2.5
-
-      response = http.request(Net::HTTP::Get.new(uri))
+      response = polygon_get(uri)
       raise NotFoundError if response.code == '404'
       raise ApiError unless response.code == '200'
 
@@ -229,12 +212,7 @@ class MarketService
       from = window_end - LIVE_WINDOW_MS
       uri=URI("https://api.polygon.io/v2/aggs/ticker/#{symbol}/range/1/second/#{from}/#{to}?adjusted=true&sort=asc&limit=50000&apiKey=#{ENV['API_KEY']}")
 
-      http = Net::HTTP.new(uri.host, uri.port)
-      http.use_ssl = true
-      http.open_timeout = 0.5
-      http.read_timeout = 2.5
-
-      response = http.request(Net::HTTP::Get.new(uri))
+      response = polygon_get(uri, open_timeout: 0.5)
       raise NotFoundError if response.code == '404'
       raise ApiError unless response.code == '200'
 
@@ -266,4 +244,14 @@ class MarketService
     by_day[by_day.keys.max]
   end
   private_class_method :latest_session
+
+  def self.polygon_get(uri, open_timeout: 1.5)
+    http = Net::HTTP.new(uri.host, uri.port)
+    http.use_ssl = true
+    http.open_timeout = open_timeout
+    http.read_timeout = 1
+    http.max_retries = 1
+    http.request(Net::HTTP::Get.new(uri))
+  end
+  private_class_method :polygon_get
 end
