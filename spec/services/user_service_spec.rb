@@ -102,6 +102,32 @@ RSpec.describe(UserService) do
 
       UserService.delete_account(user_id: user.id)
     end
+
+    def history(trades:)
+      Position.create!(user: user, symbol: "TSLA", shares: 1, average_price: 1)
+      PortfolioRecord.create!(user: user, date: Date.current, portfolio_value: 1)
+      trades.times { Transaction.create!(user: user, symbol: "USD", quantity: 1, value: 1, transaction_type: "Deposit", market_price: 1) }
+    end
+
+    it("deletes the user's positions, transactions and portfolio records") do
+      history(trades: 3)
+
+      UserService.delete_account(user_id: user.id)
+
+      expect([Position, Transaction, PortfolioRecord].map { |model| model.where(user_id: user.id).count }).to(eq([0, 0, 0]))
+    end
+
+    it("deletes each table's rows with one statement, however many trades the user made") do
+      history(trades: 25)
+      deletes = []
+      record = ->(event) { deletes << event.payload[:name] if event.payload[:name].to_s.match?(/Delete|Destroy/) }
+
+      ActiveSupport::Notifications.subscribed(record, "sql.active_record") do
+        UserService.delete_account(user_id: user.id)
+      end
+
+      expect(deletes).to(contain_exactly("Position Delete All", "Transaction Delete All", "PortfolioRecord Delete All", "User Destroy"))
+    end
   end
 
   describe("change_password") do

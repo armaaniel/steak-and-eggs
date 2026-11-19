@@ -2,9 +2,9 @@ class User < ApplicationRecord
   before_validation { self.username = username&.strip&.downcase }
 
   has_secure_password
-  has_many(:positions, dependent: :destroy)
-  has_many(:transactions, dependent: :destroy)
-  has_many(:portfolio_records, dependent: :destroy)
+  has_many(:positions, dependent: :delete_all)
+  has_many(:transactions, dependent: :delete_all)
+  has_many(:portfolio_records, dependent: :delete_all)
   validates(:username, presence: true, length:{maximum:20}, format: {with: /\A[a-zA-Z0-9_]+\z/})
   validates(:username, uniqueness: {case_sensitive:false}, if: :will_save_change_to_username?)
 
