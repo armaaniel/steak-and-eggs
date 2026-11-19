@@ -33,11 +33,11 @@ RSpec.describe("Tracing", type: :request) do
     expect(children(row[:spans], 'StocksController#buy')).to(include('MarketService.buy'))
   end
 
-  it("records the buy's queries and its one cache delete inside MarketService.buy, with nine queries inside its transaction") do
+  it("records the buy's queries and its one cache delete inside MarketService.buy, with seven queries inside its transaction") do
     spans = buy.sole[:spans]
 
     expect(children(spans, 'MarketService.buy')).to(eq(['Ticker Exists?', 'transaction', 'DEL portfolio:? activity:? positions:?']))
-    expect(children(spans, 'transaction')).to(eq(['User Load', 'Position Load', 'User Exists?', 'User Update', 'User Load', 'Position Exists?', 'Position Create', 'User Load', 'Transaction Create', 'RELEASE SAVEPOINT active_record_1']))
+    expect(children(spans, 'transaction')).to(eq(['User Load', 'Position Load', 'User Exists?', 'User Update', 'Position Exists?', 'Position Create', 'Transaction Create', 'RELEASE SAVEPOINT active_record_1']))
   end
 
   it("records the schema lookups a process makes the first time it touches a table") do
@@ -54,7 +54,7 @@ RSpec.describe("Tracing", type: :request) do
   it("keeps the user's values out of every statement") do
     spans = buy.sole[:spans]
 
-    expect(spans.filter_map { |span| span[:sql] }.size).to(be >= 11)
+    expect(spans.filter_map { |span| span[:sql] }.size).to(be >= 10)
     expect(spans.to_json).not_to(include(user.username, 'TSLA'))
   end
 

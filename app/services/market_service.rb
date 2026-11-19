@@ -53,9 +53,9 @@ class MarketService
             position.update!(average_price: new_average, shares: new_quantity)
           else
             new_average = stock_price
-            Position.create!(user_id:user_id, symbol: symbol, shares: quantity, average_price:new_average)
+            Position.create!(user: user, symbol: symbol, shares: quantity, average_price:new_average)
           end
-          transaction = Transaction.create!(symbol: symbol, quantity: quantity, value: trade_value, transaction_type: 'Buy', user_id: user_id,
+          transaction = Transaction.create!(symbol: symbol, quantity: quantity, value: trade_value, transaction_type: 'Buy', user: user,
           market_price:stock_price, average_price:new_average)
           
           end
@@ -93,7 +93,7 @@ class MarketService
         else
           position.update!(shares: position.shares - quantity)
         end
-        transaction = Transaction.create!(symbol:symbol, quantity:quantity, value:trade_value, transaction_type:'Sell', user_id:user_id,
+        transaction = Transaction.create!(symbol:symbol, quantity:quantity, value:trade_value, transaction_type:'Sell', user: user,
         realized_pnl: realized_pnl, market_price:stock_price, average_price:avg_price)
         
         end
