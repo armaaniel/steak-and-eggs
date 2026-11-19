@@ -33,10 +33,10 @@ RSpec.describe("Tracing", type: :request) do
     expect(children(row[:spans], 'StocksController#buy')).to(include('MarketService.buy'))
   end
 
-  it("records the buy's queries and its one cache delete inside MarketService.buy, with six queries inside its transaction") do
+  it("records the buy's transaction and its one cache delete inside MarketService.buy, with six queries inside the transaction") do
     spans = buy.sole[:spans]
 
-    expect(children(spans, 'MarketService.buy')).to(eq(['Ticker Exists?', 'transaction', 'DEL portfolio:? activity:? positions:?']))
+    expect(children(spans, 'MarketService.buy')).to(eq(['transaction', 'DEL portfolio:? activity:? positions:?']))
     expect(children(spans, 'transaction')).to(eq(['User Load', 'Position Load', 'User Update', 'Position Exists?', 'Position Create', 'Transaction Create', 'RELEASE SAVEPOINT active_record_1']))
   end
 
@@ -54,7 +54,7 @@ RSpec.describe("Tracing", type: :request) do
   it("keeps the user's values out of every statement") do
     spans = buy.sole[:spans]
 
-    expect(spans.filter_map { |span| span[:sql] }.size).to(be >= 9)
+    expect(spans.filter_map { |span| span[:sql] }.size).to(be >= 8)
     expect(spans.to_json).not_to(include(user.username, 'TSLA'))
   end
 
@@ -69,7 +69,7 @@ RSpec.describe("Tracing", type: :request) do
     spans = buy.sole[:spans]
 
     expect(children(spans, 'StocksController#buy')).to(eq(['before_action', 'MarketService.buy', 'render json']))
-    expect(children(spans, 'before_action')).to(eq(['Ticker Exists?', 'User Load']))
+    expect(children(spans, 'before_action')).to(eq(['Ticker Load', 'User Load']))
     expect(spans.select { |span| span[:name].in?(['before_action', 'render json']) }.map { |span| span[:category] }).to(eq(['callbacks', 'render']))
   end
 
@@ -78,7 +78,7 @@ RSpec.describe("Tracing", type: :request) do
 
     expect(row[:status]).to(eq(401))
     expect(children(row[:spans], 'StocksController#buy')).to(eq(['before_action']))
-    expect(children(row[:spans], 'before_action')).to(eq(['Ticker Exists?', 'render json']))
+    expect(children(row[:spans], 'before_action')).to(eq(['Ticker Load', 'render json']))
   end
 
   it("records a symbol that isn't a ticker by its route, so whatever was typed into the url isn't stored") do
@@ -101,7 +101,13 @@ RSpec.describe("Tracing", type: :request) do
   end
 
   it("records the route when the ticker check fails") do
-    allow(Ticker).to(receive(:exists?).and_raise(ActiveRecord::ConnectionNotEstablished))
+    lookups = 0
+    allow(Ticker).to(receive(:find_by).and_wrap_original do |find_by, **conditions|
+      lookups += 1
+      raise ActiveRecord::ConnectionNotEstablished if lookups == 1
+
+      find_by.call(**conditions)
+    end)
     allow(Sentry).to(receive(:capture_exception))
     allow(RedisService).to(receive(:safe_get).with("ticker:TSLA").and_return(nil))
 

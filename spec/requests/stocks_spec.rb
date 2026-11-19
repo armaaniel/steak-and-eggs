@@ -35,6 +35,16 @@ RSpec.describe("Stocks", type: :request) do
       expect(response).to(have_http_status(404))
       expect(JSON.parse(response.body)["error"]).to(eq("This stock is no longer listed"))
       expect(Sentry).not_to(have_received(:capture_exception))
+      expect(user.reload.balance).to(eq(10000))
+      expect(Position.find_by(user_id: user.id, symbol: "TSE")).to(be_nil)
+    end
+
+    it "returns 404 without touching the balance for a symbol that isn't a ticker" do
+      post "/stocks/BRUHH/buy", params: { quantity: 1 }, headers: headers
+
+      expect(response).to(have_http_status(404))
+      expect(user.reload.balance).to(eq(10000))
+      expect(Transaction.where(user_id: user.id)).to(be_empty)
     end
 
     it "returns 201 with trade data" do
@@ -399,7 +409,7 @@ RSpec.describe("Stocks", type: :request) do
     end
 
     it "treats the symbol as unknown and reports it when the ticker check fails" do
-      allow(Ticker).to(receive(:exists?).and_raise(ActiveRecord::ConnectionNotEstablished))
+      allow(Ticker).to(receive(:find_by).and_raise(ActiveRecord::ConnectionNotEstablished))
       allow(Sentry).to(receive(:capture_exception))
       allow(Net::HTTP).to(receive(:new))
 

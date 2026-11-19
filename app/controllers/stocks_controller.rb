@@ -11,6 +11,7 @@ class StocksController < ApplicationController
   def buy
     quantity = params[:quantity].to_i
     return render(json: {error: "Invalid quantity"}, status: 422) if params[:quantity].blank? || quantity <= 0
+    raise MarketService::NotFoundError if @ticker.nil? || @ticker.delisted_at
 
     data = MarketService.buy(symbol:params[:symbol], user_id:@current_user.id, quantity:quantity)
 
@@ -145,7 +146,8 @@ class StocksController < ApplicationController
   private
 
   def check_symbol
-    @known_symbol = Ticker.exists?(symbol: params[:symbol])
+    @ticker = Ticker.find_by(symbol: params[:symbol])
+    @known_symbol = @ticker.present?
   rescue => e
     Sentry.capture_exception(e)
     @known_symbol = false
