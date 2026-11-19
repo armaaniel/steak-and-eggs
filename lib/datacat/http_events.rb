@@ -10,5 +10,11 @@ module Datacat
         @datacat_announced = false
       end
     end
+
+    private
+
+    def connect
+      ActiveSupport::Notifications.instrument('connect.http', host: address) { super }
+    end
   end
 end

@@ -259,12 +259,24 @@ RSpec.describe(Datacat::TracingListener) do
       expect(row[:spans].last).to(include(name: 'GET api.polygon.io', category: 'http', parent: 1))
       expect(row[:http_ms]).to(be_a(Float))
     end
+
+    it("records a connection opening as an http span named by its host") do
+      request(payload) do
+        call_service do
+          connect_payload = { host: 'api.polygon.io' }
+          listener.start('connect.http', 'id', connect_payload)
+          listener.finish('connect.http', 'id', connect_payload)
+        end
+      end
+
+      expect(rows.sole[:spans].last).to(include(name: 'connect api.polygon.io', category: 'http', parent: 1))
+    end
   end
 
   describe("PATTERN") do
     it("matches every event the listener handles, and nothing that only looks like one") do
-      handled = ['process_action.action_controller', 'sql.active_record', 'transaction.active_record', 'command.redis', 'request.http', 'before_action.action_controller', 'render.action_controller', 'MarketService.buy.datacat']
-      lookalikes = ['start_processing.action_controller', 'sql.active_record.extra', 'instantiation.active_record', 'xcommand.redis', 'request.http2', 'render_template.action_view', 'datacat']
+      handled = ['process_action.action_controller', 'sql.active_record', 'transaction.active_record', 'command.redis', 'request.http', 'connect.http', 'before_action.action_controller', 'render.action_controller', 'MarketService.buy.datacat']
+      lookalikes = ['start_processing.action_controller', 'sql.active_record.extra', 'instantiation.active_record', 'xcommand.redis', 'request.http2', 'reconnect.http', 'render_template.action_view', 'datacat']
 
       expect(handled).to(all(match(Datacat::TracingListener::PATTERN)))
       expect(lookalikes).to(all(satisfy { |name| !name.match?(Datacat::TracingListener::PATTERN) }))

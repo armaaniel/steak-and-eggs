@@ -63,7 +63,7 @@ One row per trace, as today.
 | `hit` | `true` | Redis GETs and MGETs that didn't raise |
 | `dropped` | `102`, spans past the first 500 that weren't stored | the root, only when spans were left out |
 
-Names: SQL uses Rails' query name, with the statement in `sql`. Rails' `SCHEMA` lookups are spans too. A process runs them the first time it touches each table, to learn the table's columns and primary key, and they made up 18 queries and about 35 ms of a cold local buy. `BEGIN`, `COMMIT` and savepoints are named by their statement, since Rails names them all `TRANSACTION`. A transaction itself is `transaction`, and its queries are its children. Redis is the command plus the key's shape (`GET price:?`). A command with several keys lists each distinct shape (`MGET price:? open:?`), and a command with no key is just its name (`SCAN`). HTTP is the method plus the host (`GET api.polygon.io`). Services use the event name without `.datacat`. The root is `Controller#action`.
+Names: SQL uses Rails' query name, with the statement in `sql`. Rails' `SCHEMA` lookups are spans too. A process runs them the first time it touches each table, to learn the table's columns and primary key, and they made up 18 queries and about 35 ms of a cold local buy. `BEGIN`, `COMMIT` and savepoints are named by their statement, since Rails names them all `TRANSACTION`. A transaction itself is `transaction`, and its queries are its children. Redis is the command plus the key's shape (`GET price:?`). A command with several keys lists each distinct shape (`MGET price:? open:?`), and a command with no key is just its name (`SCAN`). HTTP is the method plus the host (`GET api.polygon.io`), and a connection opening inside it is `connect api.polygon.io`. Services use the event name without `.datacat`. The root is `Controller#action`.
 
 ### Where spans come from
 
@@ -72,14 +72,17 @@ Names: SQL uses Rails' query name, with the statement in `sql`. Rails' `SCHEMA` 
   - my `.datacat` services
   - `sql.active_record` and `transaction.active_record`
   - `command.redis`
-  - `request.http`
+  - `request.http` and `connect.http`
   - `before_action.action_controller` and `render.action_controller`
 - **Redis has no publisher of its own,** because `redis-client` isn't part of Rails. A five-line `redis-client` middleware (`RedisClient.register`) announces each command as `command.redis`, carrying the command and its reply. From there it's handled like a query. Announcing it costs about 4 µs of CPU per command locally, most of it the handle and Sentry's breadcrumb. That's about 0.5% of a stockprice, and it buys one code path, plus Redis commands in Sentry's trail before an error.
 - **Pipelines aren't covered.** `redis-client` aliases `call_pipelined` to the original `call`, so the middleware only sees single commands. The app's only pipeline is `redis-client`'s own connection setup.
 - **HTTP has no publisher either.** A module prepended onto `Net::HTTP` announces each `request` as `request.http`, carrying only the method and the host.
   - When the connection isn't open yet, `Net::HTTP#request` opens it and then calls itself again. A guard on the object skips that inner call, so one call is one span, and connecting is included.
   - Sentry's own patch does the opposite (`return super unless started?`), so its timing leaves connecting out.
-  - All five Polygon calls use `Net::HTTP.new` and then `request`, with no `start`, so every call opens a new connection, TLS included. The span shows what that costs.
+  - All five Polygon calls use `Net::HTTP.new` and then `request`, with no `start`, so every call opens a new connection, TLS included.
+  - The same module wraps the private `connect` as `connect.http`, carrying only the host, so opening the connection (DNS, TCP and TLS) is a child span of its request. Its time stays in the `http` category, so `http_ms` is still the whole call. The rest of the request span is sending, waiting for Polygon and reading the answer.
+  - Net/http's own retry after a read timeout reopens the connection through the same `connect`, so a retried call shows two connects under one request.
+  - `connect` is private, so a net-http upgrade could rename it and the span would disappear without an error. The spec fails if a request opens a connection without a connect span.
 - **Callbacks have no Rails event, and they aren't one block of code.**
   - The callbacks run, and then the action runs inside `run_callbacks { … }`.
   - So one module prepended onto `AbstractController::Callbacks` uses the handle API by hand, the way Rails times transactions. `process_action` builds and starts the handle, `send_action` finishes it as the action begins, and an `ensure` finishes it when a callback stops the chain (a 401 from `verify_token`).

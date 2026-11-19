@@ -5,9 +5,10 @@ module Datacat
     TRANSACTION = 'transaction.active_record'
     REDIS = 'command.redis'
     HTTP = 'request.http'
+    CONNECT = 'connect.http'
     CALLBACKS = 'before_action.action_controller'
     RENDER = 'render.action_controller'
-    PATTERN = /\.datacat\z|\A#{Regexp.union(ROOT, QUERY, TRANSACTION, REDIS, HTTP, CALLBACKS, RENDER)}\z/
+    PATTERN = /\.datacat\z|\A#{Regexp.union(ROOT, QUERY, TRANSACTION, REDIS, HTTP, CONNECT, CALLBACKS, RENDER)}\z/
     SPAN_FIELDS = %i[spans app_ms sql_ms redis_ms http_ms callbacks_ms render_ms cache_hits cache_misses].freeze
 
     TRACKED_ROUTES = [
@@ -62,6 +63,7 @@ module Datacat
       when TRANSACTION then open_transaction(tracer)
       when REDIS then tracer.open(RedisShape.call(payload[:command]), 'redis')
       when HTTP then tracer.open("#{payload[:method]} #{payload[:host]}", 'http')
+      when CONNECT then tracer.open("connect #{payload[:host]}", 'http')
       when CALLBACKS then tracer.open('before_action', 'callbacks')
       when RENDER then tracer.open("render #{payload[:renderer]}".strip, 'render')
       else tracer.open(name.delete_suffix('.datacat'), 'app')
