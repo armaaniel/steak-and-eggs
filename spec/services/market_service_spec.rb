@@ -89,7 +89,7 @@ RSpec.describe(MarketService) do
     end
 
     it("invalidates cache") do
-      expect(CacheService).to(receive(:invalidate_user).with(user_id: user.id))
+      expect(CacheService).to(receive(:invalidate_user).with(user_id: user.id, positions: true))
 
       MarketService.buy(symbol: "TSLA", quantity: 10, user_id: user.id)
     end
@@ -171,7 +171,7 @@ RSpec.describe(MarketService) do
     end
 
     it("invalidates cache") do
-      expect(CacheService).to(receive(:invalidate_user).with(user_id: user.id))
+      expect(CacheService).to(receive(:invalidate_user).with(user_id: user.id, positions: true))
 
       MarketService.sell(symbol: "TSLA", quantity: 10, user_id: user.id)
     end

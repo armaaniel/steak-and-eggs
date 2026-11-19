@@ -6,7 +6,6 @@ RSpec.describe("Tracing", type: :request) do
   before do
     Ticker.create!(symbol: "TSLA", name: "Tesla, Inc.", ticker_type: "CS", exchange: "NASDAQ", currency: "USD")
     allow(RedisService).to(receive(:safe_get).with("price:TSLA").and_return("100"))
-    allow(CacheService).to(receive(:invalidate_user))
     [User, Ticker, Position, Transaction].each { |model| [model.table_exists?, model.columns_hash, model.primary_key] }
   end
 
@@ -34,10 +33,10 @@ RSpec.describe("Tracing", type: :request) do
     expect(children(row[:spans], 'StocksController#buy')).to(include('MarketService.buy'))
   end
 
-  it("records the buy's queries, with the ten inside MarketService.buy and nine of them inside its transaction") do
+  it("records the buy's queries and its one cache delete inside MarketService.buy, with nine queries inside its transaction") do
     spans = buy.sole[:spans]
 
-    expect(children(spans, 'MarketService.buy')).to(eq(['Ticker Exists?', 'transaction', 'DEL positions:?']))
+    expect(children(spans, 'MarketService.buy')).to(eq(['Ticker Exists?', 'transaction', 'DEL portfolio:? activity:? positions:?']))
     expect(children(spans, 'transaction')).to(eq(['User Load', 'Position Load', 'User Exists?', 'User Update', 'User Load', 'Position Exists?', 'Position Create', 'User Load', 'Transaction Create', 'RELEASE SAVEPOINT active_record_1']))
   end
 
