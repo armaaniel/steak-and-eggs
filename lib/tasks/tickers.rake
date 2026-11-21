@@ -5,6 +5,7 @@ namespace :tickers do
   desc "Sync tickers with Polygon: upsert the active ones and mark the rest delisted. DRY_RUN=1 previews"
   task sync: :environment do
     dry_run = ENV["DRY_RUN"].present?
+    force = ENV["FORCE"].present?
 
     sync = lambda do
       fetched = %w[CS ETF ETV ADRC UNIT FUND].flat_map { |type| fetch_polygon_tickers(type) }.uniq { |t| t[:symbol] }
@@ -12,13 +13,17 @@ namespace :tickers do
       complete, incomplete = fetched.partition { |t| t.values.all?(&:present?) }
 
       listed = Ticker.where(delisted_at: nil)
+      listed_count = listed.count
       missing = listed.where.not(symbol: symbols).pluck(:symbol).sort
       returning = Ticker.where.not(delisted_at: nil).where(symbol: symbols).count
+      refuse = missing.size > (listed_count * 0.05).floor && !force
 
-      puts "Polygon lists #{fetched.size} active tickers; #{missing.size} of #{listed.count} listed here are gone, #{returning} come back"
+      puts "Polygon lists #{fetched.size} active tickers; #{missing.size} of #{listed_count} listed here are gone, #{returning} come back"
       puts "Gone: #{missing.join(', ')}" if missing.any?
       puts "Skipping #{incomplete.size} with missing fields: #{incomplete.map { |t| t[:symbol] }.join(', ')}" if incomplete.any?
+      puts "That's more than 5%, so a real run refuses without FORCE=1" if refuse
       next puts("Dry run, nothing written") if dry_run
+      raise "Refusing to mark #{missing.size} of #{listed_count} tickers delisted, more than 5%; check the list and rerun with FORCE=1" if refuse
 
       ActiveRecord::Base.transaction do
         Ticker.upsert_all(complete.map { |t| t.merge(delisted_at: nil) }, unique_by: :symbol)

@@ -70,12 +70,42 @@ RSpec.describe("tickers:sync") do
     expect(Ticker.find_by(symbol: "NEWCO")).to(be_nil)
   end
 
-  it("marks every ticker Polygon dropped in one run, however many") do
+  it("refuses to mark more than 5% delisted, writes nothing and records the run as failed") do
+    stub_polygon(listed.first(30) + ["NEWCO"])
+    task = Rake::Task["tickers:sync"]
+    task.reenable
+
+    expect { expect { task.invoke }.to(output.to_stdout) }.to(raise_error(RuntimeError, /Refusing to mark 11 of 41/))
+    expect(delisted).to(eq([]))
+    expect(Ticker.find_by(symbol: "NEWCO")).to(be_nil)
+    expect(JobRun.last.status).to(eq("failed"))
+  end
+
+  it("marks up to 5% without asking") do
+    stub_polygon(listed.first(39))
+
+    run
+
+    expect(delisted.size).to(eq(2))
+  end
+
+  it("marks them all when FORCE=1 says the drop is real") do
     stub_polygon(listed.first(30))
+    with_env("FORCE" => "1")
 
     run
 
     expect(delisted.size).to(eq(11))
+  end
+
+  it("warns on a dry run that a real run would refuse") do
+    stub_polygon(listed.first(30))
+    with_env("DRY_RUN" => "1")
+    task = Rake::Task["tickers:sync"]
+    task.reenable
+
+    expect { task.invoke }.to(output(/more than 5%, so a real run refuses.*Dry run, nothing written/m).to_stdout)
+    expect(delisted).to(eq([]))
   end
 
   it("only prints what it would do on a dry run, and records no run") do
