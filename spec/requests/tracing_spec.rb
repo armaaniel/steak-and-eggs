@@ -157,6 +157,17 @@ RSpec.describe("Tracing", type: :request) do
     expect(unknown.to_json).not_to(include('BRUHH'))
   end
 
+  it("records the marketdata demo error under its own symbol, with its class, location and sentry event") do
+    allow(Sentry).to(receive(:capture_exception).and_return(instance_double(Sentry::ErrorEvent, event_id: "abc123")))
+
+    row = traced { get("/stocks/!BOOM/marketdata") }.sole
+
+    expect(row).to(include(endpoint: 'GET /stocks/!BOOM/marketdata', status: 503, error_class: 'MarketService::DemoError', sentry_event_id: 'abc123'))
+    expect(row[:error_location]).to(start_with('app/services/market_service.rb'))
+    expect(children(row[:spans], 'StocksController#get_market_data')).to(include('MarketService.marketdata'))
+    expect(children(row[:spans], 'MarketService.marketdata')).to(eq([]))
+  end
+
   it("records no before_action for a controller that has no before callbacks") do
     row = traced { post("/graphql", params: { query: '{ __typename }' }) }.sole
 

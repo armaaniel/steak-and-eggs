@@ -436,6 +436,15 @@ RSpec.describe("Stocks", type: :request) do
       expect(JSON.parse(response.body)["open"]).to(eq(95))
     end
 
+    it "returns 503 and reports the demo error for !BOOM, without an auth token" do
+      expect(Sentry).to(receive(:capture_exception).with(instance_of(MarketService::DemoError)))
+
+      get "/stocks/!BOOM/marketdata"
+
+      expect(response).to(have_http_status(503))
+      expect(JSON.parse(response.body)["open"]).to(eq("N/A"))
+    end
+
     it "returns 404 without reporting when polygon does not know the symbol" do
       allow(RedisService).to(receive(:safe_get).with("market:TSE").and_return(nil))
       polygon_answers("404")

@@ -3,6 +3,9 @@ class MarketService
   class InsufficientSharesError < StandardError; end
   class ApiError < StandardError; end
   class NotFoundError < StandardError; end
+  class DemoError < StandardError; end
+
+  DEMO_ERROR_SYMBOL = '!BOOM'
 
   MARKET_ZONE = 'America/New_York'
   MARKET_OPEN_MINUTE = (9 * 60) + 30
@@ -117,6 +120,8 @@ class MarketService
 
   def self.marketdata(symbol:)
     ActiveSupport::Notifications.instrument('MarketService.marketdata.datacat', symbol: symbol) do
+      raise DemoError, "intentional error from loading market data for #{DEMO_ERROR_SYMBOL}" if symbol == DEMO_ERROR_SYMBOL
+
       cached = RedisService.safe_get("market:#{symbol}")
 
       if cached

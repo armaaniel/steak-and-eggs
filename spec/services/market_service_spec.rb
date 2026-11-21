@@ -224,6 +224,29 @@ RSpec.describe(MarketService) do
       MarketService.marketdata(symbol: "TSLA")
     end
 
+    it("raises the demo error inside the marketdata span, before the cache, the ticker check or polygon") do
+      expect(RedisService).not_to(receive(:safe_get))
+      expect(Ticker).not_to(receive(:exists?))
+      expect(Net::HTTP).not_to(receive(:new))
+
+      payloads = []
+      record = ->(*, payload) { payloads << payload }
+
+      ActiveSupport::Notifications.subscribed(record, "MarketService.marketdata.datacat") do
+        expect { MarketService.marketdata(symbol: "!BOOM") }.to(raise_error(MarketService::DemoError))
+      end
+
+      expect(payloads.last[:exception]&.first).to(eq("MarketService::DemoError"))
+    end
+
+    it("treats a symbol that only looks like the demo one as a normal lookup") do
+      allow(RedisService).to(receive(:safe_get).with("market:BOOM").and_return(nil))
+      allow(RedisService).to(receive(:safe_get).with("market:!boom").and_return(nil))
+
+      expect { MarketService.marketdata(symbol: "BOOM") }.to(raise_error(MarketService::NotFoundError))
+      expect { MarketService.marketdata(symbol: "!boom") }.to(raise_error(MarketService::NotFoundError))
+    end
+
     it("returns cached data on cache hit") do
       cached = { open: 95, high: 110, low: 90, volume: 50000 }.to_json
       allow(RedisService).to(receive(:safe_get).with("market:TSLA").and_return(cached))
