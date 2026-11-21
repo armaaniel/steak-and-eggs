@@ -116,20 +116,45 @@ RSpec.describe("Tracing", type: :request) do
   end
 
   it("records the route when the ticker check fails") do
-    lookups = 0
-    allow(Ticker).to(receive(:find_by).and_wrap_original do |find_by, **conditions|
-      lookups += 1
-      raise ActiveRecord::ConnectionNotEstablished if lookups == 1
-
-      find_by.call(**conditions)
-    end)
+    allow(Ticker).to(receive(:find_by).and_raise(ActiveRecord::ConnectionNotEstablished))
     allow(Sentry).to(receive(:capture_exception))
-    allow(RedisService).to(receive(:safe_get).with("ticker:TSLA").and_return(nil))
 
-    row = traced { get("/stocks/TSLA/tickerdata") }.sole
+    row = traced { get("/stocks/TSLA/userdata", headers: auth_headers(user)) }.sole
 
     expect(row[:status]).to(eq(200))
-    expect(row[:endpoint]).to(eq('GET /stocks/:symbol/tickerdata'))
+    expect(row[:endpoint]).to(eq('GET /stocks/:symbol/userdata'))
+  end
+
+  it("answers cached ticker, company, market, chart and live data without asking postgres") do
+    routes = %w[tickerdata companydata marketdata chartdata livedata]
+    {
+      "ticker:TSLA" => { ticker_type: "CS", name: "Tesla, Inc.", exchange: "NASDAQ" }.to_json,
+      "company:TSLA" => { market_cap: 800000000000, description: "Electric vehicles" }.to_json,
+      "market:TSLA" => { open: 95, high: 110, low: 90, volume: 50000 }.to_json,
+      "chart:TSLA:1D" => [{ date: "2024-01-02 09:30", value: 200 }].to_json,
+      "live:TSLA" => [{ time: 1759865098000, value: 336.69 }].to_json
+    }.each { |key, value| allow(RedisService).to(receive(:safe_get).with(key).and_return(value)) }
+
+    rows = traced { routes.each { |route| get("/stocks/TSLA/#{route}") } }
+
+    expect(rows.map { |row| row.values_at(:status, :endpoint, :sql_ms) }).to(eq(routes.map { |route| [200, "GET /stocks/TSLA/#{route}", nil] }))
+    expect(rows.flat_map { |row| row[:spans] }.map { |span| span[:category] }).not_to(include('sql'))
+  end
+
+  it("keeps a real ticker's symbol in the path when polygon fails, and records a symbol that isn't a ticker by its route") do
+    allow(RedisService).to(receive(:safe_get).with("market:TSLA").and_return(nil))
+    allow(RedisService).to(receive(:safe_get).with("market:BRUHH").and_return(nil))
+    allow(Net::HTTP).to(receive(:new).and_raise(Errno::ECONNREFUSED))
+    allow(Sentry).to(receive(:capture_exception))
+
+    failed, unknown = traced do
+      get("/stocks/TSLA/marketdata")
+      get("/stocks/BRUHH/marketdata")
+    end
+
+    expect(failed).to(include(status: 503, endpoint: 'GET /stocks/TSLA/marketdata'))
+    expect(unknown).to(include(status: 404, endpoint: 'GET /stocks/:symbol/marketdata'))
+    expect(unknown.to_json).not_to(include('BRUHH'))
   end
 
   it("records no before_action for a controller that has no before callbacks") do

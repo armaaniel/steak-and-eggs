@@ -409,17 +409,31 @@ RSpec.describe("Stocks", type: :request) do
       expect(Net::HTTP).not_to(have_received(:new))
     end
 
-    it "treats the symbol as unknown and reports it when the ticker check fails" do
-      allow(Ticker).to(receive(:find_by).and_raise(ActiveRecord::ConnectionNotEstablished))
+    it "returns 503 and reports it without calling polygon when the ticker check fails on a miss" do
+      allow(RedisService).to(receive(:safe_get).with("market:TSLA").and_return(nil))
+      allow(Ticker).to(receive(:exists?).and_raise(ActiveRecord::ConnectionNotEstablished))
       allow(Sentry).to(receive(:capture_exception))
       allow(Net::HTTP).to(receive(:new))
 
       get "/stocks/TSLA/marketdata", headers: headers
 
-      expect(response).to(have_http_status(404))
+      expect(response).to(have_http_status(503))
       expect(JSON.parse(response.body)["open"]).to(eq("N/A"))
       expect(Sentry).to(have_received(:capture_exception).with(an_instance_of(ActiveRecord::ConnectionNotEstablished)))
       expect(Net::HTTP).not_to(have_received(:new))
+    end
+
+    it "serves a cache hit without checking the ticker, so it still answers when that check would fail" do
+      cached = { open: 95, high: 110, low: 90, volume: 50000 }.to_json
+      allow(RedisService).to(receive(:safe_get).with("market:TSLA").and_return(cached))
+      allow(Ticker).to(receive(:find_by).and_raise(ActiveRecord::ConnectionNotEstablished))
+      allow(Ticker).to(receive(:exists?).and_raise(ActiveRecord::ConnectionNotEstablished))
+      allow(Sentry).to(receive(:capture_exception))
+
+      get "/stocks/TSLA/marketdata", headers: headers
+
+      expect(response).to(have_http_status(200))
+      expect(JSON.parse(response.body)["open"]).to(eq(95))
     end
 
     it "returns 404 without reporting when polygon does not know the symbol" do

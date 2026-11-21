@@ -3,6 +3,10 @@ require 'rails_helper'
 RSpec.describe(MarketService) do
   let(:user) { create(:user) }
 
+  def list_tsla
+    Ticker.create!(symbol: "TSLA", name: "Tesla, Inc.", ticker_type: "CS", exchange: "XNAS", currency: "usd")
+  end
+
   before do
     allow(RedisService).to(receive(:safe_get).with("price:TSLA").and_return("100"))
     allow(CacheService).to(receive(:invalidate_user))
@@ -199,6 +203,8 @@ RSpec.describe(MarketService) do
   end
 
   describe("marketdata") do
+    before { list_tsla }
+
     let(:api_response_body) do
       { "ticker" => { "day" => { "o" => 95, "h" => 110, "l" => 90, "c" => 100, "v" => 50000 }, "prevDay" => { "o" => 98, "h" => 104, "l" => 97, "c" => 100, "v" => 900000 } } }.to_json
     end
@@ -285,6 +291,8 @@ RSpec.describe(MarketService) do
   end
 
   describe("companydata") do
+    before { list_tsla }
+
     let(:api_response_body) do
       { "results" => { "market_cap" => 800000000000, "description" => "Electric vehicles" } }.to_json
     end
@@ -336,6 +344,8 @@ RSpec.describe(MarketService) do
   end
 
   describe("chartdata") do
+    before { list_tsla }
+
     let(:api_response_body) do
       { "results" => [
         { "t" => 1700000000000, "o" => 195, "c" => 200 },
@@ -465,7 +475,10 @@ RSpec.describe(MarketService) do
   describe("livedata") do
     include ActiveSupport::Testing::TimeHelpers
 
-    before { travel_to(Time.utc(2026, 10, 7, 19, 30, 0)) }
+    before do
+      travel_to(Time.utc(2026, 10, 7, 19, 30, 0))
+      list_tsla
+    end
 
     let(:now_ms) { Time.utc(2026, 10, 7, 19, 30, 0).to_i * 1000 }
     let(:window_end_ms) { now_ms - 902_000 }

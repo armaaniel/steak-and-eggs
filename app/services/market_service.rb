@@ -123,6 +123,8 @@ class MarketService
         return cached
       end
 
+      raise NotFoundError unless Ticker.exists?(symbol: symbol)
+
       uri=URI("https://api.polygon.io/v2/snapshot/locale/us/markets/stocks/tickers/#{symbol}?apiKey=#{ENV['API_KEY']}")
       response = polygon_get(uri)
       raise NotFoundError if response.code == '404'
@@ -150,6 +152,8 @@ class MarketService
         return cached
       end
 
+      raise NotFoundError unless Ticker.exists?(symbol: symbol)
+
       uri=URI("https://api.polygon.io/v3/reference/tickers/#{symbol}?apiKey=#{ENV['API_KEY']}")
       response = polygon_get(uri)
       raise NotFoundError if response.code == '404'
@@ -171,6 +175,8 @@ class MarketService
       if cached
         return cached
       end
+
+      raise NotFoundError unless Ticker.exists?(symbol: symbol)
 
       from = config[:from].call
       uri=URI("https://api.polygon.io/v2/aggs/ticker/#{symbol}/range/#{config[:multiplier]}/#{config[:timespan]}/#{from}/#{Date.current}?adjusted=true&sort=asc&limit=50000&apiKey=#{ENV['API_KEY']}")
@@ -207,7 +213,9 @@ class MarketService
         return cached
       end
 
-      window_end = (Time.current.to_f * 1000).to_i - LIVE_DELAY_MS
+      raise NotFoundError unless Ticker.exists?(symbol: symbol)
+
+      window_end =(Time.current.to_f * 1000).to_i - LIVE_DELAY_MS
       to = window_end - SECOND_MS
       from = window_end - LIVE_WINDOW_MS
       uri=URI("https://api.polygon.io/v2/aggs/ticker/#{symbol}/range/1/second/#{from}/#{to}?adjusted=true&sort=asc&limit=50000&apiKey=#{ENV['API_KEY']}")

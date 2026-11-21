@@ -1,5 +1,5 @@
 class StocksController < ApplicationController
-  before_action(:check_symbol, except: [:get_stock_price])
+  before_action(:check_symbol, only: [:buy, :sell, :get_user_data])
   before_action(:verify_token, except: [:get_ticker_data,
     :get_chart_data,
     :get_live_data,
@@ -46,6 +46,7 @@ class StocksController < ApplicationController
 
   def get_ticker_data
     data = Ticker.query(symbol: params[:symbol])
+    @known_symbol = data.present?
 
     if data
       render(json: data)
@@ -59,60 +60,60 @@ class StocksController < ApplicationController
   end
 
   def get_chart_data
-    raise MarketService::NotFoundError unless @known_symbol
-
     requested = params[:range].to_s.upcase
     range = MarketService::CHART_RANGES.key?(requested) ? requested : MarketService::DEFAULT_CHART_RANGE
 
     data = MarketService.chartdata(symbol:params[:symbol], range: range)
+    @known_symbol = true
     render(json:data)
 
   rescue MarketService::NotFoundError => e
     record_error(e)
     render(json:[{date:Date.current, value:0}, {date:Date.current, value:0}], status:404)
   rescue => e
+    @known_symbol = true
     report_error(e)
     render(json:[{date:Date.current, value:0}, {date:Date.current, value:0}], status:503)
   end
 
   def get_live_data
-    raise MarketService::NotFoundError unless @known_symbol
-
     data = MarketService.livedata(symbol:params[:symbol])
+    @known_symbol = true
     render(json:data)
 
   rescue MarketService::NotFoundError => e
     record_error(e)
     render(json:[], status:404)
   rescue => e
+    @known_symbol = true
     report_error(e)
     render(json:[], status:503)
   end
 
   def get_company_data
-    raise MarketService::NotFoundError unless @known_symbol
-
     data = MarketService.companydata(symbol:params[:symbol])
+    @known_symbol = true
     render(json: data)
 
   rescue MarketService::NotFoundError => e
     record_error(e)
     render(json:{market_cap:'N/A', description:'N/A'}, status:404)
   rescue => e
+    @known_symbol = true
     report_error(e)
     render(json:{market_cap:'N/A', description:'N/A'}, status:503)
   end
 
   def get_market_data
-    raise MarketService::NotFoundError unless @known_symbol
-
     data = MarketService.marketdata(symbol:params[:symbol])
+    @known_symbol = true
     render(json: data)
 
   rescue MarketService::NotFoundError => e
     record_error(e)
     render(json:{open:'N/A', high: 'N/A', low: 'N/A', volume: 'N/A', last: 'N/A'}, status:404)
   rescue => e
+    @known_symbol = true
     report_error(e)
     render(json:{open:'N/A', high: 'N/A', low: 'N/A', volume: 'N/A', last: 'N/A'}, status:503)
   end
