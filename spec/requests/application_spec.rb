@@ -43,6 +43,46 @@ RSpec.describe("Authentication", type: :request) do
 
       expect(response).to(have_http_status(401))
     end
+
+    context "with a real cache" do
+      let(:store) { ActiveSupport::Cache::MemoryStore.new }
+
+      before do
+        allow(Rails).to(receive(:cache).and_return(store))
+        allow(RedisService).to(receive(:safe_get).and_return(nil))
+        allow(RedisService).to(receive(:safe_setex))
+      end
+
+      it "loads and caches only the user's id and balance, so the password hash never reaches the cache" do
+        statements = []
+        record = ->(*, payload) { statements << payload[:sql] if payload[:name] == "User Load" }
+        ActiveSupport::Notifications.subscribed(record, "sql.active_record") do
+          get "/portfoliodata", headers: auth_headers(user)
+        end
+
+        cached = store.read("user:#{user.id}")
+        expect(response).to(have_http_status(200))
+        expect(statements).to(eq(['SELECT "users"."id", "users"."balance" FROM "users" WHERE "users"."id" = $1 LIMIT $2']))
+        expect(cached.balance).to(be_a(BigDecimal))
+        expect(cached.balance).to(eq(user.balance))
+        expect(cached.password_digest).to(be_nil)
+        expect(Marshal.dump(cached)).not_to(include(user.password_digest))
+      end
+
+      it "answers the next request from the cache without loading the user" do
+        get "/portfoliodata", headers: auth_headers(user)
+
+        loads = []
+        record = ->(*, payload) { loads << payload[:name] if payload[:name] == "User Load" }
+        ActiveSupport::Notifications.subscribed(record, "sql.active_record") do
+          get "/stocks/TSLA/userdata", headers: auth_headers(user)
+        end
+
+        expect(response).to(have_http_status(200))
+        expect(JSON.parse(response.body)["balance"]).to(eq(user.balance.to_s))
+        expect(loads).to(be_empty)
+      end
+    end
   end
 end
 

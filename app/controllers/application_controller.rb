@@ -9,7 +9,7 @@ class ApplicationController < ActionController::API
     id = decoded[0]['user_id']
 
     @current_user = Rails.cache.fetch("user:#{id}", {expires_in: 24.hours}) do
-      User.find(id)
+      User.select(:id, :balance).find(id)
     end
 
   rescue => e
