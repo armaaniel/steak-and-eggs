@@ -683,7 +683,7 @@ resource "aws_scheduler_schedule" "prune_traces" {
 
 resource "aws_scheduler_schedule" "ticker_sync" {
   name                = "ticker_sync"
-  schedule_expression = "cron(0 4 * * ? *)"
+  schedule_expression = "cron(0 2 * * ? *)"
 
   flexible_time_window {
     mode = "OFF"

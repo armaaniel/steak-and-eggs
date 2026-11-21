@@ -100,7 +100,7 @@ A background thread drains the queue once a second and writes the batch with a s
 
 Three EventBridge Scheduler crons start standalone Fargate tasks. Each reuses the app's task definition with a command override.
 
-- **Ticker sync (4 AM UTC):** upserts the active tickers from Polygon and marks the rest delisted. If more than 5% of listed tickers would be marked, it refuses and writes nothing, since that looks like an incomplete list from Polygon. `DRY_RUN=1` previews the changes, and `FORCE=1` lets a large drop through once it's been checked.
+- **Ticker sync (2 AM UTC, before the ingester's nightly reconnect):** upserts the active tickers from Polygon and marks the rest delisted. If more than 5% of listed tickers would be marked, it refuses and writes nothing, since that looks like an incomplete list from Polygon. `DRY_RUN=1` previews the changes, and `FORCE=1` lets a large drop through once it's been checked.
 - **Portfolio snapshots (5 AM UTC, after the US close):** iterates through users in batches of 1,000. Each batch takes five round trips no matter how many users or positions it has: one query for users, one bulk position lookup, one Redis `MGET` for all unique symbols, one `upsert_all` and one bulk cache `DEL`. `upsert_all` with `unique_by: [:user_id, :date]` makes the job idempotent, so retries, reruns and double-fires all converge to the same result. A nested `rescue` isolates per-user errors, so one bad row doesn't stop the snapshot for everyone.
 - **Trace pruning (6 AM UTC):** the 30-day cleanup described above.
 

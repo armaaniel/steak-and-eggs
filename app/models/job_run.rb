@@ -1,7 +1,7 @@
 class JobRun < ApplicationRecord
   class PartialFailure < StandardError; end
 
-  SCHEDULE = {'tickers:sync' => 4, 'record' => 5, 'prune_traces' => 6}.freeze
+  SCHEDULE = {'tickers:sync' => 2, 'record' => 5, 'prune_traces' => 6}.freeze
   GRACE = 1.hour
   DAY = 1.day.to_i
   DAYS = 30
