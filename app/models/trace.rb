@@ -98,11 +98,13 @@ class Trace < ApplicationRecord
     traces = traces.where(cache_condition(cache)) if cache
     column = direction == 'asc' ? arel_table[sort].asc.nulls_last : arel_table[sort].desc.nulls_last
 
-    traces.where(source: %w[user canary])
+    ids = traces.where("source IN ('user', 'canary')")
       .where(created_at: window)
-      .without_spans
       .order(column, id: direction)
       .limit((limit || LIST_LIMIT).clamp(0, LIST_LIMIT))
+      .select(:id)
+
+    where(id: ids).without_spans.order(column, id: direction)
   end
 
   def self.without_spans

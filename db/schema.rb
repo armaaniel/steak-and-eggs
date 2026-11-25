@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_11_18_025723) do
+ActiveRecord::Schema[8.0].define(version: 2026_11_25_223922) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -141,6 +141,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_11_18_025723) do
     t.float "render_ms"
     t.index ["created_at"], name: "index_traces_on_created_at_canary", where: "((source)::text = 'canary'::text)", include: ["run_id", "result", "status"]
     t.index ["created_at"], name: "index_traces_on_created_at_canary_result", where: "(((source)::text = 'canary'::text) AND (result IS NOT NULL))", include: ["run_id", "result", "status"]
+    t.index ["created_at"], name: "index_traces_on_created_at_user_canary", where: "((source)::text = ANY ((ARRAY['user'::character varying, 'canary'::character varying])::text[]))", include: ["endpoint", "duration", "status", "cache_hits", "cache_misses", "http_ms", "id"]
     t.index ["request_id"], name: "index_traces_on_request_id", where: "(request_id IS NOT NULL)"
     t.index ["run_id"], name: "index_traces_on_run_id", where: "(run_id IS NOT NULL)"
     t.index ["source", "created_at"], name: "index_traces_on_source_and_created_at"
