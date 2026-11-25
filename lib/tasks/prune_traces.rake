@@ -12,7 +12,7 @@ end
 
 task prune_traces: :environment do
   JobRun.track('prune_traces') do
-    cutoff = 30.days.ago
+    cutoff = 31.days.ago
 
     prune.call(Trace.where("created_at < ?", cutoff).where.not(source: 'load'), 'traces')
     prune.call(IngesterSample.where("at < ?", cutoff), 'ingester_samples')
