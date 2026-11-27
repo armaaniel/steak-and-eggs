@@ -82,7 +82,7 @@ RSpec.describe(JobRun) do
     end
 
     it("records a run when prune_traces runs") do
-      allow(ArchiveService).to(receive(:export_day).and_return({}))
+      allow(Aws::S3::Client).to(receive(:new).and_return(fake_s3))
       task = Rake::Task["prune_traces"]
       task.reenable
       task.invoke
