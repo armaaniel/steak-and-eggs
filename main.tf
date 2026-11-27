@@ -368,6 +368,39 @@ resource "aws_iam_role_policy" "cloudwatch_read" {
   })
 }
 
+resource "aws_s3_bucket" "archive" {
+  bucket = "steakneggs-datacat-archive"
+}
+
+resource "aws_s3_bucket_public_access_block" "archive" {
+  bucket                  = aws_s3_bucket.archive.id
+  block_public_acls       = true
+  block_public_policy     = true
+  ignore_public_acls      = true
+  restrict_public_buckets = true
+}
+
+resource "aws_iam_role_policy" "archive_write" {
+  name = "archive-write"
+  role = aws_iam_role.ecs_task_role.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect   = "Allow"
+        Action   = ["s3:PutObject", "s3:GetObject"]
+        Resource = "${aws_s3_bucket.archive.arn}/*"
+      },
+      {
+        Effect   = "Allow"
+        Action   = ["s3:ListBucket"]
+        Resource = aws_s3_bucket.archive.arn
+      }
+    ]
+  })
+}
+
 resource "aws_iam_role_policy" "scheduler_ecs" {
   role = aws_iam_role.scheduler_role.id
   policy = jsonencode({
