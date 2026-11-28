@@ -6,8 +6,6 @@ Backend for [steakneggs.app](https://steakneggs.app/), a paper-trading app with 
 
 Frontend repo: [steak-and-eggs-spa](https://github.com/armaaniel/steak-and-eggs-spa)
 
-Mobile app: [steak-and-eggs-mobile](https://github.com/armaaniel/steak-and-eggs-mobile)
-
 Price ingestion: [steak-and-eggs-ingester](https://github.com/armaaniel/steak-and-eggs-ingester)
 
 ![Architecture: the web and mobile clients reach Rails through the ALB. Rails uses Valkey, Postgres and Polygon's REST API. The ingester streams prices from Polygon into Valkey, reads its ticker list from Postgres and writes health samples back.](docs/architecture.svg)
